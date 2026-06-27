@@ -62,6 +62,11 @@
         console.log(`🎮 Save loaded! Stage ${GameState.player.stage}, ${GameState.collection.length} cards`);
     }
 
+    // Auto-start tutorial for new players
+    if (!hasSave || !GameState.stats.tutorialDone) {
+        setTimeout(() => Tutorial.start(), 1500); // After loading screen fades
+    }
+
     // Debug helpers
     window.DEBUG = {
         state: GameState,

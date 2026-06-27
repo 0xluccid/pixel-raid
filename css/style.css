@@ -814,6 +814,178 @@ body {
     font-size: 10px;
 }
 
+/* Tutorial System */
+.tutorial-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 10000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.tutorial-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.tutorial-overlay.fade-out {
+    opacity: 0;
+}
+
+.tutorial-backdrop {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+}
+
+.tutorial-tooltip {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-card);
+    border: 2px solid var(--gold);
+    border-radius: 16px;
+    padding: 20px 24px;
+    max-width: 380px;
+    width: 90%;
+    z-index: 2;
+    animation: tutorialSlide 0.4s ease-out;
+    pointer-events: auto;
+}
+
+.tutorial-tooltip.center {
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.tutorial-tooltip.bottom {
+    top: 20%;
+}
+
+.tutorial-tooltip.top {
+    bottom: 20%;
+    top: auto;
+}
+
+@keyframes tutorialSlide {
+    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+.tutorial-step-count {
+    font-size: 10px;
+    color: #666;
+    margin-bottom: 6px;
+    font-family: 'Press Start 2P', monospace;
+}
+
+.tutorial-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 13px;
+    color: var(--gold);
+    margin-bottom: 10px;
+    text-shadow: 0 0 8px var(--gold);
+}
+
+.tutorial-text {
+    font-size: 13px;
+    color: #ddd;
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
+
+.tutorial-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+
+.tutorial-btn-next,
+.tutorial-btn-finish {
+    background: var(--gold) !important;
+    color: #000 !important;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.tutorial-btn-back {
+    background: var(--bg-surface) !important;
+    color: #aaa !important;
+    font-size: 10px;
+    padding: 10px 16px;
+    border: 1px solid #444 !important;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.tutorial-btn-skip {
+    background: transparent !important;
+    color: #666 !important;
+    font-size: 9px;
+    padding: 8px 12px;
+    border: none !important;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.tutorial-ring {
+    position: absolute;
+    border: 3px solid var(--gold);
+    border-radius: 12px;
+    pointer-events: none;
+    animation: ringPulse 1.5s ease-in-out infinite;
+    z-index: 1;
+    box-shadow: 0 0 20px var(--gold), inset 0 0 20px rgba(255, 215, 0, 0.1);
+}
+
+@keyframes ringPulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 20px var(--gold); }
+    50% { opacity: 0.6; box-shadow: 0 0 40px var(--gold); }
+}
+
+.tutorial-highlight {
+    position: relative;
+    z-index: 10001 !important;
+    box-shadow: 0 0 0 4px var(--gold), 0 0 20px var(--gold) !important;
+    border-radius: 8px;
+    animation: highlightPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes highlightPulse {
+    0%, 100% { box-shadow: 0 0 0 4px var(--gold), 0 0 20px var(--gold); }
+    50% { box-shadow: 0 0 0 6px var(--gold), 0 0 30px var(--gold); }
+}
+
+/* Tutorial trigger button */
+.tutorial-trigger {
+    position: fixed;
+    bottom: 80px;
+    right: 16px;
+    background: var(--bg-card);
+    border: 2px solid var(--gold);
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 999;
+    box-shadow: 0 2px 10px rgba(255, 215, 0, 0.3);
+    transition: transform 0.2s;
+}
+
+.tutorial-trigger:hover {
+    transform: scale(1.1);
+}
+
 /* Mobile responsive */
 @media (max-width: 600px) {
     .nav-btn { font-size: 7px; padding: 8px 4px; }
