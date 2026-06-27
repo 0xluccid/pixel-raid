@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚔️ Pixel Raid — Auto-Battle RPG</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Header -->
+        <header id="game-header">
+            <div class="logo">⚔️ PIXEL RAID</div>
+            <div class="player-info">
+                <span id="player-name">Adventurer</span>
+                <span class="gold">💰 <span id="gold-display">0</span></span>
+                <span class="gem">💎 <span id="gem-display">0</span></span>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav id="game-nav">
+            <button class="nav-btn active" data-screen="battle">⚔️ Battle</button>
+            <button class="nav-btn" data-screen="heroes">🦸 Heroes</button>
+            <button class="nav-btn" data-screen="formation">📐 Formation</button>
+            <button class="nav-btn" data-screen="inventory">🎒 Inventory</button>
+            <button class="nav-btn" data-screen="shop">🏪 Shop</button>
+        </nav>
+
+        <!-- Main Game Area -->
+        <main id="game-main">
+            <!-- Battle Screen -->
+            <div id="screen-battle" class="screen active">
+                <div class="stage-info">
+                    <h2>Stage <span id="stage-number">1</span> — Wave <span id="wave-number">1</span>/3</h2>
+                    <div class="stage-progress">
+                        <div class="progress-bar"><div id="progress-fill" style="width:0%"></div></div>
+                    </div>
+                </div>
+                <div id="battle-arena">
+                    <div id="battle-log"></div>
+                    <canvas id="battle-canvas" width="800" height="400"></canvas>
+                </div>
+                <div class="battle-controls">
+                    <button id="btn-start-battle" class="btn btn-primary">⚔️ Start Battle</button>
+                    <button id="btn-auto-next" class="btn btn-secondary">🔄 Auto Next Stage</button>
+                    <div class="speed-control">
+                        <span>Speed:</span>
+                        <button class="speed-btn active" data-speed="1">1x</button>
+                        <button class="speed-btn" data-speed="2">2x</button>
+                        <button class="speed-btn" data-speed="3">3x</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Heroes Screen -->
+            <div id="screen-heroes" class="screen">
+                <h2>🦸 Your Heroes</h2>
+                <div id="hero-list" class="card-grid"></div>
+                <div id="hero-detail" class="hidden">
+                    <div id="hero-detail-content"></div>
+                    <button class="btn btn-secondary" onclick="UI.closeHeroDetail()">Close</button>
+                </div>
+            </div>
+
+            <!-- Formation Screen -->
+            <div id="screen-formation" class="screen">
+                <h2>📐 Formation Builder</h2>
+                <p class="hint">Drag heroes to position them. Front row takes damage first!</p>
+                <div class="formation-layout">
+                    <div id="formation-grid" class="grid-3x3"></div>
+                    <div id="formation-bench" class="hero-bench">
+                        <h3>Bench</h3>
+                        <div id="bench-heroes" class="bench-list"></div>
+                    </div>
+                </div>
+                <div id="synergy-display" class="synergy-panel">
+                    <h3>🔗 Synergies</h3>
+                    <div id="synergy-list"></div>
+                </div>
+            </div>
+
+            <!-- Inventory Screen -->
+            <div id="screen-inventory" class="screen">
+                <h2>🎒 Inventory</h2>
+                <div class="inventory-tabs">
+                    <button class="inv-tab active" data-tab="equipment">⚔️ Equipment</button>
+                    <button class="inv-tab" data-tab="materials">🧪 Materials</button>
+                </div>
+                <div id="inventory-grid" class="card-grid"></div>
+            </div>
+
+            <!-- Shop Screen -->
+            <div id="screen-shop" class="screen">
+                <h2>🏪 Shop</h2>
+                <div class="shop-tabs">
+                    <button class="shop-tab active" data-tab="summon">🎲 Summon Heroes</button>
+                    <button class="shop-tab" data-tab="items">🛒 Buy Items</button>
+                </div>
+                <div id="shop-content"></div>
+            </div>
+        </main>
+
+        <!-- Toast notifications -->
+        <div id="toast-container"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/core/heroes.js"></script>
+    <script src="js/core/items.js"></script>
+    <script src="js/core/game.js"></script>
+    <script src="js/systems/battle.js"></script>
+    <script src="js/systems/formation.js"></script>
+    <script src="js/systems/economy.js"></script>
+    <script src="js/ui/renderer.js"></script>
+    <script src="js/ui/screens.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
