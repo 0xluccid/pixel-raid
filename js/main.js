@@ -38,6 +38,9 @@
     // Init UI
     UI.init();
 
+    // Show loading screen animation
+    LoadingScreen.show();
+
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         switch(e.key) {
