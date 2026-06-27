@@ -33,18 +33,7 @@
             overflow-x: hidden;
         }
 
-        /* Loading Screen */
-        .loading-screen {
-            position: fixed; inset: 0; z-index: 10000;
-            background: var(--bg); display: flex; flex-direction: column;
-            align-items: center; justify-content: center; gap: 20px;
-            transition: opacity 0.5s;
-        }
-        .loading-screen.hide { opacity: 0; pointer-events: none; }
-        .loading-title { font-family: 'Press Start 2P'; font-size: 24px; color: var(--gold); }
-        .loading-bar { width: 200px; height: 8px; background: #222; border-radius: 4px; overflow: hidden; }
-        .loading-fill { height: 100%; width: 0%; background: var(--gold); transition: width 0.3s; }
-        .loading-text { font-size: 10px; color: var(--text-dim); }
+        /* Loading Screen — see #loading-screen styles below */
 
         /* Game Header */
         .game-header {
@@ -235,24 +224,87 @@
         .tutorial-ring { position: absolute; z-index: 9999; border: 3px solid var(--gold); border-radius: 8px; pointer-events: none; animation: tutorial-pulse 1.5s ease-in-out infinite; }
         @keyframes tutorial-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-        /* Pack Opening Modal */
+        /* Stat Bars in Cards */
+        .stat-row { display:flex; align-items:center; gap:4px; margin:2px 0; }
+        .stat-label { width:22px; font-size:6px; color:#888; text-align:right; }
+        .stat-bar-bg { flex:1; height:4px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; }
+        .stat-bar-fill { height:100%; border-radius:2px; transition: width 0.5s ease; }
+        .stat-val { width:22px; font-size:7px; font-weight:700; text-align:right; }
+        .card-power { text-align:center; margin-top:4px; font-size:7px; color:var(--gold); font-weight:700; }
+
+        /* Pack Opening — Premium */
         #pack-modal {
-            position: fixed; inset: 0; z-index: 9998; background: rgba(0,0,0,0.9);
+            position: fixed; inset: 0; z-index: 9998; background: rgba(0,0,0,0.95);
             display: none; align-items: center; justify-content: center; flex-direction: column; gap: 16px;
         }
         #pack-modal.show { display: flex; }
         #pack-title { font-family: 'Press Start 2P'; font-size: 14px; color: var(--gold); }
         #pack-box {
-            width: 180px; height: 240px; background: linear-gradient(135deg, #2a1f4e, #1a1a3e);
-            border: 3px solid var(--gold); border-radius: 12px; cursor: pointer;
+            width: 200px; height: 280px; background: linear-gradient(135deg, #2a1f4e, #1a1a3e);
+            border: 3px solid var(--gold); border-radius: 16px; cursor: pointer;
             display: flex; align-items: center; justify-content: center;
-            transition: transform 0.3s; box-shadow: 0 0 30px rgba(240,192,64,0.3);
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 0 40px rgba(240,192,64,0.3), inset 0 0 30px rgba(240,192,64,0.05);
+            position: relative; overflow: hidden;
         }
-        #pack-box:hover { transform: scale(1.05); }
-        #pack-box.opened { transform: scale(0.8) rotateY(180deg); opacity: 0; pointer-events: none; }
-        #pack-hint { font-size: 10px; color: var(--text-dim); }
-        #pack-cards { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+        #pack-box::before {
+            content: ''; position: absolute; inset: -2px; border-radius: 18px;
+            background: conic-gradient(from 0deg, #ffd700, #ff6b35, #ffd700, #00ccff, #ffd700);
+            z-index: -1; animation: pack-border-spin 3s linear infinite; opacity: 0.6;
+        }
+        #pack-box::after {
+            content: ''; position: absolute; inset: 2px; background: linear-gradient(135deg, #2a1f4e, #1a1a3e);
+            border-radius: 14px; z-index: -1;
+        }
+        @keyframes pack-border-spin { to { transform: rotate(360deg); } }
+        #pack-box:hover { transform: scale(1.05); box-shadow: 0 0 60px rgba(240,192,64,0.5); }
+        #pack-box.opened {
+            transform: scale(1.5) rotateY(180deg); opacity: 0;
+            box-shadow: 0 0 120px rgba(240,192,64,0.8); pointer-events: none;
+            transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #pack-hint { font-size: 10px; color: var(--text-dim); animation: pack-pulse 2s ease-in-out infinite; }
+        @keyframes pack-pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }
+        #pack-cards { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; perspective: 800px; }
+        #pack-cards .card {
+            animation: card-reveal 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+            box-shadow: 0 0 20px rgba(240,192,64,0.3);
+        }
+        @keyframes card-reveal {
+            0% { transform: scale(0) rotateY(180deg); opacity: 0; filter: brightness(3); }
+            50% { transform: scale(1.2) rotateY(90deg); opacity: 0.7; filter: brightness(2); }
+            100% { transform: scale(1) rotateY(0deg); opacity: 1; filter: brightness(1); }
+        }
+        #pack-cards .card:nth-child(2) { animation-delay: 0.2s; }
+        #pack-cards .card:nth-child(3) { animation-delay: 0.4s; }
+        #pack-cards .card:nth-child(4) { animation-delay: 0.6s; }
+        #pack-cards .card:nth-child(5) { animation-delay: 0.8s; }
         #pack-close-btn { display: none; }
+        #pack-sparkles { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+
+        /* Loading Screen */
+        #loading-screen {
+            position: fixed; inset: 0; z-index: 99999; background: #0a0a1a;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.8s ease;
+        }
+        #loading-screen.fade-out { opacity: 0; pointer-events: none; }
+        #loading-screen .logo-text {
+            font-family: 'Press Start 2P'; font-size: 20px; color: var(--gold);
+            margin-bottom: 24px; text-shadow: 0 0 20px rgba(240,192,64,0.5);
+        }
+        #loading-bar-outer {
+            width: 260px; height: 8px; background: rgba(255,255,255,0.06);
+            border-radius: 4px; overflow: hidden; margin-bottom: 16px;
+        }
+        #loading-bar-inner {
+            width: 0%; height: 100%; background: linear-gradient(90deg, var(--gold), #ff6b35);
+            border-radius: 4px; transition: width 0.3s ease;
+        }
+        #loading-tip {
+            font-size: 8px; color: var(--text-dim); max-width: 280px; text-align: center;
+            line-height: 1.6; min-height: 40px;
+        }
 
         /* Unlock Popup */
         .unlock-popup {
@@ -296,10 +348,11 @@
 </head>
 <body>
     <!-- Loading Screen -->
-    <div class="loading-screen" id="loading-screen">
-        <div class="loading-title">PIXEL RAID</div>
-        <div class="loading-bar"><div class="loading-fill" id="loading-fill"></div></div>
-        <div class="loading-text" id="loading-text">Loading game...</div>
+    <div id="loading-screen">
+        <div class="logo-text">◆ PIXEL RAID ◆</div>
+        <div style="font-size:8px;color:var(--text-dim);margin-bottom:20px;">Collect. Battle. Conquer.</div>
+        <div id="loading-bar-outer"><div id="loading-bar-inner"></div></div>
+        <div id="loading-tip">Gathering heroes from the frontier...</div>
     </div>
 
     <!-- Toast Container -->
@@ -308,8 +361,11 @@
     <!-- Pack Opening Modal -->
     <div id="pack-modal">
         <div id="pack-title">Opening Pack...</div>
-        <div id="pack-box" onclick="PackAnimation.open()">
-            <span style="font-size:40px">📦</span>
+        <div style="position:relative;">
+            <canvas id="pack-sparkles" width="300" height="400"></canvas>
+            <div id="pack-box" onclick="PackAnimation.open()" style="position:relative;z-index:2;">
+                <span style="font-size:40px">📦</span>
+            </div>
         </div>
         <div id="pack-hint">Click the box to open!</div>
         <div id="pack-cards"></div>
@@ -329,11 +385,11 @@
 
     <!-- Nav Tabs -->
     <div class="game-nav">
-        <button class="nav-btn active" data-screen="battle">⚔️ Battle</button>
-        <button class="nav-btn" data-screen="heroes">🃏 Heroes</button>
-        <button class="nav-btn" data-screen="formation">📐 Formation</button>
-        <button class="nav-btn" data-screen="inventory">🎒 Inventory</button>
-        <button class="nav-btn" data-screen="shop">🏪 Shop</button>
+        <button class="nav-btn active" data-screen="battle" title="Fight enemies, earn gold & cards">⚔️ Battle</button>
+        <button class="nav-btn" data-screen="heroes" title="View, upgrade & manage your hero collection">🃏 Heroes</button>
+        <button class="nav-btn" data-screen="formation" title="Arrange your team lineup for battle">📐 Formation</button>
+        <button class="nav-btn" data-screen="inventory" title="Card packs, items & rewards">🎒 Inventory</button>
+        <button class="nav-btn" data-screen="shop" title="Buy packs, gold & special offers">🏪 Shop</button>
     </div>
 
     <!-- ====== BATTLE SCREEN ====== -->
@@ -362,8 +418,8 @@
 
         <div class="battle-log" id="battle-log"></div>
 
-        <!-- Wallet Section (in Battle screen for visibility) -->
-        <div class="wallet-section">
+        <!-- Wallet Section — HIDDEN (Web3 not active yet) -->
+        <div class="wallet-section" style="display:none;">
             <div class="wallet-title">🔗 Web3 Wallet</div>
             <div class="wallet-desc">
                 Connect your MetaMask wallet to mint your hero cards as NFTs on BNB Chain.

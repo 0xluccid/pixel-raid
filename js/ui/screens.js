@@ -225,13 +225,21 @@ const UI = {
 
             const stats = document.createElement('div');
             stats.className = 'card-stats';
-            stats.innerHTML = `
-                <span><span style="color:#888">HP</span> <span style="color:#44cc44">${card.stats.hp}</span></span>
-                <span><span style="color:#888">ATK</span> <span style="color:#ff6644">${card.stats.atk}</span></span>
-                <span><span style="color:#888">DEF</span> <span style="color:#4488ff">${card.stats.def}</span></span>
-                <span><span style="color:#888">SPD</span> <span style="color:#ffaa00">${card.stats.spd}</span></span>
-                <span><span style="color:#888">PWR</span> <span style="color:var(--gold)">${getCardPower(card)}</span></span>
-            `;
+            // Calculate max stats for bar scaling (based on highest possible base)
+            const maxHP = 140, maxATK = 38, maxDEF = 25, maxSPD = 24;
+            const statData = [
+                { label: 'HP',  val: card.stats.hp,  max: maxHP,  color: '#44cc44' },
+                { label: 'ATK', val: card.stats.atk, max: maxATK, color: '#ff6644' },
+                { label: 'DEF', val: card.stats.def, max: maxDEF, color: '#4488ff' },
+                { label: 'SPD', val: card.stats.spd, max: maxSPD, color: '#ffaa00' },
+            ];
+            stats.innerHTML = statData.map(s => `
+                <div class="stat-row">
+                    <span class="stat-label">${s.label}</span>
+                    <div class="stat-bar-bg"><div class="stat-bar-fill" style="width:${Math.min(100, (s.val / s.max) * 100)}%;background:${s.color}"></div></div>
+                    <span class="stat-val" style="color:${s.color}">${s.val}</span>
+                </div>
+            `).join('') + `<div class="card-power">⚡ ${getCardPower(card)}</div>`;
 
             el.append(sprite, name, cls, stats);
             grid.appendChild(el);
@@ -244,6 +252,7 @@ const UI = {
         
         const isEquipped = GameState.deck.includes(card.id);
         const equipBtnText = isEquipped ? '📤 Remove from Deck' : '📥 Add to Deck';
+        const template = getTemplateByName(card.templateId || card.name);
         
         content.innerHTML = `
             <div style="text-align:center;margin-bottom:16px;">
@@ -252,18 +261,16 @@ const UI = {
                 <div style="color:${CLASSES[card.class].color};font-size:8px;">${CLASSES[card.class].emoji} ${CLASSES[card.class].name} • ${RARITIES[card.rarity].name}</div>
             </div>
             <div style="font-size:8px;margin-bottom:12px;">
-                <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
-                    <span style="color:#888">HP</span><span style="color:#44cc44">${card.stats.hp}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
-                    <span style="color:#888">ATK</span><span style="color:#ff6644">${card.stats.atk}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
-                    <span style="color:#888">DEF</span><span style="color:#4488ff">${card.stats.def}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
-                    <span style="color:#888">SPD</span><span style="color:#ffaa00">${card.stats.spd}</span>
-                </div>
+                ${['HP','ATK','DEF','SPD'].map(s => {
+                    const val = card.stats[s.toLowerCase()];
+                    const max = {HP:140,ATK:38,DEF:25,SPD:24}[s];
+                    const color = {HP:'#44cc44',ATK:'#ff6644',DEF:'#4488ff',SPD:'#ffaa00'}[s];
+                    return `<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid var(--border);">
+                        <span style="color:#888;width:30px;font-size:7px;">${s}</span>
+                        <div style="flex:1;height:6px;background:var(--bg-dark);border-radius:3px;overflow:hidden;"><div style="width:${Math.min(100,(val/max)*100)}%;height:100%;background:${color};border-radius:3px;"></div></div>
+                        <span style="color:${color};width:28px;text-align:right;font-size:8px;font-weight:700;">${val}</span>
+                    </div>`;
+                }).join('')}
                 <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
                     <span style="color:#888">CRIT</span><span style="color:#ff44aa">${card.stats.crit}%</span>
                 </div>
@@ -271,6 +278,7 @@ const UI = {
                     <span style="color:#888">POWER</span><span style="color:var(--gold)">${getCardPower(card)}</span>
                 </div>
             </div>
+            ${template && template.lore ? `<div style="font-size:7px;color:var(--text-dim);font-style:italic;padding:6px 8px;margin-bottom:10px;background:var(--bg-dark);border-left:2px solid ${RARITIES[card.rarity].color};border-radius:0 4px 4px 0;">"${template.lore}"</div>` : ''}
             <div style="font-size:7px;background:var(--bg-dark);padding:8px;margin-bottom:12px;">
                 <div style="color:var(--gem);margin-bottom:4px;">✨ Skill: ${card.skill.name}</div>
                 <div style="color:var(--text-dim);">Type: ${card.skill.type} • Chance: ${Math.floor(card.skill.chance * 100)}%</div>
@@ -286,7 +294,6 @@ const UI = {
         
         // Draw sprite — image with canvas fallback
         const container = document.getElementById('detail-sprite-container');
-        const template = getTemplateByName(card.templateId || card.name);
         if (template && template.image) {
             const img = document.createElement('img');
             img.width = 96;
