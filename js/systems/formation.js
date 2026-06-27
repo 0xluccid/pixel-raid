@@ -101,11 +101,29 @@ const Formation = {
             if (pos.cardId) {
                 const card = GameState.getCardById(pos.cardId);
                 if (card) {
-                    const sprite = document.createElement('canvas');
-                    sprite.className = 'cell-sprite';
-                    sprite.width = 32;
-                    sprite.height = 32;
-                    CardRenderer.drawCardSprite(sprite, card, 32);
+                    const tmpl = getTemplateByName(card.templateId || card.name);
+                    let sprite;
+                    if (tmpl && tmpl.image) {
+                        sprite = document.createElement('img');
+                        sprite.className = 'cell-sprite';
+                        sprite.width = 32;
+                        sprite.height = 32;
+                        sprite.style.imageRendering = 'pixelated';
+                        sprite.src = tmpl.image;
+                        sprite.onerror = function() {
+                            const cvs = document.createElement('canvas');
+                            cvs.className = 'cell-sprite';
+                            cvs.width = 32; cvs.height = 32;
+                            CardRenderer.drawCardSprite(cvs, card, 32);
+                            sprite.replaceWith(cvs);
+                        };
+                    } else {
+                        sprite = document.createElement('canvas');
+                        sprite.className = 'cell-sprite';
+                        sprite.width = 32;
+                        sprite.height = 32;
+                        CardRenderer.drawCardSprite(sprite, card, 32);
+                    }
                     cell.appendChild(sprite);
 
                     const name = document.createElement('div');
@@ -178,12 +196,30 @@ const Formation = {
                 e.dataTransfer.setData('cardId', card.id.toString());
             });
 
-            const sprite = document.createElement('canvas');
-            sprite.className = 'mini-sprite';
-            sprite.width = 24;
-            sprite.height = 24;
-            CardRenderer.drawCardSprite(sprite, card, 24);
-            el.appendChild(sprite);
+            const benchTmpl = getTemplateByName(card.templateId || card.name);
+            let benchSprite;
+            if (benchTmpl && benchTmpl.image) {
+                benchSprite = document.createElement('img');
+                benchSprite.className = 'mini-sprite';
+                benchSprite.width = 24;
+                benchSprite.height = 24;
+                benchSprite.style.imageRendering = 'pixelated';
+                benchSprite.src = benchTmpl.image;
+                benchSprite.onerror = function() {
+                    const cvs = document.createElement('canvas');
+                    cvs.className = 'mini-sprite';
+                    cvs.width = 24; cvs.height = 24;
+                    CardRenderer.drawCardSprite(cvs, card, 24);
+                    benchSprite.replaceWith(cvs);
+                };
+            } else {
+                benchSprite = document.createElement('canvas');
+                benchSprite.className = 'mini-sprite';
+                benchSprite.width = 24;
+                benchSprite.height = 24;
+                CardRenderer.drawCardSprite(benchSprite, card, 24);
+            }
+            el.appendChild(benchSprite);
 
             const info = document.createElement('div');
             info.innerHTML = `

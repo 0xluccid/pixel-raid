@@ -1,9 +1,42 @@
 /* ========================================
  * PIXEL RAID — Canvas Renderer
- * Procedural pixel art + battle visualization
+ * Pixel art card sprites with real image support
  * ======================================== */
 
-// Procedural pixel art card sprites
+// Image cache to avoid re-loading
+const _imageCache = {};
+const _bgImageCache = {};
+
+function _loadImage(src) {
+    if (_imageCache[src]) return _imageCache[src];
+    const img = new Image();
+    img.src = src;
+    img.onerror = () => { img._failed = true; };
+    _imageCache[src] = img;
+    return img;
+}
+
+function _loadBgImage(src) {
+    if (_bgImageCache[src]) return _bgImageCache[src];
+    const img = new Image();
+    img.src = src;
+    img.onerror = () => { img._failed = true; };
+    _bgImageCache[src] = img;
+    return img;
+}
+
+// Stage → background image mapping
+function getStageBackground(stage) {
+    if (stage <= 3) return 'assets/backgrounds/battleback_forest.png';
+    if (stage <= 6) return 'assets/backgrounds/battleback_grassland.png';
+    if (stage <= 9) return 'assets/backgrounds/battleback_desert.png';
+    if (stage <= 12) return 'assets/backgrounds/battleback_snow.png';
+    if (stage <= 15) return 'assets/backgrounds/battleback_dungeon.png';
+    if (stage <= 18) return 'assets/backgrounds/battleback_night.png';
+    return 'assets/backgrounds/volcano_bg.png';
+}
+
+// Procedural pixel art card sprites (fallback)
 const CardRenderer = {
     // Generate deterministic pixel art from card's artSeed
     drawCardSprite(canvas, card, size) {
@@ -24,6 +57,22 @@ const CardRenderer = {
         ctx.fillStyle = '#1a1a2e';
         ctx.fillRect(0, 0, s, s);
 
+        // Try to draw character image
+        const template = getTemplateByName(card.templateId || card.name);
+        if (template && template.image) {
+            const img = _loadImage(template.image);
+            if (img.complete && img.naturalWidth > 0 && !img._failed) {
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(img, 0, 0, s, s);
+                // Rarity glow border
+                ctx.strokeStyle = rarityColor;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(1, 1, s - 2, s - 2);
+                return;
+            }
+        }
+
+        // Fallback: procedural pixel art
         // Draw body (8x10 pixel grid centered)
         const ox = Math.floor((s - pixelSize * 10) / 2);
         const oy = Math.floor((s - pixelSize * 12) / 2);
@@ -147,17 +196,32 @@ const CardRenderer = {
         ctx.lineWidth = 3;
         ctx.strokeRect(2, 2, width - 4, height - 4);
         
-        // Sprite area
-        const spriteCanvas = document.createElement('canvas');
-        this.drawCardSprite(spriteCanvas, card, Math.min(width - 20, height * 0.5));
-        const spriteX = Math.floor((width - spriteCanvas.width) / 2);
-        ctx.drawImage(spriteCanvas, spriteX, 15);
+        // Sprite area — try image first, fallback to procedural
+        const spriteSize = Math.min(width - 20, height * 0.5);
+        const spriteX = Math.floor((width - spriteSize) / 2);
+        const template = getTemplateByName(card.templateId || card.name);
+        
+        if (template && template.image) {
+            const img = _loadImage(template.image);
+            if (img.complete && img.naturalWidth > 0 && !img._failed) {
+                ctx.imageSmoothingEnabled = false;
+                ctx.drawImage(img, spriteX, 15, spriteSize, spriteSize);
+            } else {
+                const spriteCanvas = document.createElement('canvas');
+                this.drawCardSprite(spriteCanvas, card, spriteSize);
+                ctx.drawImage(spriteCanvas, spriteX, 15);
+            }
+        } else {
+            const spriteCanvas = document.createElement('canvas');
+            this.drawCardSprite(spriteCanvas, card, spriteSize);
+            ctx.drawImage(spriteCanvas, spriteX, 15);
+        }
         
         // Name
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 10px "Press Start 2P"';
         ctx.textAlign = 'center';
-        const nameY = spriteCanvas.height + 30;
+        const nameY = spriteSize + 30;
         ctx.fillText(card.name, width / 2, nameY);
         
         // Rarity
@@ -211,19 +275,30 @@ const BattleRenderer = {
         ctx.fillStyle = '#0a0a2a';
         ctx.fillRect(0, 0, W, H);
 
-        // Ground line
-        ctx.fillStyle = '#1a1a4a';
-        ctx.fillRect(0, H * 0.7, W, 3);
+        // Draw stage background image
+        const stage = GameState ? GameState.player.stage : 1;
+        const bgSrc = getStageBackground(stage);
+        const bgImg = _loadBgImage(bgSrc);
+        if (bgImg.complete && bgImg.naturalWidth > 0 && !bgImg._failed) {
+            ctx.drawImage(bgImg, 0, 0, W, H);
+            // Semi-transparent overlay for readability
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+            ctx.fillRect(0, 0, W, H);
+        } else {
+            // Fallback grid pattern background
+            ctx.strokeStyle = 'rgba(50,50,100,0.3)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < W; x += 40) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+            }
+            for (let y = 0; y < H; y += 40) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+            }
+        }
 
-        // Draw grid pattern background
-        ctx.strokeStyle = 'rgba(50,50,100,0.3)';
-        ctx.lineWidth = 1;
-        for (let x = 0; x < W; x += 40) {
-            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-        }
-        for (let y = 0; y < H; y += 40) {
-            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-        }
+        // Ground line
+        ctx.fillStyle = 'rgba(26,26,74,0.7)';
+        ctx.fillRect(0, H * 0.7, W, 3);
 
         // Draw ally team (left side)
         this.drawTeam(ctx, allyTeam, 60, H * 0.35, 70, true);
@@ -247,11 +322,27 @@ const BattleRenderer = {
                 ctx.globalAlpha = 0.3;
             }
 
-            // Mini sprite
+            // Try to draw character image sprite
             const spriteSize = 40;
-            const spriteCanvas = document.createElement('canvas');
-            CardRenderer.drawCardSprite(spriteCanvas, card, spriteSize);
-            ctx.drawImage(spriteCanvas, x - spriteSize/2, y - spriteSize/2);
+            const template = getTemplateByName(card.templateId || card.name);
+            
+            if (template && template.image) {
+                const img = _loadImage(template.image);
+                if (img.complete && img.naturalWidth > 0 && !img._failed) {
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.drawImage(img, x - spriteSize/2, y - spriteSize/2, spriteSize, spriteSize);
+                } else {
+                    // Fallback to procedural sprite
+                    const spriteCanvas = document.createElement('canvas');
+                    CardRenderer.drawCardSprite(spriteCanvas, card, spriteSize);
+                    ctx.drawImage(spriteCanvas, x - spriteSize/2, y - spriteSize/2);
+                }
+            } else {
+                // Fallback to procedural sprite
+                const spriteCanvas = document.createElement('canvas');
+                CardRenderer.drawCardSprite(spriteCanvas, card, spriteSize);
+                ctx.drawImage(spriteCanvas, x - spriteSize/2, y - spriteSize/2);
+            }
 
             // HP bar
             const barWidth = 40;

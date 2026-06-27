@@ -38,34 +38,54 @@ const COMBO_SYNERGIES = [
 // Card templates — base stats before rarity multiplier
 const CARD_TEMPLATES = [
     // Warriors
-    { name: 'Iron Knight',      cls: 'warrior',  hp: 120, atk: 18, def: 22, spd: 8,  crit: 5,  skill: { name: 'Shield Wall', type: 'buff_def', val: 0.3, chance: 0.3 } },
-    { name: 'Berserker',        cls: 'warrior',  hp: 100, atk: 28, def: 12, spd: 10, crit: 15, skill: { name: 'Rage', type: 'buff_atk', val: 0.5, chance: 0.25 } },
-    { name: 'Paladin',          cls: 'warrior',  hp: 140, atk: 14, def: 25, spd: 6,  crit: 5,  skill: { name: 'Holy Guard', type: 'shield', val: 30, chance: 0.3 } },
-    { name: 'Dark Knight',      cls: 'warrior',  hp: 110, atk: 24, def: 18, spd: 9,  crit: 10, skill: { name: 'Drain Strike', type: 'lifesteal', val: 0.3, chance: 0.25 } },
+    { name: 'Iron Knight',      cls: 'warrior',
+      image: 'assets/characters/iron_knight.png',  hp: 120, atk: 18, def: 22, spd: 8,  crit: 5,  skill: { name: 'Shield Wall', type: 'buff_def', val: 0.3, chance: 0.3 } },
+    { name: 'Berserker',        cls: 'warrior',
+      image: 'assets/characters/berserker.png',  hp: 100, atk: 28, def: 12, spd: 10, crit: 15, skill: { name: 'Rage', type: 'buff_atk', val: 0.5, chance: 0.25 } },
+    { name: 'Paladin',          cls: 'warrior',
+      image: 'assets/characters/paladin.png',  hp: 140, atk: 14, def: 25, spd: 6,  crit: 5,  skill: { name: 'Holy Guard', type: 'shield', val: 30, chance: 0.3 } },
+    { name: 'Dark Knight',      cls: 'warrior',
+      image: 'assets/characters/dark_knight.png',  hp: 110, atk: 24, def: 18, spd: 9,  crit: 10, skill: { name: 'Drain Strike', type: 'lifesteal', val: 0.3, chance: 0.25 } },
     
     // Mages
-    { name: 'Fire Mage',        cls: 'mage',     hp: 70,  atk: 32, def: 8,  spd: 12, crit: 10, skill: { name: 'Fireball', type: 'aoe', val: 0.6, chance: 0.3 } },
-    { name: 'Ice Witch',        cls: 'mage',     hp: 75,  atk: 28, def: 10, spd: 11, crit: 8,  skill: { name: 'Frost Nova', type: 'debuff_spd', val: 0.3, chance: 0.3 } },
-    { name: 'Lightning Lord',   cls: 'mage',     hp: 65,  atk: 35, def: 7,  spd: 14, crit: 12, skill: { name: 'Chain Lightning', type: 'aoe', val: 0.8, chance: 0.2 } },
-    { name: 'Void Sorcerer',    cls: 'mage',     hp: 80,  atk: 30, def: 9,  spd: 10, crit: 15, skill: { name: 'Void Rift', type: 'true_dmg', val: 20, chance: 0.25 } },
+    { name: 'Fire Mage',        cls: 'mage',
+      image: 'assets/characters/fire_mage.png',     hp: 70,  atk: 32, def: 8,  spd: 12, crit: 10, skill: { name: 'Fireball', type: 'aoe', val: 0.6, chance: 0.3 } },
+    { name: 'Ice Witch',        cls: 'mage',
+      image: 'assets/characters/ice_witch.png',     hp: 75,  atk: 28, def: 10, spd: 11, crit: 8,  skill: { name: 'Frost Nova', type: 'debuff_spd', val: 0.3, chance: 0.3 } },
+    { name: 'Lightning Lord',   cls: 'mage',
+      image: 'assets/characters/lightning_lord.png',     hp: 65,  atk: 35, def: 7,  spd: 14, crit: 12, skill: { name: 'Chain Lightning', type: 'aoe', val: 0.8, chance: 0.2 } },
+    { name: 'Void Sorcerer',    cls: 'mage',
+      image: 'assets/characters/void_sorcerer.png',     hp: 80,  atk: 30, def: 9,  spd: 10, crit: 15, skill: { name: 'Void Rift', type: 'true_dmg', val: 20, chance: 0.25 } },
     
     // Archers
-    { name: 'Wind Ranger',      cls: 'archer',   hp: 80,  atk: 24, def: 10, spd: 18, crit: 12, skill: { name: 'Multi Shot', type: 'multi_hit', val: 2, chance: 0.25 } },
-    { name: 'Shadow Sniper',    cls: 'archer',   hp: 70,  atk: 30, def: 8,  spd: 16, crit: 20, skill: { name: 'Headshot', type: 'crit_boost', val: 2.0, chance: 0.2 } },
-    { name: 'Beast Tamer',      cls: 'archer',   hp: 90,  atk: 22, def: 12, spd: 14, crit: 10, skill: { name: 'Eagle Strike', type: 'ignore_def', val: 0.5, chance: 0.25 } },
-    { name: 'Storm Archer',     cls: 'archer',   hp: 75,  atk: 26, def: 9,  spd: 20, crit: 14, skill: { name: 'Thunder Arrow', type: 'stun', val: 1, chance: 0.2 } },
+    { name: 'Wind Ranger',      cls: 'archer',
+      image: 'assets/characters/wind_ranger.png',   hp: 80,  atk: 24, def: 10, spd: 18, crit: 12, skill: { name: 'Multi Shot', type: 'multi_hit', val: 2, chance: 0.25 } },
+    { name: 'Shadow Sniper',    cls: 'archer',
+      image: 'assets/characters/shadow_sniper.png',   hp: 70,  atk: 30, def: 8,  spd: 16, crit: 20, skill: { name: 'Headshot', type: 'crit_boost', val: 2.0, chance: 0.2 } },
+    { name: 'Beast Tamer',      cls: 'archer',
+      image: 'assets/characters/beast_tamer.png',   hp: 90,  atk: 22, def: 12, spd: 14, crit: 10, skill: { name: 'Eagle Strike', type: 'ignore_def', val: 0.5, chance: 0.25 } },
+    { name: 'Storm Archer',     cls: 'archer',
+      image: 'assets/characters/storm_archer.png',   hp: 75,  atk: 26, def: 9,  spd: 20, crit: 14, skill: { name: 'Thunder Arrow', type: 'stun', val: 1, chance: 0.2 } },
     
     // Healers
-    { name: 'Holy Priest',      cls: 'healer',   hp: 90,  atk: 10, def: 14, spd: 10, crit: 5,  skill: { name: 'Heal', type: 'heal', val: 0.25, chance: 0.4 } },
-    { name: 'Druid',            cls: 'healer',   hp: 100, atk: 14, def: 16, spd: 8,  crit: 5,  skill: { name: 'Regrowth', type: 'hot', val: 0.1, chance: 0.35 } },
-    { name: 'Battle Medic',     cls: 'healer',   hp: 85,  atk: 16, def: 12, spd: 12, crit: 8,  skill: { name: 'Combat Heal', type: 'heal', val: 0.20, chance: 0.35 } },
-    { name: 'Necromancer',      cls: 'healer',   hp: 80,  atk: 18, def: 10, spd: 11, crit: 10, skill: { name: 'Life Drain', type: 'lifesteal', val: 0.25, chance: 0.3 } },
+    { name: 'Holy Priest',      cls: 'healer',
+      image: 'assets/characters/holy_priest.png',   hp: 90,  atk: 10, def: 14, spd: 10, crit: 5,  skill: { name: 'Heal', type: 'heal', val: 0.25, chance: 0.4 } },
+    { name: 'Druid',            cls: 'healer',
+      image: 'assets/characters/druid.png',   hp: 100, atk: 14, def: 16, spd: 8,  crit: 5,  skill: { name: 'Regrowth', type: 'hot', val: 0.1, chance: 0.35 } },
+    { name: 'Battle Medic',     cls: 'healer',
+      image: 'assets/characters/battle_medic.png',   hp: 85,  atk: 16, def: 12, spd: 12, crit: 8,  skill: { name: 'Combat Heal', type: 'heal', val: 0.20, chance: 0.35 } },
+    { name: 'Necromancer',      cls: 'healer',
+      image: 'assets/characters/necromancer.png',   hp: 80,  atk: 18, def: 10, spd: 11, crit: 10, skill: { name: 'Life Drain', type: 'lifesteal', val: 0.25, chance: 0.3 } },
     
     // Assassins
-    { name: 'Phantom Blade',    cls: 'assassin', hp: 65,  atk: 34, def: 6,  spd: 22, crit: 25, skill: { name: 'Backstab', type: 'crit_boost', val: 2.5, chance: 0.25 } },
-    { name: 'Venom Dancer',     cls: 'assassin', hp: 70,  atk: 28, def: 8,  spd: 20, crit: 18, skill: { name: 'Poison Blade', type: 'dot', val: 10, chance: 0.3 } },
-    { name: 'Shadow Monk',      cls: 'assassin', hp: 75,  atk: 26, def: 10, spd: 19, crit: 20, skill: { name: 'Shadow Step', type: 'dodge_buff', val: 0.3, chance: 0.25 } },
-    { name: 'Reaper',           cls: 'assassin', hp: 60,  atk: 38, def: 5,  spd: 24, crit: 30, skill: { name: 'Execute', type: 'execute', val: 0.3, chance: 0.15 } },
+    { name: 'Phantom Blade',    cls: 'assassin',
+      image: 'assets/characters/phantom_blade.png', hp: 65,  atk: 34, def: 6,  spd: 22, crit: 25, skill: { name: 'Backstab', type: 'crit_boost', val: 2.5, chance: 0.25 } },
+    { name: 'Venom Dancer',     cls: 'assassin',
+      image: 'assets/characters/venom_dancer.png', hp: 70,  atk: 28, def: 8,  spd: 20, crit: 18, skill: { name: 'Poison Blade', type: 'dot', val: 10, chance: 0.3 } },
+    { name: 'Shadow Monk',      cls: 'assassin',
+      image: 'assets/characters/shadow_monk.png', hp: 75,  atk: 26, def: 10, spd: 19, crit: 20, skill: { name: 'Shadow Step', type: 'dodge_buff', val: 0.3, chance: 0.25 } },
+    { name: 'Reaper',           cls: 'assassin',
+      image: 'assets/characters/reaper.png', hp: 60,  atk: 38, def: 5,  spd: 24, crit: 30, skill: { name: 'Execute', type: 'execute', val: 0.3, chance: 0.15 } },
 ];
 
 // ===== STARTER PACK — 3 heroes untuk onboarding =====

@@ -178,11 +178,31 @@ const UI = {
             el.className = `card ${card.rarity}`;
             el.onclick = () => this.showHeroDetail(card);
 
-            const sprite = document.createElement('canvas');
-            sprite.className = 'card-sprite';
-            sprite.width = 48;
-            sprite.height = 48;
-            CardRenderer.drawCardSprite(sprite, card, 48);
+            const template = getTemplateByName(card.templateId || card.name);
+            let sprite;
+            if (template && template.image) {
+                sprite = document.createElement('img');
+                sprite.className = 'card-sprite';
+                sprite.width = 48;
+                sprite.height = 48;
+                sprite.style.imageRendering = 'pixelated';
+                sprite.src = template.image;
+                sprite.onerror = function() {
+                    // Fallback to canvas procedural art
+                    const cvs = document.createElement('canvas');
+                    cvs.className = 'card-sprite';
+                    cvs.width = 48;
+                    cvs.height = 48;
+                    CardRenderer.drawCardSprite(cvs, card, 48);
+                    sprite.replaceWith(cvs);
+                };
+            } else {
+                sprite = document.createElement('canvas');
+                sprite.className = 'card-sprite';
+                sprite.width = 48;
+                sprite.height = 48;
+                CardRenderer.drawCardSprite(sprite, card, 48);
+            }
 
             const name = document.createElement('div');
             name.className = 'card-name';
@@ -217,7 +237,7 @@ const UI = {
         
         content.innerHTML = `
             <div style="text-align:center;margin-bottom:16px;">
-                <canvas id="detail-sprite" width="96" height="96"></canvas>
+                <div id="detail-sprite-container" style="width:96px;height:96px;margin:0 auto;"></div>
                 <h3 style="color:${RARITIES[card.rarity].color};font-size:12px;margin-top:8px;">${card.name}</h3>
                 <div style="color:${CLASSES[card.class].color};font-size:8px;">${CLASSES[card.class].emoji} ${CLASSES[card.class].name} • ${RARITIES[card.rarity].name}</div>
             </div>
@@ -254,9 +274,31 @@ const UI = {
 
         detail.classList.remove('hidden');
         
-        // Draw sprite
-        const spriteCanvas = document.getElementById('detail-sprite');
-        CardRenderer.drawCardSprite(spriteCanvas, card, 96);
+        // Draw sprite — image with canvas fallback
+        const container = document.getElementById('detail-sprite-container');
+        const template = getTemplateByName(card.templateId || card.name);
+        if (template && template.image) {
+            const img = document.createElement('img');
+            img.width = 96;
+            img.height = 96;
+            img.style.imageRendering = 'pixelated';
+            img.src = template.image;
+            img.onerror = function() {
+                const cvs = document.createElement('canvas');
+                cvs.width = 96; cvs.height = 96;
+                CardRenderer.drawCardSprite(cvs, card, 96);
+                container.innerHTML = '';
+                container.appendChild(cvs);
+            };
+            container.innerHTML = '';
+            container.appendChild(img);
+        } else {
+            const cvs = document.createElement('canvas');
+            cvs.width = 96; cvs.height = 96;
+            CardRenderer.drawCardSprite(cvs, card, 96);
+            container.innerHTML = '';
+            container.appendChild(cvs);
+        }
     },
 
     toggleDeck(cardId) {
