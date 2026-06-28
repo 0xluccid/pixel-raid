@@ -100,6 +100,11 @@ const Tutorial = {
 
     start() {
         if (GameState.stats.battlesWon > 0) return; // Skip if already played
+        // Auto-skip if player already has heroes (main.js gave them)
+        if (GameState.collection.length >= 3) {
+            console.log('Tutorial skipped — already have heroes');
+            return;
+        }
         this.active = true;
         this.step = 0;
         this.chosenClass = null;
