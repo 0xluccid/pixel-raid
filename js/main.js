@@ -10,12 +10,31 @@
     const hasSave = GameState.load();
     
     if (!hasSave) {
-        // Starter cards are now given by the Tutorial character creation step
-        // Only init basic player data here
-        console.log('🎮 New game! Tutorial will handle character creation...');
+        console.log('🎮 New game! Giving starter heroes...');
 
         // Init empty inventory if needed
         if (!GameState.inventory) GameState.inventory = [];
+
+        // Give 3 starter heroes immediately (don't depend on tutorial)
+        GameState.player.name = GameState.player.name || 'Adventurer';
+        const starterNames = ['Iron Knight', 'Fire Mage', 'Holy Priest'];
+        starterNames.forEach(heroName => {
+            const tmpl = CARD_TEMPLATES.find(t => t.name === heroName);
+            if (tmpl) {
+                const card = generateCard(tmpl, 'common');
+                GameState.addToCollection(card);
+                GameState.deck.push(card.id);
+                card.inDeck = true;
+            }
+        });
+
+        // Give starter items
+        if (!GameState.inventory || GameState.inventory.length === 0) {
+            const starterSword = createItem(ITEM_TEMPLATES.find(t => t.name === 'Rusty Sword'));
+            const starterArmor = createItem(ITEM_TEMPLATES.find(t => t.name === 'Leather Vest'));
+            if (starterSword) GameState.addItem(starterSword);
+            if (starterArmor) GameState.addItem(starterArmor);
+        }
 
         GameState.save();
     }

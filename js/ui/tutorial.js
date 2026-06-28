@@ -458,12 +458,44 @@ const Tutorial = {
         if (this.highlightEl) {
             this.highlightEl.classList.remove('tutorial-highlight');
         }
+
+        // If collection is empty (user skipped character creation), give default starters
+        if (!GameState.collection || GameState.collection.length === 0) {
+            GameState.player.name = GameState.player.name || 'Adventurer';
+            const starterNames = ['Iron Knight', 'Fire Mage', 'Holy Priest'];
+            starterNames.forEach(heroName => {
+                const tmpl = CARD_TEMPLATES.find(t => t.name === heroName);
+                if (tmpl) {
+                    const card = generateCard(tmpl, 'common');
+                    GameState.addToCollection(card);
+                    GameState.deck.push(card.id);
+                    card.inDeck = true;
+                }
+            });
+            // Give starter items
+            if (!GameState.inventory || GameState.inventory.length === 0) {
+                const starterSword = createItem(ITEM_TEMPLATES.find(t => t.name === 'Rusty Sword'));
+                const starterArmor = createItem(ITEM_TEMPLATES.find(t => t.name === 'Leather Vest'));
+                if (starterSword) GameState.addItem(starterSword);
+                if (starterArmor) GameState.addItem(starterArmor);
+            }
+        }
+
         GameState.stats.tutorialDone = true;
         GameState.save();
+
+        // Update player name display
+        const nameEl = document.getElementById('player-name');
+        if (nameEl && GameState.player.name) nameEl.textContent = GameState.player.name;
 
         // Refresh UI with final state
         if (typeof UI !== 'undefined' && UI.updateHeader) {
             UI.updateHeader();
+        }
+
+        // Show heroes screen so player can see their new cards
+        if (typeof UI !== 'undefined' && UI.showScreen) {
+            setTimeout(() => UI.showScreen('heroes'), 400);
         }
     },
 };
