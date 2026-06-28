@@ -10,13 +10,13 @@
     <style>
         /* ========== GAME UI STYLES ========== */
         :root {
-            --bg: #0a0a1a;
-            --bg-card: #141428;
-            --bg-panel: #1a1a2e;
-            --gold: #f0c040;
-            --gold-dark: #b8860b;
-            --text: #e0e0e0;
-            --text-dim: #888;
+            --bg: #FFF5E6;
+            --bg-card: #FFE8CC;
+            --bg-panel: rgba(255,220,180,0.6);
+            --gold: #D4820A;
+            --gold-dark: #A06800;
+            --text: #2D1B00;
+            --text-dim: #8B6914;
             --rarity-common: #aaaaaa;
             --rarity-rare: #4488ff;
             --rarity-epic: #aa44ff;
@@ -39,7 +39,7 @@
         .game-header {
             display: flex; align-items: center; justify-content: space-between;
             padding: 12px 20px; background: var(--bg-panel);
-            border-bottom: 2px solid rgba(240,192,64,0.2);
+            border-bottom: 2px solid rgba(212,130,10,0.2);
             position: sticky; top: 0; z-index: 100;
         }
         .game-logo { font-family: 'Press Start 2P'; font-size: 12px; color: var(--gold); }
@@ -57,7 +57,7 @@
         /* Nav Tabs */
         .game-nav {
             display: flex; gap: 4px; padding: 8px 16px;
-            background: #0d0d1f; border-bottom: 1px solid rgba(255,255,255,0.05);
+            background: rgba(255,220,180,0.4); border-bottom: 1px solid rgba(139,105,20,0.15);
             overflow-x: auto;
         }
         .nav-btn {
@@ -66,8 +66,8 @@
             padding: 8px 14px; cursor: pointer; border-radius: 6px;
             transition: all 0.2s; white-space: nowrap;
         }
-        .nav-btn:hover { color: var(--text); background: rgba(255,255,255,0.05); }
-        .nav-btn.active { color: var(--gold); background: rgba(240,192,64,0.1); }
+        .nav-btn:hover { color: var(--text); background: rgba(139,105,20,0.08); }
+        .nav-btn.active { color: var(--gold); background: rgba(212,130,10,0.1); }
 
         /* Screen container */
         .screen { display: none; padding: 16px; max-width: 900px; margin: 0 auto; }
@@ -75,11 +75,11 @@
 
         /* Cards */
         .card {
-            background: var(--bg-card); border: 2px solid rgba(255,255,255,0.08);
+            background: var(--bg-card); border: 2px solid rgba(139,105,20,0.15);
             border-radius: 8px; padding: 12px; cursor: pointer;
             transition: all 0.2s; position: relative;
         }
-        .card:hover { transform: translateY(-2px); border-color: rgba(240,192,64,0.3); }
+        .card:hover { transform: translateY(-2px); border-color: rgba(212,130,10,0.3); }
         .card.common { border-color: var(--rarity-common); }
         .card.rare { border-color: var(--rarity-rare); }
         .card.epic { border-color: var(--rarity-epic); }
@@ -99,24 +99,24 @@
             background: linear-gradient(135deg, var(--gold), var(--gold-dark));
             color: #000; font-weight: 700;
         }
-        .btn-gold:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(240,192,64,0.3); }
+        .btn-gold:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(212,130,10,0.3); }
         .btn-gold:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        .btn-secondary { background: rgba(255,255,255,0.05); color: var(--text-dim); border-color: rgba(255,255,255,0.1); }
-        .btn-secondary:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+        .btn-secondary { background: rgba(139,105,20,0.08); color: var(--text-dim); border-color: rgba(139,105,20,0.15); }
+        .btn-secondary:hover { color: var(--text); border-color: rgba(139,105,20,0.25); }
 
         /* Battle Screen */
         .battle-canvas-wrap { position: relative; margin-bottom: 12px; }
-        #battle-canvas { width: 100%; max-width: 600px; display: block; margin: 0 auto; border-radius: 8px; border: 2px solid rgba(255,255,255,0.1); image-rendering: pixelated; }
+        #battle-canvas { width: 100%; max-width: 600px; display: block; margin: 0 auto; border-radius: 8px; border: 2px solid rgba(139,105,20,0.15); image-rendering: pixelated; }
         .battle-controls { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
         .speed-controls { display: flex; gap: 4px; margin-left: auto; }
-        .speed-btn { font-size: 8px; padding: 6px 10px; background: rgba(255,255,255,0.05); color: var(--text-dim); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; cursor: pointer; }
+        .speed-btn { font-size: 8px; padding: 6px 10px; background: rgba(139,105,20,0.08); color: var(--text-dim); border: 1px solid rgba(139,105,20,0.15); border-radius: 4px; cursor: pointer; }
         .speed-btn.active { background: var(--gold); color: #000; border-color: var(--gold); }
         .battle-progress { margin-bottom: 12px; }
-        .progress-bar { width: 100%; height: 6px; background: #222; border-radius: 3px; overflow: hidden; }
+        .progress-bar { width: 100%; height: 6px; background: rgba(139,105,20,0.15); border-radius: 3px; overflow: hidden; }
         .progress-fill { height: 100%; background: linear-gradient(90deg, var(--gold), #ff8800); transition: width 0.3s; }
         .progress-info { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-dim); margin-top: 4px; }
         .battle-log {
-            background: #0d0d1f; border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(255,220,180,0.4); border: 1px solid rgba(139,105,20,0.15);
             border-radius: 6px; padding: 10px; max-height: 200px; overflow-y: auto;
             font-size: 9px; line-height: 1.6;
         }
@@ -131,14 +131,14 @@
         /* Heroes Screen */
         .heroes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
         .hero-detail {
-            background: var(--bg-panel); border: 2px solid rgba(240,192,64,0.2);
+            background: var(--bg-panel); border: 2px solid rgba(212,130,10,0.2);
             border-radius: 8px; padding: 16px; display: none;
         }
         .hero-detail.show { display: block; }
         .hero-detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
         .hero-detail-name { font-family: 'Press Start 2P'; font-size: 12px; }
         .hero-detail-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; font-size: 10px; margin-bottom: 12px; }
-        .stat-row { display: flex; justify-content: space-between; padding: 4px 8px; background: rgba(255,255,255,0.03); border-radius: 4px; }
+        .stat-row { display: flex; justify-content: space-between; padding: 4px 8px; background: rgba(139,105,20,0.06); border-radius: 4px; }
         .stat-label { color: var(--text-dim); }
         .stat-value { color: var(--gold); font-weight: 700; }
         .hero-detail-skill { background: rgba(170,68,255,0.1); border: 1px solid rgba(170,68,255,0.2); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; }
@@ -146,7 +146,7 @@
 
         /* Formation Screen */
         .formation-legend {
-            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(139,105,20,0.06); border: 1px solid rgba(139,105,20,0.15);
             border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; font-size: 9px;
         }
         .legend-item { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
@@ -154,12 +154,12 @@
         #formation-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
         .grid-cell {
             width: 100px; min-height: 110px; background: var(--bg-card);
-            border: 2px dashed rgba(255,255,255,0.1); border-radius: 8px;
+            border: 2px dashed rgba(139,105,20,0.15); border-radius: 8px;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             position: relative; transition: all 0.2s; cursor: pointer;
         }
-        .grid-cell.occupied { border-style: solid; border-color: rgba(240,192,64,0.3); }
-        .grid-cell.drag-over { border-color: var(--gold); background: rgba(240,192,64,0.1); }
+        .grid-cell.occupied { border-style: solid; border-color: rgba(212,130,10,0.3); }
+        .grid-cell.drag-over { border-color: var(--gold); background: rgba(212,130,10,0.1); }
         .row-label { font-size: 7px; color: var(--text-dim); margin-bottom: 4px; }
         .cell-sprite { image-rendering: pixelated; }
         .cell-name { font-size: 7px; color: var(--text); margin-top: 2px; }
@@ -168,10 +168,10 @@
         #bench-heroes { display: flex; gap: 8px; flex-wrap: wrap; }
         .bench-card {
             width: 70px; padding: 8px; background: var(--bg-card);
-            border: 1px solid rgba(255,255,255,0.08); border-radius: 6px;
+            border: 1px solid rgba(139,105,20,0.15); border-radius: 6px;
             text-align: center; cursor: grab; transition: all 0.2s;
         }
-        .bench-card:hover { border-color: rgba(240,192,64,0.3); }
+        .bench-card:hover { border-color: rgba(212,130,10,0.3); }
         .synergies-section { margin-top: 16px; }
         .synergy-title { font-family: 'Press Start 2P'; font-size: 8px; color: var(--text-dim); margin-bottom: 8px; }
         #synergy-list { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -182,19 +182,19 @@
 
         /* Inventory Screen */
         .inv-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
-        .inv-tab { font-size: 9px; padding: 6px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; cursor: pointer; color: var(--text-dim); }
-        .inv-tab.active { background: rgba(240,192,64,0.1); border-color: var(--gold); color: var(--gold); }
+        .inv-tab { font-size: 9px; padding: 6px 14px; background: rgba(139,105,20,0.08); border: 1px solid rgba(139,105,20,0.15); border-radius: 4px; cursor: pointer; color: var(--text-dim); }
+        .inv-tab.active { background: rgba(212,130,10,0.1); border-color: var(--gold); color: var(--gold); }
         #inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 
         /* Shop Screen */
         .shop-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
-        .shop-tab { font-size: 9px; padding: 6px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; cursor: pointer; color: var(--text-dim); }
-        .shop-tab.active { background: rgba(240,192,64,0.1); border-color: var(--gold); color: var(--gold); }
+        .shop-tab { font-size: 9px; padding: 6px 14px; background: rgba(139,105,20,0.08); border: 1px solid rgba(139,105,20,0.15); border-radius: 4px; cursor: pointer; color: var(--text-dim); }
+        .shop-tab.active { background: rgba(212,130,10,0.1); border-color: var(--gold); color: var(--gold); }
         #shop-content { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
 
         /* Blockchain / Wallet Section */
         .wallet-section {
-            background: var(--bg-panel); border: 2px solid rgba(240,192,64,0.15);
+            background: var(--bg-panel); border: 2px solid rgba(212,130,10,0.15);
             border-radius: 8px; padding: 16px; margin-top: 16px;
         }
         .wallet-title { font-family: 'Press Start 2P'; font-size: 10px; color: var(--gold); margin-bottom: 8px; }
@@ -206,7 +206,7 @@
         .tutorial-overlay { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
         .tutorial-overlay.active { opacity: 1; }
         .tutorial-overlay.fade-out { opacity: 0; }
-        .tutorial-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.7); }
+        .tutorial-backdrop { position: absolute; inset: 0; background: rgba(60,30,0,0.5); }
         .tutorial-tooltip {
             position: relative; z-index: 1; background: var(--bg-panel);
             border: 2px solid var(--gold); border-radius: 12px; padding: 24px;
@@ -219,32 +219,32 @@
         .tutorial-btn-back, .tutorial-btn-next, .tutorial-btn-finish, .tutorial-btn-skip {
             font-size: 8px; padding: 8px 16px; border-radius: 4px; cursor: pointer;
         }
-        .tutorial-btn-skip { background: none; border: 1px solid rgba(255,255,255,0.2); color: var(--text-dim); }
-        .tutorial-highlight { position: relative; z-index: 10000; box-shadow: 0 0 0 4px var(--gold), 0 0 20px rgba(240,192,64,0.4); border-radius: 8px; }
+        .tutorial-btn-skip { background: none; border: 1px solid rgba(139,105,20,0.25); color: var(--text-dim); }
+        .tutorial-highlight { position: relative; z-index: 10000; box-shadow: 0 0 0 4px var(--gold), 0 0 20px rgba(212,130,10,0.4); border-radius: 8px; }
         .tutorial-ring { position: absolute; z-index: 9999; border: 3px solid var(--gold); border-radius: 8px; pointer-events: none; animation: tutorial-pulse 1.5s ease-in-out infinite; }
         @keyframes tutorial-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
         /* Stat Bars in Cards */
         .card-stat-row { display:flex; align-items:center; gap:4px; margin:2px 0; }
-        .card-stat-label { width:22px; font-size:6px; color:#888; text-align:right; }
-        .card-stat-bar-bg { flex:1; height:4px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; }
+        .card-stat-label { width:22px; font-size:6px; color:#8B6914; text-align:right; }
+        .card-stat-bar-bg { flex:1; height:4px; background:rgba(139,105,20,0.1); border-radius:2px; overflow:hidden; }
         .card-stat-bar-fill { height:100%; border-radius:2px; transition: width 0.5s ease; }
         .card-stat-val { width:22px; font-size:7px; font-weight:700; text-align:right; }
         .card-power { text-align:center; margin-top:4px; font-size:7px; color:var(--gold); font-weight:700; }
 
         /* Pack Opening — Premium */
         #pack-modal {
-            position: fixed; inset: 0; z-index: 9998; background: rgba(0,0,0,0.95);
+            position: fixed; inset: 0; z-index: 9998; background: rgba(60,30,0,0.9);
             display: none; align-items: center; justify-content: center; flex-direction: column; gap: 16px;
         }
         #pack-modal.show { display: flex; }
         #pack-title { font-family: 'Press Start 2P'; font-size: 14px; color: var(--gold); }
         #pack-box {
-            width: 200px; height: 280px; background: linear-gradient(135deg, #2a1f4e, #1a1a3e);
+            width: 200px; height: 280px; background: linear-gradient(135deg, #C49A5C, #A07830);
             border: 3px solid var(--gold); border-radius: 16px; cursor: pointer;
             display: flex; align-items: center; justify-content: center;
             transition: transform 0.3s, box-shadow 0.3s;
-            box-shadow: 0 0 40px rgba(240,192,64,0.3), inset 0 0 30px rgba(240,192,64,0.05);
+            box-shadow: 0 0 40px rgba(212,130,10,0.3), inset 0 0 30px rgba(212,130,10,0.05);
             position: relative; overflow: hidden;
         }
         #pack-box::before {
@@ -253,14 +253,14 @@
             z-index: -1; animation: pack-border-spin 3s linear infinite; opacity: 0.6;
         }
         #pack-box::after {
-            content: ''; position: absolute; inset: 2px; background: linear-gradient(135deg, #2a1f4e, #1a1a3e);
+            content: ''; position: absolute; inset: 2px; background: linear-gradient(135deg, #C49A5C, #A07830);
             border-radius: 14px; z-index: -1;
         }
         @keyframes pack-border-spin { to { transform: rotate(360deg); } }
-        #pack-box:hover { transform: scale(1.05); box-shadow: 0 0 60px rgba(240,192,64,0.5); }
+        #pack-box:hover { transform: scale(1.05); box-shadow: 0 0 60px rgba(212,130,10,0.5); }
         #pack-box.opened {
             transform: scale(1.5) rotateY(180deg); opacity: 0;
-            box-shadow: 0 0 120px rgba(240,192,64,0.8); pointer-events: none;
+            box-shadow: 0 0 120px rgba(212,130,10,0.8); pointer-events: none;
             transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         #pack-hint { font-size: 10px; color: var(--text-dim); animation: pack-pulse 2s ease-in-out infinite; }
@@ -268,7 +268,7 @@
         #pack-cards { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; perspective: 800px; }
         #pack-cards .card {
             animation: card-reveal 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
-            box-shadow: 0 0 20px rgba(240,192,64,0.3);
+            box-shadow: 0 0 20px rgba(212,130,10,0.3);
         }
         @keyframes card-reveal {
             0% { transform: scale(0) rotateY(180deg); opacity: 0; filter: brightness(3); }
@@ -284,17 +284,17 @@
 
         /* Loading Screen */
         #loading-screen {
-            position: fixed; inset: 0; z-index: 99999; background: #0a0a1a;
+            position: fixed; inset: 0; z-index: 99999; background: #FFF5E6;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             transition: opacity 0.8s ease;
         }
         #loading-screen.fade-out { opacity: 0; pointer-events: none; }
         #loading-screen .logo-text {
             font-family: 'Press Start 2P'; font-size: 20px; color: var(--gold);
-            margin-bottom: 24px; text-shadow: 0 0 20px rgba(240,192,64,0.5);
+            margin-bottom: 24px; text-shadow: 0 0 20px rgba(212,130,10,0.5);
         }
         #loading-bar-outer {
-            width: 260px; height: 8px; background: rgba(255,255,255,0.06);
+            width: 260px; height: 8px; background: rgba(139,105,20,0.1);
             border-radius: 4px; overflow: hidden; margin-bottom: 16px;
         }
         #loading-bar-inner {
@@ -308,7 +308,7 @@
 
         /* Unlock Popup */
         .unlock-popup {
-            position: fixed; inset: 0; z-index: 9997; background: rgba(0,0,0,0.8);
+            position: fixed; inset: 0; z-index: 9997; background: rgba(60,30,0,0.6);
             display: flex; align-items: center; justify-content: center;
         }
         .unlock-content {
@@ -320,8 +320,8 @@
         #toast-container { position: fixed; top: 16px; right: 16px; z-index: 99999; display: flex; flex-direction: column; gap: 8px; }
         .toast {
             font-size: 10px; padding: 10px 16px; border-radius: 6px;
-            background: var(--bg-panel); border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4); animation: toastIn 0.3s ease-out;
+            background: var(--bg-panel); border: 1px solid rgba(139,105,20,0.15);
+            box-shadow: 0 4px 12px rgba(60,30,0,0.3); animation: toastIn 0.3s ease-out;
         }
         .toast.success { border-color: #44cc44; color: #44cc44; }
         .toast.error { border-color: #ff4444; color: #ff4444; }
@@ -333,7 +333,7 @@
         .hero-locked::after {
             content: '🔒 Lv.' attr(data-unlock-level);
             position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-            background: rgba(0,0,0,0.6); font-size: 10px; color: var(--gold);
+            background: rgba(60,30,0,0.5); font-size: 10px; color: var(--gold);
             font-family: 'Press Start 2P';
         }
 

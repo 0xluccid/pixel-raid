@@ -8,8 +8,17 @@ const Tutorial = {
     step: 0,
     overlay: null,
     highlightEl: null,
+    chosenClass: null,
+    chosenName: '',
 
     STEPS: [
+        {
+            id: 'character_creation',
+            title: '⚔️ Create Your Character',
+            text: '', // Custom render — no text needed
+            target: null,
+            position: 'center',
+        },
         {
             id: 'welcome',
             title: '⚔️ Welcome to Pixel Raid!',
@@ -20,7 +29,7 @@ const Tutorial = {
         {
             id: 'meet_heroes',
             title: '🃏 Your Starter Heroes',
-            text: 'You got 3 heroes to start:\n\n🗡️ Iron Knight — Tanky warrior\n🔮 Fire Mage — AOE damage\n💚 Holy Priest — Healer\n\nThey\'re already in your deck!',
+            text: '', // Will be dynamically filled based on class choice
             target: null,
             position: 'center',
         },
@@ -83,7 +92,7 @@ const Tutorial = {
         {
             id: 'ready',
             title: '🚀 You\'re Ready!',
-            text: 'That\'s everything you need to know!\n\nQuick tips:\n• Win stages to earn gold & cards\n• Open packs to expand collection\n• Equip gear to boost stats\n• Level up to unlock rare heroes\n• Build synergies for bonus power\n\nGood luck, Adventurer! ⚔️',
+            text: '', // Will be dynamically filled
             target: null,
             position: 'center',
         },
@@ -93,6 +102,8 @@ const Tutorial = {
         if (GameState.stats.battlesWon > 0) return; // Skip if already played
         this.active = true;
         this.step = 0;
+        this.chosenClass = null;
+        this.chosenName = '';
         this.showStep();
     },
 
@@ -113,6 +124,36 @@ const Tutorial = {
         // Create overlay
         this.overlay = document.createElement('div');
         this.overlay.className = 'tutorial-overlay';
+
+        // Special render for character creation
+        if (step.id === 'character_creation') {
+            this.renderCharacterCreation();
+            document.body.appendChild(this.overlay);
+            requestAnimationFrame(() => {
+                this.overlay.classList.add('active');
+            });
+            return;
+        }
+
+        // Dynamically fill text for steps that depend on player choices
+        if (step.id === 'meet_heroes') {
+            const starterTeam = CLASS_STARTER_MAP[this.chosenClass];
+            if (starterTeam) {
+                const heroList = starterTeam.heroes.map(name => {
+                    const tmpl = CARD_TEMPLATES.find(t => t.name === name);
+                    const emoji = tmpl ? CLASSES[tmpl.cls]?.emoji : '🗡️';
+                    const desc = tmpl ? tmpl.skill.name : '';
+                    return `${emoji} ${name} — ${desc}`;
+                }).join('\n');
+                step.text = `Your ${CLASSES[this.chosenClass]?.name || this.chosenClass} starter team:\n\n${heroList}\n\nThey're already in your deck!`;
+            }
+        }
+
+        if (step.id === 'ready') {
+            const className = CLASSES[this.chosenClass]?.name || this.chosenClass;
+            const classEmoji = CLASSES[this.chosenClass]?.emoji || '⚔️';
+            step.text = `That's everything you need to know, ${this.chosenName}!\n\nYour ${classEmoji} ${className} journey begins now.\n\nQuick tips:\n• Win stages to earn gold & cards\n• Open packs to expand collection\n• Equip gear to boost stats\n• Level up to unlock rare heroes\n• Build synergies for bonus power\n\nGood luck, ${this.chosenName}! ⚔️`;
+        }
 
         // Highlight target element
         let targetRect = null;
@@ -173,6 +214,229 @@ const Tutorial = {
         });
     },
 
+    renderCharacterCreation() {
+        const classes = [
+            { key: 'warrior', emoji: '⚔️', name: 'Warrior', color: '#ff6644',
+              desc: 'Tanky fighters with high DEF.\nYour team focuses on survival and steady damage.',
+              heroes: CLASS_STARTER_MAP.warrior.heroes },
+            { key: 'mage', emoji: '🔮', name: 'Mage', color: '#8844ff',
+              desc: 'Powerful magic damage dealers.\nYour team devastates enemies with AOE spells.',
+              heroes: CLASS_STARTER_MAP.mage.heroes },
+            { key: 'archer', emoji: '🏹', name: 'Archer', color: '#44cc88',
+              desc: 'Swift ranged attackers with high SPD.\nYour team strikes fast from a distance.',
+              heroes: CLASS_STARTER_MAP.archer.heroes },
+        ];
+
+        const classCards = classes.map(c => {
+            const heroEmojis = c.heroes.map(h => {
+                const tmpl = CARD_TEMPLATES.find(t => t.name === h);
+                return tmpl ? CLASSES[tmpl.cls]?.emoji || '🗡️' : '🗡️';
+            });
+            return `
+                <div class="cc-class-card" data-class="${c.key}" style="border-color: ${c.color}40;">
+                    <div class="cc-class-emoji">${c.emoji}</div>
+                    <div class="cc-class-name" style="color: ${c.color};">${c.name}</div>
+                    <div class="cc-class-desc">${c.desc.replace(/\n/g, '<br>')}</div>
+                    <div class="cc-class-heroes">
+                        ${c.heroes.map((h, i) => `<span class="cc-hero-tag">${heroEmojis[i]} ${h}</span>`).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        this.overlay.innerHTML = `
+            <div class="tutorial-backdrop"></div>
+            <div class="tutorial-tooltip center" style="max-width: 480px;">
+                <div class="tutorial-title">⚔️ Create Your Character</div>
+                <div class="tutorial-text" style="margin-bottom: 12px;">
+                    Choose your name and class to begin your adventure!
+                </div>
+                <div class="cc-name-section">
+                    <label style="font-size: 9px; color: var(--text-dim); display: block; margin-bottom: 4px;">YOUR NAME</label>
+                    <input type="text" id="cc-name-input" class="cc-name-input"
+                           placeholder="Enter your name..." maxlength="16" value="${this.chosenName}">
+                </div>
+                <div class="cc-classes-section">
+                    <label style="font-size: 9px; color: var(--text-dim); display: block; margin-bottom: 8px;">CHOOSE YOUR CLASS</label>
+                    <div class="cc-class-grid">
+                        ${classCards}
+                    </div>
+                </div>
+                <div class="tutorial-buttons" style="margin-top: 16px;">
+                    <button class="btn btn-gold tutorial-btn-confirm" disabled>⚔️ Begin Adventure!</button>
+                </div>
+                <button class="btn tutorial-btn-skip" style="margin-top: 8px;">Skip Tutorial</button>
+            </div>
+            <style>
+                .cc-name-input {
+                    font-family: 'Press Start 2P', monospace;
+                    font-size: 10px;
+                    padding: 10px 14px;
+                    background: rgba(255,255,255,0.05);
+                    border: 2px solid rgba(255,255,255,0.15);
+                    border-radius: 6px;
+                    color: var(--gold);
+                    width: 100%;
+                    text-align: center;
+                    outline: none;
+                    transition: border-color 0.2s;
+                }
+                .cc-name-input:focus {
+                    border-color: var(--gold);
+                }
+                .cc-name-input::placeholder {
+                    color: var(--text-dim);
+                }
+                .cc-class-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: 8px;
+                }
+                .cc-class-card {
+                    background: rgba(255,255,255,0.03);
+                    border: 2px solid rgba(255,255,255,0.1);
+                    border-radius: 8px;
+                    padding: 12px 8px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    text-align: center;
+                }
+                .cc-class-card:hover {
+                    transform: translateY(-2px);
+                    background: rgba(255,255,255,0.06);
+                }
+                .cc-class-card.selected {
+                    border-color: var(--gold) !important;
+                    background: rgba(240,192,64,0.1);
+                    box-shadow: 0 0 16px rgba(240,192,64,0.2);
+                }
+                .cc-class-emoji {
+                    font-size: 28px;
+                    margin-bottom: 4px;
+                }
+                .cc-class-name {
+                    font-family: 'Press Start 2P';
+                    font-size: 9px;
+                    margin-bottom: 4px;
+                }
+                .cc-class-desc {
+                    font-size: 8px;
+                    color: var(--text-dim);
+                    line-height: 1.5;
+                    margin-bottom: 6px;
+                }
+                .cc-class-heroes {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+                }
+                .cc-hero-tag {
+                    font-size: 7px;
+                    color: var(--text);
+                    background: rgba(255,255,255,0.04);
+                    padding: 2px 4px;
+                    border-radius: 3px;
+                }
+                .tutorial-btn-confirm:disabled {
+                    opacity: 0.4;
+                    cursor: not-allowed;
+                    transform: none;
+                    box-shadow: none;
+                }
+                @media (max-width: 500px) {
+                    .cc-class-grid {
+                        grid-template-columns: 1fr;
+                    }
+                }
+            </style>
+        `;
+
+        // Bind class card selection
+        const classCardsEls = this.overlay.querySelectorAll('.cc-class-card');
+        classCardsEls.forEach(card => {
+            card.addEventListener('click', () => {
+                classCardsEls.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                this.chosenClass = card.dataset.class;
+                this._updateConfirmBtn();
+            });
+        });
+
+        // Bind name input
+        const nameInput = this.overlay.querySelector('#cc-name-input');
+        nameInput.addEventListener('input', () => {
+            this.chosenName = nameInput.value.trim();
+            this._updateConfirmBtn();
+        });
+
+        // Bind confirm button
+        this.overlay.querySelector('.tutorial-btn-confirm').addEventListener('click', () => {
+            this._confirmCharacterCreation();
+        });
+
+        // Bind skip button
+        this.overlay.querySelector('.tutorial-btn-skip').addEventListener('click', () => {
+            this.end();
+        });
+
+        // Re-select if previously chosen
+        if (this.chosenClass) {
+            const prev = this.overlay.querySelector(`.cc-class-card[data-class="${this.chosenClass}"]`);
+            if (prev) prev.classList.add('selected');
+        }
+        this._updateConfirmBtn();
+    },
+
+    _updateConfirmBtn() {
+        const btn = this.overlay?.querySelector('.tutorial-btn-confirm');
+        if (btn) {
+            btn.disabled = !(this.chosenName && this.chosenClass);
+        }
+    },
+
+    _confirmCharacterCreation() {
+        if (!this.chosenName || !this.chosenClass) return;
+
+        // Store name
+        GameState.player.name = this.chosenName;
+
+        // Give starter heroes based on class choice
+        const starterTeam = CLASS_STARTER_MAP[this.chosenClass];
+        if (starterTeam) {
+            // Clear any existing deck/collection (fresh game)
+            GameState.collection = [];
+            GameState.deck = [];
+
+            starterTeam.heroes.forEach(heroName => {
+                const tmpl = CARD_TEMPLATES.find(t => t.name === heroName);
+                if (tmpl) {
+                    const card = generateCard(tmpl, 'common');
+                    GameState.addToCollection(card);
+                    GameState.deck.push(card.id);
+                    card.inDeck = true;
+                }
+            });
+        }
+
+        // Give starter items if not already given
+        if (!GameState.inventory || GameState.inventory.length === 0) {
+            const starterSword = createItem(ITEM_TEMPLATES.find(t => t.name === 'Rusty Sword'));
+            const starterArmor = createItem(ITEM_TEMPLATES.find(t => t.name === 'Leather Vest'));
+            if (starterSword) GameState.addItem(starterSword);
+            if (starterArmor) GameState.addItem(starterArmor);
+        }
+
+        GameState.save();
+        console.log(`🎮 Character created: ${this.chosenName} (${this.chosenClass})`);
+
+        // Update header display
+        const nameEl = document.getElementById('player-name');
+        if (nameEl) nameEl.textContent = this.chosenName;
+
+        // Advance to next step
+        this.next();
+    },
+
     next() {
         this.step++;
         this.showStep();
@@ -196,5 +460,10 @@ const Tutorial = {
         }
         GameState.stats.tutorialDone = true;
         GameState.save();
+
+        // Refresh UI with final state
+        if (typeof UI !== 'undefined' && UI.updateHeader) {
+            UI.updateHeader();
+        }
     },
 };

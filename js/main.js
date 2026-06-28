@@ -10,27 +10,14 @@
     const hasSave = GameState.load();
     
     if (!hasSave) {
-        // Give starter cards — 3 basic heroes for onboarding
-        console.log('🎮 New game! Generating starter cards...');
-        
-        STARTER_HEROES.forEach(heroName => {
-            const tmpl = CARD_TEMPLATES.find(t => t.name === heroName);
-            if (tmpl) {
-                const card = generateCard(tmpl, 'common');
-                GameState.addToCollection(card);
-                GameState.deck.push(card.id);
-                card.inDeck = true;
-            }
-        });
+        // Starter cards are now given by the Tutorial character creation step
+        // Only init basic player data here
+        console.log('🎮 New game! Tutorial will handle character creation...');
 
-        // Give starter items
-        const starterSword = createItem(ITEM_TEMPLATES.find(t => t.name === 'Rusty Sword'));
-        const starterArmor = createItem(ITEM_TEMPLATES.find(t => t.name === 'Leather Vest'));
-        GameState.addItem(starterSword);
-        GameState.addItem(starterArmor);
+        // Init empty inventory if needed
+        if (!GameState.inventory) GameState.inventory = [];
 
         GameState.save();
-        console.log('✅ Starter deck ready: Iron Knight, Fire Mage, Holy Priest');
     }
 
     // Init UI

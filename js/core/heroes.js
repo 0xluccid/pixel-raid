@@ -131,6 +131,14 @@ const CARD_TEMPLATES = [
 // ===== STARTER PACK — 3 heroes untuk onboarding =====
 const STARTER_HEROES = ['Iron Knight', 'Fire Mage', 'Holy Priest'];
 
+// ===== CLASS-BASED STARTER TEAMS =====
+// Each class choice gives 3 starter heroes
+const CLASS_STARTER_MAP = {
+    warrior: { heroes: ['Iron Knight', 'Paladin', 'Holy Priest'],   desc: 'Tanky defensive team' },
+    mage:    { heroes: ['Fire Mage', 'Ice Witch', 'Holy Priest'],   desc: 'Devastating magic damage' },
+    archer:  { heroes: ['Wind Ranger', 'Shadow Sniper', 'Holy Priest'], desc: 'Swift ranged DPS' },
+};
+
 // ===== LEVEL UNLOCK SYSTEM =====
 // Setiap level unlock hero baru (rarity common)
 const LEVEL_UNLOCKS = {
