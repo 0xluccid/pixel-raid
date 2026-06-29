@@ -81,6 +81,14 @@ const UI = {
             btn.textContent = GameState.autoNext ? '⏹️ Stop Auto' : '🔄 Auto Next Stage';
         });
 
+        // End Turn button
+        const endTurnBtn = document.getElementById('btn-end-turn');
+        if (endTurnBtn) {
+            endTurnBtn.addEventListener('click', () => {
+                BattleEngine.endTurn();
+            });
+        }
+
         // Pause button
         const pauseBtn = document.getElementById('btn-pause');
         if (pauseBtn) {
@@ -110,17 +118,31 @@ const UI = {
     },
 
     startBattle() {
+        // 1v1 Card Battle: pick 1 hero + skill cards from deck
         const deckCards = GameState.getDeckCards();
         if (deckCards.length === 0) {
-            this.toast('Build your deck first! Go to Formation.', 'error');
+            this.toast('Build your deck first! Go to Heroes.', 'error');
             return;
         }
 
+        // Pick first hero in deck as active battle hero
+        const playerHero = deckCards[0];
+
+        // Get skill card IDs for the player
+        let playerSkillIds = GameState.skillDeck.slice();
+        // If no skill deck built, use default starter skill cards
+        if (playerSkillIds.length === 0) {
+            playerSkillIds = STARTER_SKILL_CARDS.slice(0, 5).map(c => c.id);
+        }
+
+        // Generate enemy: 1 hero + skill cards
+        const stage = GameState.player.stage;
+        const enemyDeck = GameState.generateEnemyDeck(stage);
+        const enemyHero = enemyDeck[0]; // pick first generated enemy
+        const enemySkillIds = GameState.generateEnemySkillDeck(stage);
+
         // Clear battle log
         document.getElementById('battle-log').innerHTML = '';
-        
-        const stage = GameState.player.stage;
-        const enemies = GameState.generateEnemyDeck(stage);
         
         document.getElementById('btn-start-battle').disabled = true;
 
@@ -132,38 +154,14 @@ const UI = {
             this.renderTurnOrder();
         };
 
-        // Canvas click for enemy info
+        // Canvas click for hero info
         const canvas = document.getElementById('battle-canvas');
         canvas.onclick = (e) => {
             if (!BattleEngine.isRunning) return;
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            const mx = (e.clientX - rect.left) * scaleX;
-            const my = (e.clientY - rect.top) * scaleY;
-            // Check enemy positions (right side)
-            for (const enemy of BattleEngine.enemyTeam) {
-                if (!enemy.alive) continue;
-                const ex = canvas.width - 80 - enemy.position * 90;
-                const ey = canvas.height * 0.32;
-                if (Math.abs(mx - ex) < 45 && Math.abs(my - ey) < 50) {
-                    this.showEnemyInfo(enemy);
-                    return;
-                }
-            }
-            // Check ally positions (left side)
-            for (const ally of BattleEngine.allyTeam) {
-                if (!ally.alive) continue;
-                const ax = 80 + ally.position * 90;
-                const ay = canvas.height * 0.32;
-                if (Math.abs(mx - ax) < 45 && Math.abs(my - ay) < 50) {
-                    this.showEnemyInfo(ally);
-                    return;
-                }
-            }
+            this.showEnemyInfo(BattleEngine.isPlayerTurn ? BattleEngine.enemy.hero : BattleEngine.player.hero);
         };
 
-        BattleEngine.startBattle(deckCards, enemies, (result, log, turns) => {
+        BattleEngine.startBattle(playerHero, playerSkillIds, enemyHero, enemySkillIds, (result, log, turns) => {
             document.getElementById('btn-start-battle').disabled = false;
             // Hide pause button after battle
             if (pauseBtn) pauseBtn.style.display = 'none';
@@ -175,12 +173,8 @@ const UI = {
                 // Process wave
                 if (GameState.player.wave < GameState.player.maxWave) {
                     GameState.player.wave++;
-                    // Show wave transition overlay for next wave
-                    setTimeout(() => BattleEngine.showWaveOverlay(GameState.player.wave), 300);
                 } else {
                     // Stage complete!
-                    // Show stage clear celebration
-                    BattleEngine.showStageClearOverlay();
                     const rewards = Economy.processStageReward(stage);
                     GameState.player.stage++;
                     GameState.player.wave = 1;

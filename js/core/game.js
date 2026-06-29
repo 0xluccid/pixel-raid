@@ -13,8 +13,9 @@ const GameState = {
         wave: 1,
         maxWave: 3,
     },
-    collection: [],     // all owned cards
-    deck: [],           // 5 cards in active deck (card ids)
+    collection: [],     // all owned hero cards
+    deck: [],           // 1 hero in active deck (card id) — for 1v1 battles
+    skillDeck: [],      // 5-8 skill card ids in active skill deck
     inventory: [],      // all owned items
     equippedItems: {},  // { cardId: { weapon: itemId, armor: itemId, accessory: itemId } }
     
@@ -37,6 +38,7 @@ const GameState = {
             player: this.player,
             collection: this.collection,
             deck: this.deck,
+            skillDeck: this.skillDeck,
             inventory: this.inventory,
             equippedItems: this.equippedItems,
             stats: this.stats,
@@ -54,6 +56,7 @@ const GameState = {
             Object.assign(this.player, data.player);
             this.collection = data.collection || [];
             this.deck = data.deck || [];
+            this.skillDeck = data.skillDeck || [];
             this.inventory = data.inventory || [];
             this.equippedItems = data.equippedItems || {};
             Object.assign(this.stats, data.stats || {});
@@ -72,6 +75,21 @@ const GameState = {
 
     getDeckCards() {
         return this.deck.map(id => this.getCardById(id)).filter(Boolean);
+    },
+
+    getSkillDeckCards() {
+        return this.skillDeck.map(id => getSkillCardById(id)).filter(Boolean);
+    },
+
+    generateEnemySkillDeck(stage) {
+        // Generate 5 random skill cards for enemy, scaled by stage
+        const count = Math.min(5, Math.ceil(stage / 3) + 2);
+        const ids = [];
+        const pool = STARTER_SKILL_CARDS.map(c => c.id);
+        for (let i = 0; i < count; i++) {
+            ids.push(pool[Math.floor(Math.random() * pool.length)]);
+        }
+        return ids;
     },
 
     addToCollection(card) {

@@ -251,6 +251,93 @@
         .battle-log {
             display: none; /* Hidden — battle log stored internally for rewards only */
         }
+
+        /* ===== CARD BATTLE UI — Phase/Mana/Hand ===== */
+        .battle-hero-row { display: flex; justify-content: center; padding: 4px 12px; }
+        .battle-hero-row.enemy-row { margin-bottom: 4px; }
+        .battle-hero-row.player-row { margin-top: 4px; }
+        .battle-hero-info { text-align: center; min-width: 200px; }
+        .battle-hero-name { font-family: 'Press Start 2P', monospace; font-size: 10px; color: var(--gold); margin-bottom: 4px; }
+        .hp-bar-wrap { display: flex; align-items: center; gap: 6px; justify-content: center; }
+        .hp-bar { width: 140px; height: 10px; background: rgba(0,0,0,0.5); border: 1px solid var(--border-pixel); border-radius: 2px; overflow: hidden; }
+        .hp-fill { height: 100%; background: #4CAF50; transition: width 0.3s; }
+        .hp-fill.hp-warning { background: #ff8800; }
+        .hp-fill.hp-critical { background: #e84040; }
+        .hp-text { font-size: 8px; color: var(--text-dim); font-family: 'Silkscreen', monospace; }
+        .hero-stats-line { font-size: 7px; color: var(--text-dim); margin-top: 2px; }
+        .shield-badge { font-size: 8px; color: #4488ff; }
+
+        .battle-info-bar {
+            display: flex; justify-content: center; align-items: center; gap: 16px;
+            padding: 6px 12px; flex-wrap: wrap;
+            background: rgba(14,28,14,0.7); border-top: 1px solid var(--border-pixel); border-bottom: 1px solid var(--border-pixel);
+        }
+        .battle-turn-text { font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--gold); }
+        .battle-phase-text { font-size: 8px; color: var(--green-accent); }
+        .battle-mana-text { font-size: 9px; color: #6688ff; letter-spacing: 1px; }
+        .deck-info { font-size: 7px; color: var(--text-dim); }
+
+        .card-hand-area {
+            display: flex; justify-content: center; gap: 6px; padding: 8px 12px;
+            min-height: 90px; flex-wrap: wrap;
+        }
+
+        #btn-end-turn {
+            font-family: 'Press Start 2P', monospace; font-size: 9px;
+            padding: 6px 20px; display: block !important;
+        }
+
+        /* Card in hand */
+        .hand-card {
+            width: 72px; padding: 6px; border-radius: 4px; cursor: pointer;
+            background: var(--bg-card); border: 2px solid var(--border-pixel);
+            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+            user-select: none; position: relative;
+        }
+        .hand-card:hover { transform: translateY(-6px); box-shadow: 0 6px 16px rgba(0,0,0,0.5); border-color: var(--gold); }
+        .hand-card.disabled { opacity: 0.4; cursor: not-allowed; }
+        .hand-card.disabled:hover { transform: none; box-shadow: none; border-color: var(--border-pixel); }
+        .hand-card .card-name { font-size: 7px; font-family: 'Press Start 2P', monospace; color: var(--text); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .hand-card .card-mana { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: #2244aa; color: #aaccff; font-size: 8px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 1px solid #4466cc; font-family: 'Press Start 2P', monospace; }
+        .hand-card .card-type { font-size: 6px; color: var(--text-dim); text-transform: uppercase; }
+        .hand-card .card-desc { font-size: 6px; color: #88aa88; margin-top: 2px; line-height: 1.3; }
+        .hand-card[data-rarity="common"] { border-color: var(--rarity-common); }
+        .hand-card[data-rarity="rare"] { border-color: var(--rarity-rare); }
+        .hand-card[data-rarity="epic"] { border-color: var(--rarity-epic); }
+        .hand-card[data-rarity="legendary"] { border-color: var(--rarity-legendary); }
+        .hand-card[data-rarity="mythic"] { border-color: var(--rarity-mythic); }
+
+        /* Battle animations */
+        .battle-shake { animation: battleShake 0.3s ease; }
+        .battle-shake-crit { animation: battleShakeCrit 0.5s ease; }
+        .battle-flash-red { animation: flashRed 0.3s ease; }
+        .battle-flash-yellow { animation: flashYellow 0.3s ease; }
+        .battle-heal-glow { animation: healGlow 0.5s ease; }
+        .battle-skill-highlight { animation: skillHighlight 0.8s ease; }
+
+        @keyframes battleShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+        @keyframes battleShakeCrit { 0%,100%{transform:translate(0)} 10%{transform:translate(-6px,-3px)} 30%{transform:translate(6px,3px)} 50%{transform:translate(-4px,2px)} 70%{transform:translate(4px,-2px)} }
+        @keyframes flashRed { 0%{box-shadow:inset 0 0 40px rgba(232,64,64,0.6)} 100%{box-shadow:none} }
+        @keyframes flashYellow { 0%{box-shadow:inset 0 0 40px rgba(255,221,68,0.6)} 100%{box-shadow:none} }
+        @keyframes healGlow { 0%{box-shadow:inset 0 0 30px rgba(68,255,136,0.4)} 100%{box-shadow:none} }
+        @keyframes skillHighlight { 0%{box-shadow:inset 0 0 40px rgba(100,100,255,0.5)} 50%{box-shadow:inset 0 0 20px rgba(100,100,255,0.3)} 100%{box-shadow:none} }
+
+        .battle-damage-num {
+            position: absolute; font-family: 'Press Start 2P', monospace; font-size: 14px;
+            pointer-events: none; z-index: 50; text-shadow: 2px 2px 0 #000, -1px -1px 0 #000;
+            animation: dmgFloat 1.2s ease-out forwards;
+        }
+        @keyframes dmgFloat { 0%{opacity:1;transform:translateY(0) scale(1)} 50%{opacity:1;transform:translateY(-20px) scale(1.1)} 100%{opacity:0;transform:translateY(-40px) scale(0.8)} }
+
+        .battle-overlay {
+            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.6); z-index: 40; animation: overlayIn 0.3s ease;
+        }
+        .battle-overlay-text { font-family: 'Press Start 2P', monospace; font-size: 18px; text-shadow: 3px 3px 0 #000; }
+        .battle-overlay-wave { color: var(--gold); }
+        .battle-overlay-clear { color: #44ff88; }
+        .battle-overlay-defeat { color: #ff4444; }
+        @keyframes overlayIn { from{opacity:0} to{opacity:1} }
         .log-win { color: #44cc44; }
         .log-lose { color: #ff4444; }
         .log-damage { color: #ff8800; }
@@ -836,11 +923,53 @@
 
     <!-- ====== BATTLE SCREEN ====== -->
     <div class="screen active" id="screen-battle">
-        <div class="battle-canvas-wrap">
-            <canvas id="battle-canvas" width="600" height="300"></canvas>
+        <!-- Enemy Hero Display -->
+        <div class="battle-hero-row enemy-row">
+            <div class="battle-hero-info" id="enemy-hero-info">
+                <div class="battle-hero-name" id="enemy-hero-name">Enemy</div>
+                <div class="hp-bar-wrap">
+                    <div class="hp-bar"><div class="hp-fill" id="enemy-hp-fill"></div></div>
+                    <span class="hp-text" id="enemy-hp-text">0 / 0</span>
+                </div>
+                <div class="hero-stats-line" id="enemy-stats-display">ATK:0 DEF:0 SPD:0</div>
+                <span class="shield-badge" id="enemy-shield-display"></span>
+            </div>
         </div>
 
-        <div class="battle-progress">
+        <!-- Battle Canvas -->
+        <div class="battle-canvas-wrap">
+            <canvas id="battle-canvas" width="600" height="250"></canvas>
+        </div>
+
+        <!-- Player Hero Display -->
+        <div class="battle-hero-row player-row">
+            <div class="battle-hero-info" id="player-hero-info">
+                <div class="battle-hero-name" id="player-hero-name">Hero</div>
+                <div class="hp-bar-wrap">
+                    <div class="hp-bar"><div class="hp-fill" id="player-hp-fill"></div></div>
+                    <span class="hp-text" id="player-hp-text">0 / 0</span>
+                </div>
+                <div class="hero-stats-line" id="player-stats-display">ATK:0 DEF:0 SPD:0</div>
+                <span class="shield-badge" id="player-shield-display"></span>
+            </div>
+        </div>
+
+        <!-- Battle Info Bar -->
+        <div class="battle-info-bar">
+            <div id="turn-display" class="battle-turn-text">Turn 1 — Your Turn</div>
+            <div id="phase-display" class="battle-phase-text">🃏 Main Phase</div>
+            <div id="player-mana-display" class="battle-mana-text">💎 ○○○○○○○○○○ (0/10)</div>
+            <div class="deck-info">Deck: <span id="deck-count">0</span> cards</div>
+        </div>
+
+        <!-- Card Hand Area -->
+        <div id="card-hand-area" class="card-hand-area"></div>
+
+        <!-- End Turn Button -->
+        <button class="btn btn-gold" id="btn-end-turn" style="display:none; margin: 8px auto; display:none;">⏭ End Turn</button>
+
+        <!-- Legacy Controls (kept for compatibility) -->
+        <div class="battle-progress" style="display:none;">
             <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
             <div class="progress-info">
                 <span>Stage <span id="stage-number">1</span> — Wave <span id="wave-number">1</span>/3</span>
@@ -862,7 +991,6 @@
         <div class="turn-order-bar" id="turn-order-display"></div>
 
         <div class="battle-log" id="battle-log"></div>
-
 
     </div>
 
@@ -910,12 +1038,15 @@
     <!-- ====== SCRIPTS (load order matters!) ====== -->
     <script src="js/core/sound.js"></script>
     <script src="js/core/heroes.js"></script>
+    <script src="js/core/cards.js"></script>
+    <script src="js/core/deck.js"></script>
     <script src="js/core/items.js"></script>
     <script src="js/core/game.js"></script>
     <script src="js/systems/battle.js"></script>
     <script src="js/systems/economy.js"></script>
     <script src="js/systems/formation.js"></script>
     <script src="js/ui/renderer.js"></script>
+    <script src="js/ui/cardhand.js"></script>
     <script src="js/ui/animations.js"></script>
     <script src="js/ui/tutorial.js"></script>
     <script src="js/ui/screens.js"></script>

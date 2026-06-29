@@ -222,6 +222,8 @@ function generateCard(template, rarity) {
             def:  Math.floor(template.def  * r.statMul * (cls.bonusStat === 'def'  ? cls.bonusVal : 1)),
             spd:  Math.floor(template.spd  * r.statMul * (cls.bonusStat === 'spd'  ? cls.bonusVal : 1)),
             crit: Math.floor(template.crit * r.statMul * (cls.bonusStat === 'crit' ? cls.bonusVal : 1)),
+            mana: 0,    // starts at 0, gains +1 per turn in battle (max 10)
+            maxMana: 0, // tracks max mana cap per turn
         },
         skill: { ...template.skill },
         level: 1,
@@ -231,6 +233,7 @@ function generateCard(template, rarity) {
         artSeed: Math.floor(Math.random() * 999999), // for procedural pixel art fallback
     };
     card.stats.maxHp = card.stats.hp;
+    card.type = template.type || template.cls; // hero type for synergy (warrior/mage/archer/tank/healer/assassin)
     return card;
 }
 
