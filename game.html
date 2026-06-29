@@ -399,7 +399,8 @@
         #shop-content { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
 
         /* Blockchain / Wallet Section */
-        .wallet-section {
+        /* wallet-section removed — Web3 not active yet */
+        /* .wallet-section {
             background: var(--bg-panel); border: 2px solid rgba(212,160,23,0.15);
             border-radius: 8px; padding: 16px; margin-top: 16px;
         }
@@ -407,6 +408,7 @@
         .wallet-desc { font-size: 10px; color: var(--text-dim); margin-bottom: 12px; line-height: 1.6; }
         .wallet-info { font-size: 9px; color: var(--text-dim); margin-top: 8px; }
         .wallet-address { font-family: monospace; color: var(--gold); }
+        */
 
         /* Tutorial Overlay */
         .tutorial-overlay { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
@@ -662,26 +664,7 @@
 
         <div class="battle-log" id="battle-log"></div>
 
-        <!-- Wallet Section — HIDDEN (Web3 not active yet) -->
-        <div class="wallet-section" style="display:none;">
-            <div class="wallet-title">🔗 Web3 Wallet</div>
-            <div class="wallet-desc">
-                Connect your MetaMask wallet to mint your hero cards as NFTs on BNB Chain.
-                Your cards become blockchain assets you truly own — trade, sell, or keep them forever.
-                <br><br>
-                <strong>What you can do:</strong><br>
-                • 🖼️ <strong>Mint cards</strong> as NFTs (costs gas)<br>
-                • 🏪 <strong>List cards</strong> on the on-chain marketplace<br>
-                • 🔄 <strong>Trade</strong> with other players via smart contract
-                <br><br>
-                <em style="font-size:9px;color:var(--text-dim);">Note: Game works fully without wallet — connecting is optional for blockchain features.</em>
-            </div>
-            <button class="btn btn-secondary" id="btn-connect-wallet">🦊 Connect Wallet</button>
-            <div class="wallet-info" id="wallet-info" style="display:none;">
-                <span id="wallet-address" class="wallet-address"></span>
-            </div>
-            <div class="wallet-info" id="wallet-status">Not connected — game works fine without it!</div>
-        </div>
+
     </div>
 
     <!-- ====== HEROES SCREEN ====== -->
@@ -727,19 +710,17 @@
     </div>
 
     <!-- ====== SCRIPTS (load order matters!) ====== -->
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js" defer></script>
-    <script src="js/core/sound.js?v=5"></script>
-    <script src="js/core/heroes.js?v=4"></script>
-    <script src="js/core/items.js?v=4"></script>
-    <script src="js/core/game.js?v=4"></script>
-    <script src="js/systems/battle.js?v=4"></script>
-    <script src="js/systems/economy.js?v=4"></script>
-    <script src="js/systems/formation.js?v=4"></script>
-    <script src="js/systems/blockchain.js?v=4"></script>
-    <script src="js/ui/renderer.js?v=4"></script>
-    <script src="js/ui/animations.js?v=4"></script>
-    <script src="js/ui/tutorial.js?v=5"></script>
-    <script src="js/ui/screens.js?v=4"></script>
-    <script src="js/main.js?v=4"></script>
+    <script src="js/core/sound.js"></script>
+    <script src="js/core/heroes.js"></script>
+    <script src="js/core/items.js"></script>
+    <script src="js/core/game.js"></script>
+    <script src="js/systems/battle.js"></script>
+    <script src="js/systems/economy.js"></script>
+    <script src="js/systems/formation.js"></script>
+    <script src="js/ui/renderer.js"></script>
+    <script src="js/ui/animations.js"></script>
+    <script src="js/ui/tutorial.js"></script>
+    <script src="js/ui/screens.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
