@@ -504,9 +504,7 @@ const UI = {
     // ===== FORMATION SCREEN =====
     renderFormationScreen() {
         Formation.init();
-        Formation.renderGrid();
-        Formation.renderBench();
-        Formation.renderSynergies();
+        Formation.render();
     },
 
     // ===== INVENTORY SCREEN =====

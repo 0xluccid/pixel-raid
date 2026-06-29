@@ -1,86 +1,308 @@
 /* ========================================
- * PIXEL RAID — Formation System
- * 3-position deck layout
+ * PIXEL RAID — Formation Grid + Synergy System
+ * 3-column x 2-row grid with drag & drop
  * ======================================== */
 
+// ===== SYNERGY RULES =====
+// Each rule defines requirements and stat bonuses applied at battle start
+const FORMATION_SYNERGIES = [
+    {
+        id: 'warrior_trio',
+        name: 'Iron Wall',
+        icon: '🛡️',
+        requires: [{ type: 'warrior', count: 3 }],
+        bonus: { def: 20 },
+        description: 'All Warriors +20 DEF',
+    },
+    {
+        id: 'mage_duo',
+        name: 'Arcane Surge',
+        icon: '🔮',
+        requires: [{ type: 'mage', count: 2 }],
+        bonus: { atk: 15 },
+        description: 'All Mages +15 ATK',
+    },
+    {
+        id: 'balanced',
+        name: 'Full Balance',
+        icon: '⚖️',
+        requires: [
+            { type: 'warrior', count: 1 },
+            { type: 'mage', count: 1 },
+            { type: 'healer', count: 1 },
+        ],
+        bonus: { hp: 50 },
+        description: 'All heroes +50 HP',
+    },
+    {
+        id: 'archer_duo',
+        name: 'Eagle Eye',
+        icon: '🦅',
+        requires: [{ type: 'archer', count: 2 }],
+        bonus: { spd: 10 },
+        description: 'All Archers +10 SPD',
+    },
+    {
+        id: 'full_tank',
+        name: 'Fortress',
+        icon: '🏰',
+        requires: [
+            { type: 'tank', count: 2 },
+            { type: 'healer', count: 1 },
+        ],
+        bonus: { def: 30, hp: 100 },
+        description: 'Tanks +30 DEF, all +100 HP',
+    },
+];
+
+const FORMATION_STORAGE_KEY = 'pixel_raid_formation';
+
 const Formation = {
-    // Deck positions: [front, mid1, mid2, back1, back2]
-    // Front takes damage first, back is safest
-    positions: [
-        { id: 0, label: 'Front', row: 'front', cardId: null },
-        { id: 1, label: 'Mid-L', row: 'mid',   cardId: null },
-        { id: 2, label: 'Mid-R', row: 'mid',   cardId: null },
-        { id: 3, label: 'Back-L', row: 'back',  cardId: null },
-        { id: 4, label: 'Back-R', row: 'back',  cardId: null },
-    ],
+    // 3 columns x 2 rows = 6 slots
+    // [0,1,2] = top row (front — takes damage first)
+    // [3,4,5] = bottom row (back — safer)
+    slots: [null, null, null, null, null, null],
+
+    // ===== INITIALIZATION =====
 
     init() {
-        // Load deck from GameState
-        this.positions.forEach((pos, i) => {
-            pos.cardId = GameState.deck[i] || null;
-        });
+        this.load();
+        // Sync from GameState.deck if formation is empty but deck exists
+        if (this.slots.every(s => s === null) && GameState.deck.length > 0) {
+            GameState.deck.forEach((cardId, i) => {
+                if (i < 6) this.slots[i] = cardId;
+            });
+            this.save();
+        }
     },
 
-    placeCard(positionId, cardId) {
-        // Remove card from other positions first
-        this.positions.forEach(pos => {
-            if (pos.cardId === cardId) pos.cardId = null;
-        });
-        this.positions[positionId].cardId = cardId;
+    // ===== PERSISTENCE =====
+
+    save() {
+        try {
+            localStorage.setItem(FORMATION_STORAGE_KEY, JSON.stringify(this.slots));
+        } catch (e) {
+            console.warn('FormationGrid: failed to save', e);
+        }
+    },
+
+    load() {
+        try {
+            const raw = localStorage.getItem(FORMATION_STORAGE_KEY);
+            if (raw) {
+                const data = JSON.parse(raw);
+                if (Array.isArray(data) && data.length === 6) {
+                    this.slots = data;
+                }
+            }
+        } catch (e) {
+            console.warn('FormationGrid: failed to load', e);
+        }
+    },
+
+    // ===== SLOT OPERATIONS =====
+
+    placeCard(slotIndex, cardId) {
+        if (slotIndex < 0 || slotIndex > 5) return false;
+
+        // If card already in another slot, swap or remove
+        const existingSlot = this.slots.indexOf(cardId);
+        if (existingSlot !== -1) {
+            // Swap: put the current occupant of target slot into the old slot
+            this.slots[existingSlot] = this.slots[slotIndex];
+        }
+
+        this.slots[slotIndex] = cardId;
         this.syncToGameState();
+        this.save();
+        return true;
     },
 
-    removeCard(positionId) {
-        this.positions[positionId].cardId = null;
+    removeCard(slotIndex) {
+        if (slotIndex < 0 || slotIndex > 5) return;
+        this.slots[slotIndex] = null;
         this.syncToGameState();
+        this.save();
     },
 
-    getDeckCardIds() {
-        return this.positions.map(p => p.cardId).filter(Boolean);
+    removeCardById(cardId) {
+        const idx = this.slots.indexOf(cardId);
+        if (idx !== -1) {
+            this.slots[idx] = null;
+            this.syncToGameState();
+            this.save();
+        }
     },
+
+    getCardAtSlot(slotIndex) {
+        return this.slots[slotIndex] || null;
+    },
+
+    getFormationCardIds() {
+        return this.slots.filter(Boolean);
+    },
+
+    getOccupiedCount() {
+        return this.slots.filter(Boolean).length;
+    },
+
+    // ===== GAME STATE SYNC =====
 
     syncToGameState() {
-        GameState.deck = this.getDeckCardIds();
-        // Update inDeck flags
-        GameState.collection.forEach(c => c.inDeck = GameState.deck.includes(c.id));
+        GameState.deck = this.getFormationCardIds();
+        GameState.collection.forEach(c => {
+            c.inDeck = GameState.deck.includes(c.id);
+        });
         GameState.save();
     },
 
-    getSynergies() {
-        const deckCards = GameState.getDeckCards();
-        const classCounts = {};
-        deckCards.forEach(c => {
-            classCounts[c.class] = (classCounts[c.class] || 0) + 1;
+    // ===== SYNERGY DETECTION =====
+
+    /**
+     * Count hero types in the active formation
+     * @returns {Object} { warrior: 2, mage: 1, ... }
+     */
+    getTypeCounts() {
+        const counts = {};
+        for (const cardId of this.slots) {
+            if (!cardId) continue;
+            const card = GameState.getCardById(cardId);
+            if (!card) continue;
+            // Use card.type if available, fallback to card.class
+            const heroType = card.type || card.cls;
+            counts[heroType] = (counts[heroType] || 0) + 1;
+        }
+        return counts;
+    },
+
+    /**
+     * Check which synergies are active based on current formation
+     * @returns {Array} [{ rule, active, missing }]
+     */
+    getActiveSynergies() {
+        const counts = this.getTypeCounts();
+        const results = [];
+
+        for (const rule of FORMATION_SYNERGIES) {
+            const reqs = Array.isArray(rule.requires[0])
+                ? rule.requires
+                : [rule.requires];
+
+            // Flatten: supports both single requirement and array of requirements
+            const flatReqs = Array.isArray(rule.requires) && rule.requires.length > 0 && typeof rule.requires[0] === 'object' && !Array.isArray(rule.requires[0]) && rule.requires[0].type
+                ? rule.requires
+                : rule.requires;
+
+            let allMet = true;
+            let missing = [];
+
+            for (const req of flatReqs) {
+                const current = counts[req.type] || 0;
+                if (current < req.count) {
+                    allMet = false;
+                    const diff = req.count - current;
+                    missing.push({ type: req.type, needed: diff });
+                }
+            }
+
+            results.push({
+                rule,
+                active: allMet,
+                missing,
+            });
+        }
+
+        return results;
+    },
+
+    /**
+     * Get only the active synergy rules
+     * @returns {Array} of synergy rule objects
+     */
+    getActiveSynergyRules() {
+        return this.getActiveSynergies()
+            .filter(s => s.active)
+            .map(s => s.rule);
+    },
+
+    // ===== BONUS APPLICATION (RUNTIME ONLY) =====
+
+    /**
+     * Apply formation synergy bonuses to hero copies (non-permanent)
+     * Call this BEFORE battle starts with deep copies of hero stats
+     * @param {Array} heroes - Array of hero objects with stats
+     * @returns {Array} heroes with boosted stats
+     */
+    applyFormationBonuses(heroes) {
+        const activeSynergies = this.getActiveSynergyRules();
+        if (activeSynergies.length === 0) return heroes;
+
+        // Count types among the heroes being boosted
+        const heroTypeMap = {};
+        heroes.forEach(h => {
+            const t = h.type || h.cls;
+            heroTypeMap[t] = heroTypeMap[t] || [];
+            heroTypeMap[t].push(h);
         });
 
-        const active = [];
-        
-        // Class synergies
-        for (const [cls, count] of Object.entries(classCounts)) {
-            const syn = SYNERGIES[cls];
-            if (syn) {
-                const tier = count >= 3 ? 3 : count >= 2 ? 2 : 0;
-                if (tier && syn[tier]) {
-                    active.push({ type: 'class', desc: syn[tier].desc, active: true });
-                } else if (syn[2]) {
-                    active.push({ type: 'class', desc: `Need ${2 - count} more ${CLASSES[cls].name}`, active: false });
+        for (const synergy of activeSynergies) {
+            const reqs = Array.isArray(synergy.requires) && synergy.requires.length > 0 && typeof synergy.requires[0] === 'object' && synergy.requires[0].type
+                ? synergy.requires
+                : [synergy.requires];
+
+            // Determine which heroes get the bonus
+            for (const req of reqs) {
+                const affectedHeroes = heroTypeMap[req.type] || [];
+
+                for (const hero of affectedHeroes) {
+                    for (const [stat, value] of Object.entries(synergy.bonus)) {
+                        if (stat === 'hp') {
+                            hero.stats.hp += value;
+                            hero.stats.maxHp += value;
+                        } else if (hero.stats[stat] !== undefined) {
+                            hero.stats[stat] += value;
+                        }
+                    }
+                }
+            }
+
+            // For "balanced" type synergies, apply to ALL heroes
+            if (synergy.id === 'balanced') {
+                for (const hero of heroes) {
+                    for (const [stat, value] of Object.entries(synergy.bonus)) {
+                        if (stat === 'hp') {
+                            hero.stats.hp += value;
+                            hero.stats.maxHp += value;
+                        }
+                    }
+                }
+            }
+
+            // For "full_tank", apply HP to all, DEF only to tanks
+            if (synergy.id === 'full_tank') {
+                for (const hero of heroes) {
+                    if (synergy.bonus.hp) {
+                        hero.stats.hp += synergy.bonus.hp;
+                        hero.stats.maxHp += synergy.bonus.hp;
+                    }
                 }
             }
         }
 
-        // Cross-class combos
-        const classSet = new Set(deckCards.map(c => c.class));
-        for (const combo of COMBO_SYNERGIES) {
-            const has = combo.classes.filter(c => classSet.has(c));
-            if (has.length === combo.classes.length) {
-                active.push({ type: 'combo', desc: combo.desc, active: true });
-            } else if (has.length === combo.classes.length - 1) {
-                const missing = combo.classes.find(c => !classSet.has(c));
-                active.push({ type: 'combo', desc: `Need ${CLASSES[missing].name} for combo`, active: false });
-            }
-        }
+        return heroes;
+    },
 
-        return active;
+    // ===== DRAG & DROP STATE =====
+
+    _dragCardId: null,
+    _dragSourceSlot: null, // null if from bench, slot index if from grid
+
+    // ===== RENDERING =====
+
+    render() {
+        this.renderGrid();
+        this.renderBench();
+        this.renderSynergyPanel();
     },
 
     renderGrid() {
@@ -88,110 +310,135 @@ const Formation = {
         if (!grid) return;
         grid.innerHTML = '';
 
-        // Row impact legend
-        const legend = document.createElement('div');
-        legend.className = 'formation-legend';
-        legend.innerHTML = `
-            <div class="legend-item"><span class="legend-dot" style="background:#ff4444"></span> <b>Front</b> — Takes most damage, high threat</div>
-            <div class="legend-item"><span class="legend-dot" style="background:#ffaa00"></span> <b>Mid</b> — Balanced risk, good for DPS</div>
-            <div class="legend-item"><span class="legend-dot" style="background:#44cc44"></span> <b>Back</b> — Safest spot, ideal for healers/rangers</div>
-            <div style="font-size:7px;color:var(--text-dim);margin-top:6px;">💡 Tip: Place tanks in Front, healers/rangers in Back</div>
-        `;
-        grid.appendChild(legend);
-
-        this.positions.forEach((pos, i) => {
+        for (let i = 0; i < 6; i++) {
             const cell = document.createElement('div');
-            cell.className = 'grid-cell' + (pos.cardId ? ' occupied' : '');
-            cell.dataset.position = i;
-            cell.dataset.row = pos.row;
+            cell.className = 'fg-cell';
+            cell.dataset.slot = i;
 
-            // Row color indicator
-            const rowColors = { front: '#ff4444', mid: '#ffaa00', back: '#44cc44' };
-            const rowBar = document.createElement('div');
-            rowBar.className = 'row-bar';
-            rowBar.style.cssText = `position:absolute;top:0;left:0;right:0;height:3px;background:${rowColors[pos.row]};border-radius:4px 4px 0 0;`;
-            cell.appendChild(rowBar);
-
-            const rowLabel = document.createElement('span');
-            rowLabel.className = 'row-label';
-            rowLabel.textContent = pos.label;
+            // Row label
+            const isFront = i < 3;
+            const rowLabel = document.createElement('div');
+            rowLabel.className = 'fg-row-label';
+            rowLabel.textContent = isFront ? 'FRONT' : 'BACK';
             cell.appendChild(rowLabel);
 
-            if (pos.cardId) {
-                const card = GameState.getCardById(pos.cardId);
+            // Slot number
+            const slotNum = document.createElement('div');
+            slotNum.className = 'fg-slot-num';
+            slotNum.textContent = `#${i + 1}`;
+            cell.appendChild(slotNum);
+
+            const cardId = this.slots[i];
+            if (cardId) {
+                const card = GameState.getCardById(cardId);
                 if (card) {
-                    const tmpl = getTemplateByName(card.templateId || card.name);
-                    let sprite;
-                    if (tmpl && tmpl.image) {
-                        sprite = document.createElement('img');
-                        sprite.className = 'cell-sprite';
-                        sprite.width = 32;
-                        sprite.height = 32;
-                        sprite.style.imageRendering = 'pixelated';
-                        sprite.src = tmpl.image;
-                        sprite.onerror = function() {
-                            const cvs = document.createElement('canvas');
-                            cvs.className = 'cell-sprite';
-                            cvs.width = 32; cvs.height = 32;
-                            CardRenderer.drawCardSprite(cvs, card, 32);
-                            sprite.replaceWith(cvs);
-                        };
-                    } else {
-                        sprite = document.createElement('canvas');
-                        sprite.className = 'cell-sprite';
-                        sprite.width = 32;
-                        sprite.height = 32;
-                        CardRenderer.drawCardSprite(sprite, card, 32);
-                    }
+                    cell.classList.add('fg-occupied');
+
+                    // Rarity border color
+                    const rarityColor = RARITIES[card.rarity]?.color || '#8a8a7a';
+                    cell.style.borderColor = rarityColor;
+
+                    // Hero sprite
+                    const sprite = this._createSprite(card, 32);
                     cell.appendChild(sprite);
 
+                    // Hero name (max 8 chars)
                     const name = document.createElement('div');
-                    name.className = 'cell-name';
-                    name.textContent = card.name;
+                    name.className = 'fg-hero-name';
+                    name.textContent = card.name.length > 8 ? card.name.substring(0, 8) : card.name;
+                    name.style.color = rarityColor;
                     cell.appendChild(name);
+
+                    // Stats row
+                    const stats = document.createElement('div');
+                    stats.className = 'fg-hero-stats';
+                    stats.innerHTML = `<span class="fg-stat-hp">HP:${card.stats.hp}</span> <span class="fg-stat-atk">ATK:${card.stats.atk}</span>`;
+                    cell.appendChild(stats);
 
                     // Remove button
                     const removeBtn = document.createElement('div');
+                    removeBtn.className = 'fg-remove-btn';
                     removeBtn.textContent = '✕';
-                    removeBtn.style.cssText = 'position:absolute;top:2px;right:4px;cursor:pointer;font-size:8px;color:#ff4444;';
-                    removeBtn.onclick = (e) => {
+                    removeBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         this.removeCard(i);
-                        this.renderGrid();
-                        this.renderBench();
-                        this.renderSynergies();
-                    };
+                        this.render();
+                    });
                     cell.appendChild(removeBtn);
                 }
             }
 
-            // Drop zone
-            cell.addEventListener('dragover', e => { e.preventDefault(); cell.classList.add('drag-over'); });
-            cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
-            cell.addEventListener('drop', e => {
+            // Drag & Drop — grid slots
+            cell.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                cell.classList.remove('drag-over');
-                const cardId = parseInt(e.dataTransfer.getData('cardId'));
-                if (cardId) {
-                    this.placeCard(i, cardId);
-                    this.renderGrid();
-                    this.renderBench();
-                    this.renderSynergies();
+                e.dataTransfer.dropEffect = 'move';
+                cell.classList.add('fg-drag-over');
+            });
+
+            cell.addEventListener('dragleave', () => {
+                cell.classList.remove('fg-drag-over');
+            });
+
+            cell.addEventListener('drop', (e) => {
+                e.preventDefault();
+                cell.classList.remove('fg-drag-over');
+                const droppedCardId = parseInt(e.dataTransfer.getData('text/plain'));
+                if (droppedCardId) {
+                    this.placeCard(i, droppedCardId);
+                    this.render();
                 }
             });
 
-            // Click to remove
-            cell.addEventListener('click', () => {
-                if (pos.cardId) {
-                    this.removeCard(i);
-                    this.renderGrid();
-                    this.renderBench();
-                    this.renderSynergies();
+            // Touch support for drop
+            cell.addEventListener('touchend', (e) => {
+                if (this._dragCardId) {
+                    e.preventDefault();
+                    this.placeCard(i, this._dragCardId);
+                    this._dragCardId = null;
+                    this._dragSourceSlot = null;
+                    this.render();
                 }
             });
+
+            // Make grid cells draggable if occupied (for moving between slots)
+            if (cardId) {
+                cell.draggable = true;
+                cell.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', cardId.toString());
+                    e.dataTransfer.effectAllowed = 'move';
+                    this._dragCardId = cardId;
+                    this._dragSourceSlot = i;
+                    cell.classList.add('fg-dragging');
+                    // Remove from source after a tick (visual feedback)
+                    setTimeout(() => {
+                        this.slots[i] = null;
+                        this.syncToGameState();
+                    }, 0);
+                });
+
+                cell.addEventListener('dragend', () => {
+                    cell.classList.remove('fg-dragging');
+                    // If drag ended without a drop, restore the card
+                    if (this._dragSourceSlot === i && this.slots[i] === null) {
+                        this.slots[i] = cardId;
+                        this.syncToGameState();
+                    }
+                    this._dragCardId = null;
+                    this._dragSourceSlot = null;
+                    this.save();
+                    this.render();
+                });
+
+                // Touch drag support
+                cell.addEventListener('touchstart', (e) => {
+                    this._dragCardId = cardId;
+                    this._dragSourceSlot = i;
+                    cell.classList.add('fg-dragging');
+                }, { passive: true });
+            }
 
             grid.appendChild(cell);
-        });
+        }
     },
 
     renderBench() {
@@ -199,74 +446,172 @@ const Formation = {
         if (!bench) return;
         bench.innerHTML = '';
 
-        const inDeck = this.getDeckCardIds();
-        const available = GameState.collection.filter(c => !inDeck.includes(c.id));
+        const inFormation = this.getFormationCardIds();
+        const available = GameState.collection.filter(c => !inFormation.includes(c.id));
 
         if (available.length === 0) {
-            bench.innerHTML = '<div style="font-size:7px;color:var(--text-dim);padding:8px;">No cards available. Open packs!</div>';
+            bench.innerHTML = '<div class="fg-bench-empty">No heroes available. Open packs!</div>';
             return;
         }
 
+        // Sort by power (descending)
+        available.sort((a, b) => getCardPower(b) - getCardPower(a));
+
         available.forEach(card => {
             const el = document.createElement('div');
-            el.className = 'bench-hero';
+            el.className = 'fg-bench-card';
             el.draggable = true;
-            el.addEventListener('dragstart', e => {
-                e.dataTransfer.setData('cardId', card.id.toString());
-            });
 
-            const benchTmpl = getTemplateByName(card.templateId || card.name);
-            let benchSprite;
-            if (benchTmpl && benchTmpl.image) {
-                benchSprite = document.createElement('img');
-                benchSprite.className = 'mini-sprite';
-                benchSprite.width = 24;
-                benchSprite.height = 24;
-                benchSprite.style.imageRendering = 'pixelated';
-                benchSprite.src = benchTmpl.image;
-                benchSprite.onerror = function() {
-                    const cvs = document.createElement('canvas');
-                    cvs.className = 'mini-sprite';
-                    cvs.width = 24; cvs.height = 24;
-                    CardRenderer.drawCardSprite(cvs, card, 24);
-                    benchSprite.replaceWith(cvs);
-                };
-            } else {
-                benchSprite = document.createElement('canvas');
-                benchSprite.className = 'mini-sprite';
-                benchSprite.width = 24;
-                benchSprite.height = 24;
-                CardRenderer.drawCardSprite(benchSprite, card, 24);
-            }
-            el.appendChild(benchSprite);
+            // Rarity border
+            const rarityColor = RARITIES[card.rarity]?.color || '#8a8a7a';
+            el.style.borderColor = rarityColor;
 
+            // Sprite
+            const sprite = this._createSprite(card, 24);
+            el.appendChild(sprite);
+
+            // Info
             const info = document.createElement('div');
+            info.className = 'fg-bench-info';
             info.innerHTML = `
-                <div style="color:${RARITIES[card.rarity].color}">${card.name}</div>
-                <div style="font-size:6px;color:var(--text-dim)">${CLASSES[card.class].emoji} ${CLASSES[card.class].name} • PWR ${getCardPower(card)}</div>
+                <div class="fg-bench-name" style="color:${rarityColor}">${card.name}</div>
+                <div class="fg-bench-meta">${CLASSES[card.class]?.emoji || '?'} ${CLASSES[card.class]?.name || card.class} · ${getCardPower(card)}</div>
             `;
             el.appendChild(info);
+
+            // Drag from bench
+            el.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', card.id.toString());
+                e.dataTransfer.effectAllowed = 'copy';
+                this._dragCardId = card.id;
+                this._dragSourceSlot = null;
+            });
+
+            el.addEventListener('dragend', () => {
+                this._dragCardId = null;
+                this._dragSourceSlot = null;
+            });
+
+            // Touch drag
+            el.addEventListener('touchstart', () => {
+                this._dragCardId = card.id;
+                this._dragSourceSlot = null;
+            }, { passive: true });
 
             bench.appendChild(el);
         });
     },
 
-    renderSynergies() {
-        const list = document.getElementById('synergy-list');
-        if (!list) return;
-        list.innerHTML = '';
+    renderSynergyPanel() {
+        const panel = document.getElementById('synergy-panel');
+        if (!panel) return;
+        panel.innerHTML = '';
 
-        const synergies = this.getSynergies();
-        if (synergies.length === 0) {
-            list.innerHTML = '<div style="font-size:7px;color:var(--text-dim);">Place cards with matching classes to activate synergies!</div>';
+        const synergies = this.getActiveSynergies();
+        const header = document.createElement('div');
+        header.className = 'fg-synergy-header';
+        header.textContent = 'SYNERGIES';
+        panel.appendChild(header);
+
+        if (this.getOccupiedCount() === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'fg-synergy-empty';
+            empty.textContent = 'Place heroes to activate synergies!';
+            panel.appendChild(empty);
             return;
         }
 
-        synergies.forEach(syn => {
-            const el = document.createElement('div');
-            el.className = 'synergy-item ' + (syn.active ? 'synergy-active' : 'synergy-inactive');
-            el.textContent = (syn.active ? '✅ ' : '🔒 ') + syn.desc;
-            list.appendChild(el);
-        });
+        for (const { rule, active, missing } of synergies) {
+            const badge = document.createElement('div');
+            badge.className = 'fg-synergy-badge' + (active ? ' fg-synergy-active' : ' fg-synergy-inactive');
+
+            if (active) {
+                badge.innerHTML = `
+                    <span class="fg-syn-icon">${rule.icon}</span>
+                    <span class="fg-syn-name">${rule.name}</span>
+                    <span class="fg-syn-desc">— ${rule.description}</span>
+                `;
+                // Fade-in animation
+                badge.style.animation = 'fgFadeIn 0.3s ease forwards';
+            } else {
+                const missingText = missing.map(m => `${m.needed} more ${m.type}`).join(', ');
+                badge.innerHTML = `
+                    <span class="fg-syn-icon">${rule.icon}</span>
+                    <span class="fg-syn-name">${rule.name}</span>
+                    <span class="fg-syn-missing">Need ${missingText}</span>
+                `;
+            }
+
+            panel.appendChild(badge);
+        }
     },
+
+    // ===== HELPERS =====
+
+    _createSprite(card, size) {
+        const tmpl = getTemplateByName(card.templateId || card.name);
+
+        if (tmpl && tmpl.image) {
+            const img = document.createElement('img');
+            img.className = 'fg-sprite';
+            img.width = size;
+            img.height = size;
+            img.style.imageRendering = 'pixelated';
+            img.src = tmpl.image;
+            img.onerror = function () {
+                // Fallback to canvas sprite on image load error
+                const cvs = document.createElement('canvas');
+                cvs.className = 'fg-sprite';
+                cvs.width = size;
+                cvs.height = size;
+                if (typeof CardRenderer !== 'undefined') {
+                    CardRenderer.drawCardSprite(cvs, card, size);
+                }
+                img.replaceWith(cvs);
+            };
+            return img;
+        }
+
+        // Canvas fallback
+        const cvs = document.createElement('canvas');
+        cvs.className = 'fg-sprite';
+        cvs.width = size;
+        cvs.height = size;
+        if (typeof CardRenderer !== 'undefined') {
+            CardRenderer.drawCardSprite(cvs, card, size);
+        }
+        return cvs;
+    },
+
+    // ===== BACKWARD COMPAT ALIASES =====
+    renderSynergies() { this.renderSynergyPanel(); },
 };
+
+// ===== EXPORTED API FOR BATTLE.JS =====
+// These global functions are the integration layer
+
+/**
+ * Get the active formation as an array of card objects (null for empty slots)
+ * @returns {Array} [hero0, hero1, ..., hero5] with nulls for empty
+ */
+function getActiveFormation() {
+    return Formation.slots.map(id => id ? GameState.getCardById(id) : null);
+}
+
+/**
+ * Get array of active synergy rule objects
+ * @returns {Array} of synergy rules that are currently met
+ */
+function getActiveSynergies() {
+    return Formation.getActiveSynergyRules();
+}
+
+/**
+ * Apply formation synergy bonuses to hero copies (non-permanent, runtime only)
+ * Call before battle.startBattle() with hero stat copies
+ * @param {Array} heroes - Array of hero objects with .stats
+ * @returns {Array} same heroes with boosted stats
+ */
+function applyFormationBonuses(heroes) {
+    return Formation.applyFormationBonuses(heroes);
+}
