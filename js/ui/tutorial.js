@@ -74,9 +74,9 @@ const Tutorial = {
         },
         {
             id: 'mana_system',
-            title: '💎 Mana System',
-            text: 'Every skill card costs mana to play!\n\nYou start with 0 mana. Each turn your max mana increases +1 (up to 10), and you refill to max.\n\nEarly turns = few cards playable.\nLater turns = unleash powerful combos!\n\nTip: Save mana for big cards when it matters!',
-            target: '#player-mana-display',
+            title: '❤️ Life Points',
+            text: 'Both duelists start with 4000 LP (Life Points)!\n\nPlay hero cards to your field zones.\nAttack enemy heroes to deal damage.\nReduce enemy LP to 0 to win!\n\nTip: Protect your heroes and attack strategically!',
+            target: '#battle-canvas',
             position: 'top',
         },
         {

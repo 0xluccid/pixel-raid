@@ -1,6 +1,6 @@
 /* ========================================
- * PIXEL RAID — Card Hand Renderer
- * Renders skill cards in battle hand area
+ * PIXEL RAID — Card Hand Renderer (v3)
+ * Yu-Gi-Oh style hand with hero + skill cards
  * Click to play cards during Main Phase
  * ======================================== */
 
@@ -24,15 +24,25 @@ const CardHand = {
     },
 
     /**
-     * Render current hand
-     * @param {Array} hand - Array of skill card objects
-     * @param {number} currentMana - Player's current mana
+     * Render current hand — supports both old API and new combatant API
+     * @param {Array} hand - Array of card objects
+     * @param {Object} combatantOrMana - Combatant object (new) or mana number (old)
      * @param {boolean} enabled - Whether cards can be played
      */
-    render(hand, currentMana, enabled = false) {
+    render(hand, combatantOrMana, enabled = false) {
         if (!this.container) return;
         this.enabled = enabled;
         this.container.innerHTML = '';
+
+        // Support both old (mana int) and new (combatant object) APIs
+        let currentMana = 0;
+        let combatant = null;
+        if (typeof combatantOrMana === 'number') {
+            currentMana = combatantOrMana;
+        } else if (combatantOrMana && typeof combatantOrMana === 'object') {
+            combatant = combatantOrMana;
+            currentMana = combatant.mana || 0;
+        }
 
         if (!hand || hand.length === 0) {
             this.container.innerHTML = `
@@ -42,7 +52,19 @@ const CardHand = {
         }
 
         hand.forEach((card, index) => {
-            const canPlay = enabled && currentMana >= card.manaCost;
+            // In Yu-Gi-Oh mode, hero cards are always playable if there's an empty hero zone
+            // Skill cards are always playable (they go to skill zones or activate immediately)
+            let canPlay = enabled;
+            if (card.cardType === 'hero' && combatant) {
+                let hasEmpty = false;
+                for (let i = 0; i < 3; i++) {
+                    if (!combatant.heroZones[i]) { hasEmpty = true; break; }
+                }
+                canPlay = enabled && hasEmpty;
+            } else if (card.manaCost !== undefined) {
+                canPlay = enabled && currentMana >= card.manaCost;
+            }
+
             try {
                 const el = this._createCardElement(card, index, canPlay, currentMana);
                 this.container.appendChild(el);
@@ -57,27 +79,59 @@ const CardHand = {
      */
     _createCardElement(card, index, canPlay, currentMana) {
         const el = document.createElement('div');
-        el.className = `battle-card rarity-${card.rarity}`;
+
+        // Determine card class based on type
+        if (card.cardType === 'hero') {
+            el.className = `battle-card hero-card rarity-${card.rarity || 'common'}`;
+        } else {
+            el.className = `battle-card skill-card rarity-${card.rarity || 'common'}`;
+        }
+
         if (!canPlay) el.classList.add('card-disabled');
         if (this.selectedCard === index) el.classList.add('card-selected');
 
-        const typeInfo = CARD_TYPES[card.type] || { emoji: '?', color: '#888' };
-        const rarityColor = RARITIES[card.rarity]?.color || '#aaa';
+        const rarityColor = RARITIES[card.rarity] ? RARITIES[card.rarity].color : '#aaa';
 
         el.style.borderColor = rarityColor;
         el.style.setProperty('--rarity-glow', rarityColor);
 
-        el.innerHTML = `
-            <div class="card-mana ${currentMana < card.manaCost ? 'mana-lack' : ''}">
-                ${card.manaCost}
-            </div>
-            <div class="card-art" style="background:${card.pixelColor || typeInfo.color}22">
-                <div class="card-art-icon">${typeInfo.emoji}</div>
-            </div>
-            <div class="card-name">${card.name}</div>
-            <div class="card-type-badge" style="color:${typeInfo.color}">${typeInfo.name}</div>
-            <div class="card-desc">${card.description}</div>
-        `;
+        if (card.cardType === 'hero') {
+            // Hero card display (Yu-Gi-Oh monster style)
+            const template = getTemplateByName(card.templateId || card.name);
+            const cls = CLASSES[card.class || card.cls];
+            const rarityStars = { common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
+            const stars = rarityStars[card.rarity] || 1;
+
+            el.innerHTML = `
+                <div class="card-stars">${'★'.repeat(stars)}</div>
+                <div class="card-art hero-art" style="background:${cls ? cls.color : '#4488ff'}22">
+                    ${template && template.image
+                        ? `<img src="${template.image}" style="width:100%;height:100%;object-fit:contain;image-rendering:pixelated;" onerror="this.style.display='none'">`
+                        : `<div class="card-art-icon">${cls ? cls.emoji : '⚔️'}</div>`
+                    }
+                </div>
+                <div class="card-name">${card.name}</div>
+                <div class="card-type-badge" style="color:${cls ? cls.color : '#888'}">${cls ? cls.name : 'Hero'}</div>
+                <div class="card-stats-row">
+                    <span class="card-atk">⚔${card.stats.atk}</span>
+                    <span class="card-def">🛡${card.stats.def}</span>
+                </div>
+                <div class="card-hp">HP: ${card.stats.hp}</div>
+            `;
+        } else {
+            // Skill card display (Yu-Gi-Oh spell style)
+            const typeInfo = CARD_TYPES[card.type] || { emoji: '✨', color: '#888' };
+
+            el.innerHTML = `
+                ${card.manaCost !== undefined ? `<div class="card-mana ${currentMana < card.manaCost ? 'mana-lack' : ''}">${card.manaCost}</div>` : ''}
+                <div class="card-art" style="background:${card.pixelColor || typeInfo.color}22">
+                    <div class="card-art-icon">${typeInfo.emoji}</div>
+                </div>
+                <div class="card-name">${card.name}</div>
+                <div class="card-type-badge" style="color:${typeInfo.color}">${typeInfo.name}</div>
+                <div class="card-desc">${card.description}</div>
+            `;
+        }
 
         // Click to play
         if (canPlay) {
@@ -138,7 +192,7 @@ const CardHand = {
         if (!cards) return;
 
         cards.forEach((el, i) => {
-            if (hand[i] && currentMana >= hand[i].manaCost) {
+            if (hand[i] && (hand[i].cardType === 'hero' || currentMana >= (hand[i].manaCost || 0))) {
                 el.classList.remove('card-disabled');
                 el.classList.add('card-playable');
             } else {
@@ -167,16 +221,18 @@ const CardHand = {
         style.textContent = `
             .card-hand-container {
                 display: flex;
-                gap: 8px;
+                gap: 6px;
                 justify-content: center;
                 align-items: flex-end;
                 padding: 8px 4px;
                 min-height: 140px;
-                flex-wrap: wrap;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
             }
             .battle-card {
-                width: 90px;
-                min-height: 130px;
+                width: 85px;
+                min-height: 125px;
                 background: var(--bg-card, #1a1a2e);
                 border: 2px solid #555;
                 border-radius: 6px;
@@ -186,10 +242,16 @@ const CardHand = {
                 position: relative;
                 display: flex;
                 flex-direction: column;
-                gap: 2px;
+                gap: 1px;
                 font-family: 'Press Start 2P', monospace;
                 user-select: none;
                 flex-shrink: 0;
+            }
+            .battle-card.hero-card {
+                border-width: 3px;
+            }
+            .battle-card.skill-card {
+                border-width: 2px;
             }
             .battle-card:hover {
                 z-index: 10;
@@ -212,6 +274,12 @@ const CardHand = {
             }
             .battle-card.card-draw-in {
                 animation: card-draw-in 0.5s ease-out;
+            }
+            .card-stars {
+                font-size: 5px;
+                color: #ffd700;
+                text-align: right;
+                line-height: 1;
             }
             .card-mana {
                 position: absolute;
@@ -237,18 +305,22 @@ const CardHand = {
             }
             .card-art {
                 width: 100%;
-                height: 50px;
+                height: 45px;
                 border-radius: 4px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                margin-top: 4px;
+                margin-top: 2px;
+                overflow: hidden;
+            }
+            .hero-art {
+                height: 50px;
             }
             .card-art-icon {
                 font-size: 22px;
             }
             .card-name {
-                font-size: 6px;
+                font-size: 5px;
                 color: #fff;
                 text-align: center;
                 line-height: 1.2;
@@ -257,18 +329,37 @@ const CardHand = {
                 white-space: nowrap;
             }
             .card-type-badge {
-                font-size: 5px;
+                font-size: 4px;
                 text-align: center;
                 text-transform: uppercase;
                 letter-spacing: 1px;
                 opacity: 0.8;
             }
             .card-desc {
-                font-size: 5px;
+                font-size: 4px;
                 color: #aaa;
                 text-align: center;
                 line-height: 1.3;
                 flex: 1;
+            }
+            .card-stats-row {
+                display: flex;
+                justify-content: space-between;
+                padding: 1px 4px;
+                font-size: 5px;
+            }
+            .card-atk {
+                color: #ff6644;
+                font-weight: bold;
+            }
+            .card-def {
+                color: #4488ff;
+                font-weight: bold;
+            }
+            .card-hp {
+                font-size: 4px;
+                color: #44cc44;
+                text-align: center;
             }
             .hand-empty {
                 color: #666;
@@ -300,13 +391,15 @@ const CardHand = {
             /* Mobile responsive */
             @media (max-width: 480px) {
                 .battle-card {
-                    width: 72px;
-                    min-height: 110px;
+                    width: 70px;
+                    min-height: 105px;
                 }
-                .card-art { height: 40px; }
+                .card-art { height: 38px; }
+                .hero-art { height: 42px; }
                 .card-art-icon { font-size: 18px; }
-                .card-name { font-size: 5px; }
-                .card-desc { font-size: 4px; }
+                .card-name { font-size: 4px; }
+                .card-desc { font-size: 3.5px; }
+                .card-stats-row { font-size: 4px; }
             }
         `;
         document.head.appendChild(style);
