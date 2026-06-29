@@ -248,6 +248,14 @@
         .enemy-info-close { position: absolute; top: 8px; right: 10px; cursor: pointer; color: var(--text-dim); font-size: 14px; }
         .enemy-info-close:hover { color: var(--text); }
 
+        .enemy-info-panel {
+            position: fixed; z-index: 999;
+            background: rgba(20,16,30,0.95); border: 1px solid var(--gold);
+            border-radius: 8px; padding: 10px 12px; min-width: 160px;
+            pointer-events: none; box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            font-family: 'Press Start 2P'; animation: fadeIn 0.2s ease;
+        }
+
         /* Battle animation classes */
         .battle-shake { animation: battleShake 0.3s ease-in-out; }
         .battle-shake-crit { animation: battleShakeCrit 0.5s ease-in-out; }

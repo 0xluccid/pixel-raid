@@ -326,6 +326,8 @@ const BattleRenderer = {
         
         // Draw enemy team (right side)
         this.drawTeam(ctx, enemyTeam, W - 80, H * 0.32, 90, false, offsets);
+        this.storeEnemyPositions(enemyTeam, W - 80, H * 0.32, 90);
+        this.initEnemyClickHandler();
 
         // VS text (only if no animation active)
         if (this._attackAnims.length === 0) {
@@ -515,5 +517,78 @@ const BattleRenderer = {
         ctx.fillStyle = grad;
         ctx.fillRect(baseX - 50, baseY - 50, 100, 100);
         ctx.restore();
+    },
+
+    // ===== ENEMY INFO PANEL =====
+    _enemyPositions: [],
+    _infoPanel: null,
+
+    storeEnemyPositions(team, startX, startY, spacing) {
+        this._enemyPositions = [];
+        team.forEach((card, i) => {
+            const x = startX - i * spacing;
+            const y = startY + (i % 2) * 15;
+            this._enemyPositions.push({ card, x, y });
+        });
+    },
+
+    initEnemyClickHandler() {
+        const canvas = document.getElementById('battle-canvas');
+        if (!canvas || canvas._enemyClickInit) return;
+        canvas._enemyClickInit = true;
+
+        canvas.addEventListener('click', (e) => {
+            if (!BattleEngine.isRunning) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const mx = (e.clientX - rect.left) * scaleX;
+            const my = (e.clientY - rect.top) * scaleY;
+
+            // Check if click is near an enemy
+            for (const ep of this._enemyPositions) {
+                const dx = mx - ep.x;
+                const dy = my - ep.y;
+                if (dx * dx + dy * dy < 2500) { // 50px radius
+                    this.showEnemyInfo(ep.card, e.clientX, e.clientY);
+                    return;
+                }
+            }
+            // Click elsewhere dismisses
+            this.hideEnemyInfo();
+        });
+    },
+
+    showEnemyInfo(card, screenX, screenY) {
+        this.hideEnemyInfo();
+        const panel = document.createElement('div');
+        panel.className = 'enemy-info-panel';
+        panel.innerHTML = `
+            <div style="text-align:center;margin-bottom:6px;">
+                <div style="font-size:10px;font-weight:700;color:${RARITIES[card.rarity]?.color || '#fff'};">${card.name}</div>
+                <div style="font-size:7px;color:#888;">${card.class} • ${card.rarity}</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px;font-size:7px;">
+                <span style="color:#44cc44">❤️ HP: ${card.stats.hp}/${card.stats.maxHp}</span>
+                <span style="color:#ff6644">⚔️ ATK: ${card.stats.atk}</span>
+                <span style="color:#4488ff">🛡️ DEF: ${card.stats.def}</span>
+                <span style="color:#ffaa00">⚡ SPD: ${card.stats.spd}</span>
+                <span style="color:#ff44aa">💥 CRIT: ${card.stats.crit}%</span>
+                <span style="color:#aaa;">✨ ${card.skill || 'None'}</span>
+            </div>
+        `;
+        panel.style.left = Math.min(screenX + 10, window.innerWidth - 180) + 'px';
+        panel.style.top = Math.min(screenY - 40, window.innerHeight - 120) + 'px';
+        document.body.appendChild(panel);
+        this._infoPanel = panel;
+        // Auto-dismiss after 4s
+        setTimeout(() => this.hideEnemyInfo(), 4000);
+    },
+
+    hideEnemyInfo() {
+        if (this._infoPanel && this._infoPanel.parentNode) {
+            this._infoPanel.remove();
+            this._infoPanel = null;
+        }
     },
 };
