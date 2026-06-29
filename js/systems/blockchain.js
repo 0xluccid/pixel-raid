@@ -4,13 +4,10 @@
  * ======================================== */
 
 const BlockchainBridge = {
-    // Contract config (BSC Testnet)
-    // V2 deployed at 0xFB44693…7C13 — mutable baseURI, OpenZeppelin ERC-721 v4
-    // BSCscan: https://testnet.bscscan.com/address/0xFB44693a41CaFAa2CfeDb7694A2b7F70A41F7C13
-    // v1 (orphan): 0xB96eFfe282b5a8B71895CCF83fA4792A0f0933AC (no longer wired)
-    CONTRACT_ADDRESS: '0xFB44693a41CaFAa2CfeDb7694A2b7F70A41F7C13', // V2 (BSC testnet)
-    BSC_CHAIN_ID: '0x38',        // BSC Mainnet: 56
-    BSC_TESTNET_CHAIN_ID: '0x61', // BSC Testnet: 97
+    // Contract config (BSC Testnet for demo)
+    CONTRACT_ADDRESS: '0xFB44693a41CaFAa2CfeDb7694A2b7F70A41F7C13', // V2 verified on BSC testnet (BSCscan)
+    BSC_CHAIN_ID: '0x61',        // BSC Testnet: 97 (matches V2 deploy)
+    BSC_TESTNET_CHAIN_ID: '0x61', // alias, kept for clarity
     
     // State
     provider: null,
@@ -68,7 +65,7 @@ const BlockchainBridge = {
             });
             
             this.account = accounts[0];
-            this.provider = new ethers.providers.Web3Provider(window.ethereum);
+            this.provider = new ethers.BrowserProvider(window.ethereum); // ethers v6 (was .providers.Web3Provider in v5)
             this.signer = this.provider.getSigner();
 
             // Check chain
@@ -119,7 +116,7 @@ const BlockchainBridge = {
      */
     async checkAndSwitchChain() {
         const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-        const targetChainId = this.BSC_CHAIN_ID; // Use BSC Mainnet
+        const targetChainId = this.BSC_CHAIN_ID; // BSC Testnet (97), see const above
 
         if (chainId !== targetChainId) {
             try {
@@ -135,10 +132,10 @@ const BlockchainBridge = {
                         method: 'wallet_addEthereumChain',
                         params: [{
                             chainId: targetChainId,
-                            chainName: 'BNB Smart Chain',
+                            chainName: 'BNB Smart Chain Testnet',
                             nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
-                            rpcUrls: ['https://bsc-dataseed.binance.org/'],
-                            blockExplorerUrls: ['https://bscscan.com/'],
+                            rpcUrls: ['https://data-seed-prebsc-1-s1.binance.org/'],
+                            blockExplorerUrls: ['https://testnet.bscscan.com/'],
                         }],
                     });
                     this.isCorrectChain = true;
@@ -182,9 +179,18 @@ const BlockchainBridge = {
             console.log('📝 Mint tx:', tx.hash);
             const receipt = await tx.wait();
             
-            // Extract token ID from event
-            const event = receipt.events.find(e => e.event === 'CardMinted');
-            const tokenId = event.args.tokenId.toNumber();
+            // Extract token ID from event (ethers v6 uses logs + parseLog, not receipt.events[name].args)
+            const iface = new ethers.Interface(this.ABI);
+            let tokenId = null;
+            for (const log of (receipt.logs || [])) {
+                try {
+                    const parsed = iface.parseLog(log);
+                    if (parsed && parsed.name === 'CardMinted') {
+                        tokenId = Number(parsed.args.tokenId); // v6 returns BigInt
+                        break;
+                    }
+                } catch (_) { /* skip non-matching logs */ }
+            }
 
             console.log('✅ Card minted! Token ID:', tokenId);
             this.updateUI('minted', tokenId);
@@ -222,7 +228,7 @@ const BlockchainBridge = {
         if (!this.isConnected || !this.contract) return null;
 
         try {
-            const priceWei = ethers.utils.parseEther(priceInBnb.toString());
+            const priceWei = ethers.parseEther(priceInBnb.toString()); // v6: ethers.utils → ethers
             const tx = await this.contract.listCard(tokenId, priceWei);
             await tx.wait();
             console.log('✅ Card listed! Token ID:', tokenId, 'Price:', priceInBnb, 'BNB');
@@ -240,7 +246,7 @@ const BlockchainBridge = {
         if (!this.isConnected || !this.contract) return null;
 
         try {
-            const priceWei = ethers.utils.parseEther(priceInBnb.toString());
+            const priceWei = ethers.parseEther(priceInBnb.toString()); // v6: ethers.utils → ethers
             const tx = await this.contract.buyCard(tokenId, { value: priceWei });
             await tx.wait();
             console.log('✅ Card bought! Token ID:', tokenId);
@@ -264,21 +270,21 @@ const BlockchainBridge = {
                 class: data.className,
                 rarity: data.rarity,
                 stats: {
-                    hp: data.hp.toNumber(),
-                    atk: data.atk.toNumber(),
-                    def: data.def.toNumber(),
-                    spd: data.spd.toNumber(),
-                    crit: data.crit.toNumber(),
+                    hp: Number(data.hp),  // v6: BigInt → Number
+                    atk: Number(data.atk),
+                    def: Number(data.def),
+                    spd: Number(data.spd),
+                    crit: Number(data.crit),
                 },
                 skill: {
                     name: data.skillName,
                     type: data.skillType,
-                    val: data.skillValue.toNumber(),
+                    val: Number(data.skillValue),
                 },
-                level: data.level.toNumber(),
-                exp: data.exp.toNumber(),
-                artSeed: data.artSeed.toNumber(),
-                createdAt: data.createdAt.toNumber(),
+                level: Number(data.level),
+                exp: Number(data.exp),
+                artSeed: Number(data.artSeed),
+                createdAt: Number(data.createdAt),
             };
         } catch (error) {
             console.error('❌ Get card data failed:', error);
@@ -296,12 +302,15 @@ const BlockchainBridge = {
             const balance = await this.contract.balanceOf(this.account);
             const cards = [];
 
-            for (let i = 0; i < balance.toNumber(); i++) {
-                // Note: This is simplified. For full enumeration, 
-                // we'd need to track token IDs separately
-                const tokenId = i + 1; // Simplified
+            // V2 inherits ERC721Enumerable, so tokenOfOwnerByIndex exists.
+            // Stable across transfers — works even if user traded NFT
+            // to / from this wallet. (Confirmed: V2.sol imports
+            // ERC721Enumerable.sol.)
+            const balanceCount = Number(balance);
+            for (let i = 0; i < balanceCount; i++) {
+                const tokenId = await this.contract.tokenOfOwnerByIndex(this.account, i);
                 const data = await this.getCardData(tokenId);
-                if (data) cards.push({ tokenId, ...data });
+                if (data && data.name) cards.push({ tokenId, ...data });
             }
 
             return cards;
