@@ -90,11 +90,14 @@ var BattlePhaser = {
                 'bottom: 0',
                 'width: 100vw',
                 'height: 100vh',
+                'max-width: none',
+                'min-height: 0',
                 'z-index: 9999',
                 'background: #0a0a1a',
                 'display: block',
                 'margin: 0',
                 'padding: 0',
+                'border: none',
                 'border-radius: 0',
                 'overflow: hidden'
             ].join('; ') + ';';
@@ -126,21 +129,24 @@ var BattlePhaser = {
 
         // Resize Phaser game to fill viewport
         var self = this;
-        // Wait for DOM to settle after fullscreen
         requestAnimationFrame(function () {
             self._resizeToViewport();
-            // Second resize after layout recalc
-            setTimeout(function () { self._resizeToViewport(); }, 100);
         });
 
-        // Force Phaser canvas to fill container
-        setTimeout(function () {
+        // Style the Phaser canvas to fill container
+        var styleCanvas = function () {
             if (self._game && self._game.canvas) {
-                self._game.canvas.style.width = '100%';
-                self._game.canvas.style.height = '100%';
-                self._game.canvas.style.objectFit = 'contain';
+                var c = self._game.canvas;
+                c.style.width = '100%';
+                c.style.height = '100%';
+                c.style.display = 'block';
+                c.style.objectFit = 'contain';
+                c.style.margin = '0 auto';
             }
-        }, 150);
+        };
+        setTimeout(styleCanvas, 50);
+        setTimeout(styleCanvas, 200);
+        setTimeout(styleCanvas, 500);
 
         // Show enter transition
         this._scene.showTransition('enter', function () {
