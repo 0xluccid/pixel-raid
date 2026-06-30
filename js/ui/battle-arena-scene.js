@@ -78,9 +78,56 @@ const BattleArenaScene = {
         this.shakeY = 0;
         this.shakeDecay = 0;
 
-        // Show the battle canvas wrap
+        // === FULLSCREEN OVERLAY ===
         const wrap = document.querySelector('.battle-canvas-wrap');
-        if (wrap) wrap.style.display = 'block';
+        if (wrap) {
+            // Make wrap a fixed fullscreen overlay
+            wrap.style.cssText = `
+                position: fixed !important;
+                top: 0; left: 0; right: 0; bottom: 0;
+                width: 100vw !important; height: 100vh !important;
+                z-index: 9999 !important;
+                background: #0a0a1a;
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                margin: 0 !important;
+                padding: 0 !important;
+                border-radius: 0 !important;
+                overflow: hidden;
+            `;
+        }
+
+        // Resize canvas to fill viewport (maintain aspect ratio)
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const aspect = 600 / 400; // 3:2
+        let cw, ch;
+        if (vw / vh > aspect) {
+            ch = vh;
+            cw = ch * aspect;
+        } else {
+            cw = vw;
+            ch = cw / aspect;
+        }
+        this.canvas.width = Math.floor(cw);
+        this.canvas.height = Math.floor(ch);
+        this.W = this.canvas.width;
+        this.H = this.canvas.height;
+        this.canvas.style.cssText = `
+            display: block;
+            image-rendering: pixelated;
+            width: ${cw}px; height: ${ch}px;
+            border: none; box-shadow: none; margin: 0;
+        `;
+
+        // Hide other battle UI elements
+        const hideEls = ['.battle-info-strip', '#card-hand-area', '.battle-action-row',
+            '.battle-controls', '.game-nav', '.game-header'];
+        hideEls.forEach(sel => {
+            const el = document.querySelector(sel);
+            if (el) el.style.display = 'none';
+        });
 
         // Draw initial black frame immediately
         this._drawBlackScreen();
@@ -105,6 +152,30 @@ const BattleArenaScene = {
             this.active = false;
             this.transitioning = false;
             this._stopRenderLoop();
+
+            // === RESTORE FROM FULLSCREEN ===
+            const wrap = document.querySelector('.battle-canvas-wrap');
+            if (wrap) {
+                wrap.style.cssText = ''; // Reset to CSS defaults
+            }
+
+            // Restore canvas size
+            if (this.canvas) {
+                this.canvas.width = 600;
+                this.canvas.height = 400;
+                this.W = 600;
+                this.H = 400;
+                this.canvas.style.cssText = '';
+            }
+
+            // Restore hidden UI elements
+            const showEls = ['.battle-info-strip', '#card-hand-area', '.battle-action-row',
+                '.battle-controls', '.game-nav', '.game-header'];
+            showEls.forEach(sel => {
+                const el = document.querySelector(sel);
+                if (el) el.style.display = '';
+            });
+
             if (onComplete) onComplete();
         }, this.TRANSITION_DURATION);
     },
