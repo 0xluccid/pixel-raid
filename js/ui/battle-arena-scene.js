@@ -81,16 +81,14 @@ const BattleArenaScene = {
         // === FULLSCREEN OVERLAY ===
         const wrap = document.querySelector('.battle-canvas-wrap');
         if (wrap) {
-            // Make wrap a fixed fullscreen overlay
+            // Make wrap a fixed fullscreen overlay with flex column for canvas + controls
             wrap.style.cssText = `
                 position: fixed !important;
                 top: 0; left: 0; right: 0; bottom: 0;
                 width: 100vw !important; height: 100vh !important;
                 z-index: 9999 !important;
                 background: #0a0a1a;
-                display: flex !important;
-                align-items: center;
-                justify-content: center;
+                display: block !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 border-radius: 0 !important;
@@ -98,18 +96,12 @@ const BattleArenaScene = {
             `;
         }
 
-        // Resize canvas to fill viewport (maintain aspect ratio)
+        // Resize canvas to fill most of viewport (leave ~160px for hand/controls)
         const vw = window.innerWidth;
-        const vh = window.innerHeight;
+        const canvasArea = window.innerHeight - 160; // leave room for card hand + controls
         const aspect = 600 / 400; // 3:2
-        let cw, ch;
-        if (vw / vh > aspect) {
-            ch = vh;
-            cw = ch * aspect;
-        } else {
-            cw = vw;
-            ch = cw / aspect;
-        }
+        let cw = canvasArea * aspect > vw ? vw : canvasArea * aspect;
+        let ch = cw / aspect;
         this.canvas.width = Math.floor(cw);
         this.canvas.height = Math.floor(ch);
         this.W = this.canvas.width;
@@ -118,13 +110,28 @@ const BattleArenaScene = {
             display: block;
             image-rendering: pixelated;
             width: ${cw}px; height: ${ch}px;
-            border: none; box-shadow: none; margin: 0;
+            border: none; box-shadow: none;
+            margin: 0 auto;
         `;
 
-        // Hide other battle UI elements
-        const hideEls = ['.battle-info-strip', '#card-hand-area', '.battle-action-row',
-            '.battle-controls', '.game-nav', '.game-header'];
-        hideEls.forEach(sel => {
+        // Move card hand and action buttons INSIDE the wrap (after canvas)
+        const cardHand = document.getElementById('card-hand-area');
+        const actionRow = document.querySelector('.battle-action-row');
+        const infoStrip = document.querySelector('.battle-info-strip');
+        const controls = document.querySelector('.battle-controls');
+        [cardHand, actionRow, infoStrip, controls].forEach(el => {
+            if (el && el.parentElement !== wrap) {
+                wrap.appendChild(el);
+            }
+            if (el) {
+                el.style.display = '';
+                el.style.position = 'relative';
+                el.style.zIndex = '10000';
+            }
+        });
+
+        // Only hide nav/header (not battle controls)
+        ['.game-nav', '.game-header'].forEach(sel => {
             const el = document.querySelector(sel);
             if (el) el.style.display = 'none';
         });
@@ -155,6 +162,18 @@ const BattleArenaScene = {
 
             // === RESTORE FROM FULLSCREEN ===
             const wrap = document.querySelector('.battle-canvas-wrap');
+            const screenBattle = document.getElementById('screen-battle');
+
+            // Move elements back to screen-battle if they were moved into wrap
+            const movedEls = ['#card-hand-area', '.battle-action-row', '.battle-info-strip', '.battle-controls'];
+            movedEls.forEach(sel => {
+                const el = document.querySelector(sel);
+                if (el && wrap && el.parentElement === wrap && screenBattle) {
+                    screenBattle.appendChild(el);
+                    el.style.cssText = '';
+                }
+            });
+
             if (wrap) {
                 wrap.style.cssText = ''; // Reset to CSS defaults
             }
@@ -168,10 +187,8 @@ const BattleArenaScene = {
                 this.canvas.style.cssText = '';
             }
 
-            // Restore hidden UI elements
-            const showEls = ['.battle-info-strip', '#card-hand-area', '.battle-action-row',
-                '.battle-controls', '.game-nav', '.game-header'];
-            showEls.forEach(sel => {
+            // Restore hidden UI elements (nav/header)
+            ['.game-nav', '.game-header'].forEach(sel => {
                 const el = document.querySelector(sel);
                 if (el) el.style.display = '';
             });
