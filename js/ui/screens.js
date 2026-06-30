@@ -316,10 +316,22 @@ const UI = {
         // Initialize Phaser renderer and wait for scene to be ready before starting battle
         if (typeof BattlePhaser !== 'undefined') {
             BattlePhaser.init('battle-canvas-container');
+            // Force Phaser game to resume/resize now that container is visible
+            if (BattlePhaser._game) {
+                BattlePhaser._game.loop.wake();
+                if (BattlePhaser._game.scale) BattlePhaser._game.scale.refresh();
+            }
             BattlePhaser.enter(playerHero, enemyHero, () => {
                 // Phaser scene is ready — safe to start battle engine now
                 startEngine();
             });
+            // Safety net: if callback never fires (Phaser clock stuck), start engine after 5s
+            setTimeout(() => {
+                if (!BattleEngine.isRunning) {
+                    console.warn('[Battle] Phaser enter callback timeout — starting engine directly');
+                    startEngine();
+                }
+            }, 5000);
         } else {
             // Fallback: init canvas scene and start immediately
             BattleArenaScene.init('battle-canvas-container');
