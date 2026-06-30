@@ -923,22 +923,23 @@ const BattleArenaScene = {
                 const curX = anim.srcX + (anim.tgtX - anim.srcX) * eased;
                 const curY = anim.srcY + (anim.tgtY - anim.srcY) * eased;
 
-                // Draw attack flash line
-                ctx.strokeStyle = anim.isCrit ? 'rgba(255,50,50,0.8)' : 'rgba(255,255,255,0.6)';
-                ctx.lineWidth = anim.isCrit ? 3 : 2;
-                ctx.setLineDash([4, 4]);
+                // Trail line with glow
+                ctx.strokeStyle = anim.isCrit ? 'rgba(255,50,50,0.8)' : 'rgba(255,200,50,0.6)';
+                ctx.lineWidth = anim.isCrit ? 4 : 3;
+                ctx.shadowColor = anim.isCrit ? '#ff4444' : '#ffd700';
+                ctx.shadowBlur = 10;
                 ctx.beginPath();
                 ctx.moveTo(anim.srcX, anim.srcY);
                 ctx.lineTo(curX, curY);
                 ctx.stroke();
-                ctx.setLineDash([]);
+                ctx.shadowBlur = 0;
 
-                // Attack flash
+                // Bright projectile
+                ctx.fillStyle = anim.isCrit ? '#ff6666' : '#ffdd44';
                 ctx.shadowColor = anim.isCrit ? '#ff4444' : '#ffd700';
-                ctx.shadowBlur = 15;
-                ctx.fillStyle = '#fff';
+                ctx.shadowBlur = 20;
                 ctx.beginPath();
-                ctx.arc(curX, curY, 6, 0, Math.PI * 2);
+                ctx.arc(curX, curY, anim.isCrit ? 8 : 6, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.shadowBlur = 0;
 
@@ -947,25 +948,51 @@ const BattleArenaScene = {
                     anim.progress = 0;
                 }
             } else if (anim.phase === 'impact') {
-                anim.progress += 0.06;
+                anim.progress += 0.04; // Slower for drama
                 
                 if (!anim.impactDone) {
-                    // Spawn damage number
+                    // Spawn damage number (bigger)
                     this.spawnDamageNumber(
-                        anim.tgtX + (Math.random() - 0.5) * 30,
-                        anim.tgtY - 20,
+                        anim.tgtX + (Math.random() - 0.5) * 20,
+                        anim.tgtY - 30,
                         anim.damage,
                         anim.isCrit
                     );
-                    // Screen shake
-                    this.triggerShake(anim.isCrit ? 8 : 4, anim.isCrit ? 0.6 : 0.3);
+                    // Strong screen shake
+                    this.triggerShake(anim.isCrit ? 12 : 6, anim.isCrit ? 0.8 : 0.5);
                     anim.impactDone = true;
+                }
 
-                    // Flash on target zone
-                    ctx.fillStyle = anim.isCrit ? 'rgba(255,50,50,0.4)' : 'rgba(255,255,255,0.3)';
-                    const zoneX = anim.tgtX - this.ZONE_W / 2;
-                    const zoneY = anim.tgtY - this.ZONE_H / 2;
-                    ctx.fillRect(zoneX, zoneY, this.ZONE_W, this.ZONE_H);
+                // Full-screen flash
+                const flashAlpha = Math.max(0, 0.4 * (1 - anim.progress));
+                if (flashAlpha > 0) {
+                    ctx.fillStyle = anim.isCrit ? `rgba(255,50,50,${flashAlpha})` : `rgba(255,255,200,${flashAlpha})`;
+                    ctx.fillRect(0, 0, this.W, this.H);
+                }
+
+                // Radial burst at impact point
+                const burstProgress = Math.min(1, anim.progress * 2);
+                const burstRadius = 40 * burstProgress;
+                const burstAlpha = Math.max(0, 0.6 * (1 - burstProgress));
+                if (burstAlpha > 0) {
+                    ctx.strokeStyle = anim.isCrit ? `rgba(255,100,50,${burstAlpha})` : `rgba(255,220,100,${burstAlpha})`;
+                    ctx.lineWidth = 3;
+                    for (let r = 0; r < 8; r++) {
+                        const angle = (r / 8) * Math.PI * 2;
+                        ctx.beginPath();
+                        ctx.moveTo(anim.tgtX, anim.tgtY);
+                        ctx.lineTo(
+                            anim.tgtX + Math.cos(angle) * burstRadius,
+                            anim.tgtY + Math.sin(angle) * burstRadius
+                        );
+                        ctx.stroke();
+                    }
+                    // Impact ring
+                    ctx.strokeStyle = anim.isCrit ? `rgba(255,50,50,${burstAlpha * 0.5})` : `rgba(255,220,100,${burstAlpha * 0.5})`;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(anim.tgtX, anim.tgtY, burstRadius, 0, Math.PI * 2);
+                    ctx.stroke();
                 }
 
                 if (anim.progress >= 1) {
@@ -979,13 +1006,13 @@ const BattleArenaScene = {
     spawnDamageNumber(x, y, amount, isCrit) {
         this.damageNumbers.push({
             x, y,
-            text: String(amount),
+            text: isCrit ? `💥${amount}` : `-${amount}`,
             color: isCrit ? '#ff4444' : '#ffffff',
-            outline: isCrit ? '#cc0000' : '#000000',
-            fontSize: isCrit ? 16 : 12,
+            outline: isCrit ? '#880000' : '#000000',
+            fontSize: isCrit ? 22 : 16,
             alpha: 1.0,
-            vy: -1.5,
-            scale: isCrit ? 1.3 : 1.0,
+            vy: -2,
+            scale: isCrit ? 1.5 : 1.2,
             life: 1.0,
         });
     },
