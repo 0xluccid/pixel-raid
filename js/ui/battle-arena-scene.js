@@ -1,1923 +1,746 @@
 /**
- * BattleArenaScene — Full-screen Canvas battle arena (Duel Links style)
+ * BattleArenaScene — Tactical Auto Battler renderer (Phase 1)
  * 
- * Takes over #battle-canvas when battle starts.
- * Split-screen: Enemy (top) | VS divider (mid) | Player (bottom)
- * Handles transitions, animations, damage numbers, HP bars.
+ * Layout:
+ *   Top bar: Enemy hero HP + name
+ *   Enemy board: 5 slots in a row
+ *   Divider: Turn info + VS
+ *   Player board: 5 slots in a row  
+ *   Player hero HP + Energy bar
+ *   Hand cards: horizontal row at bottom
+ *   End Turn button
  * 
- * Depends on: BattleEngine, BattleAnimations, CardRenderer, CLASSES, RARITIES
+ * Interactions:
+ *   - Tap hand card → select
+ *   - Tap empty board slot → play selected card
+ *   - Tap End Turn → trigger auto battle
+ * 
+ * Depends on: BattleEngine
  */
 
 const BattleArenaScene = {
-    // Canvas references
     canvas: null,
     ctx: null,
     W: 600,
     H: 400,
-
-    // Scene state
     active: false,
-    transitioning: false,
-    transitionType: 'enter', // 'enter' | 'exit'
-    transitionAlpha: 1.0,
-    transitionStartTime: 0,
-    TRANSITION_DURATION: 800, // ms
+
+    // Interaction state
+    _selectedHandIdx: -1,
+    _hoveredSlot: -1,
+    _hoveredHandIdx: -1,
 
     // Animation state
-    animations: [],
-    damageNumbers: [],
-    attackAnims: [],
-    shakeX: 0,
-    shakeY: 0,
-    shakeDecay: 0,
+    _damageNumbers: [],
+    _attackAnims: [],
+    _shakeX: 0,
+    _shakeY: 0,
+    _shakeDecay: 0,
+    _floatingTexts: [],
 
-    // Layout constants
-    LP_BAR_H: 18,
-    FIELD_GAP: 6,
-    CENTER_H: 32,
-    ZONE_W: 80,
-    ZONE_H: 100,
-    ZONE_GAP: 6,
-    SKILL_ZONE_W: 56,
-    SKILL_ZONE_H: 80,
-
-    // Cache
-    _spriteCache: {},
+    // Cached rects for hit testing
+    _handRects: [],
+    _playerSlotRects: [],
+    _endTurnRect: null,
 
     // ===== INIT =====
-    init(canvasId) {
-        let el = document.getElementById(canvasId || 'battle-canvas');
-        if (!el) return;
-        
-        // If it's a container div (not a canvas), find or create a canvas inside it
-        if (el.tagName !== 'CANVAS') {
-            let cvs = el.querySelector('canvas');
-            if (!cvs) {
-                cvs = document.createElement('canvas');
-                cvs.id = 'battle-canvas';
-                cvs.width = 800;
-                cvs.height = 500;
-                el.appendChild(cvs);
-            }
-            el = cvs;
-        }
-        
-        this.canvas = el;
+    init(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '';
+
+        this.canvas = document.createElement('canvas');
+        this.canvas.style.cssText = 'width:100%;height:100%;display:block;touch-action:none;image-rendering:pixelated;';
+        container.appendChild(this.canvas);
         this.ctx = this.canvas.getContext('2d');
-        this.W = this.canvas.width;
-        this.H = this.canvas.height;
 
-        // Preload arena background image
-        if (!this._arenaImg) {
-            this._arenaImg = new Image();
-            this._arenaImg.src = 'assets/arena/battle-arena.png';
-        }
-    },
+        this._resize();
+        window.addEventListener('resize', () => this._resize());
 
-    _setupFonts() {
-        // Press Start 2P is loaded via Google Fonts in HTML
-        // We just set it here for reference
-    },
+        this.canvas.addEventListener('click', (e) => this._onClick(e));
+        this.canvas.addEventListener('mousemove', (e) => this._onMove(e));
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (e.touches.length > 0) this._onClick(e.touches[0]);
+        }, { passive: false });
 
-    // ===== SCENE LIFECYCLE =====
-    enter(player, enemy, onComplete) {
-        if (!this.canvas) this.init();
+        // Hook BattleEngine callbacks
+        BattleEngine.onFieldUpdate = () => { /* will render on next frame */ };
+        BattleEngine.onAttack = (atk) => this._onAttack(atk);
+        BattleEngine.onPhaseChange = (phase) => this._onPhaseChange(phase);
 
         this.active = true;
-        this.transitioning = true;
-        this.transitionType = 'enter';
-        this.transitionAlpha = 1.0;
-        this.transitionStartTime = Date.now();
-        this.animations = [];
-        this.damageNumbers = [];
-        this.attackAnims = [];
-        this.shakeX = 0;
-        this.shakeY = 0;
-        this.shakeDecay = 0;
+        this._gameLoop();
+    },
 
-        // === FULLSCREEN OVERLAY ===
-        const wrap = document.querySelector('.battle-canvas-wrap');
-        if (wrap) {
-            // Make wrap a fixed fullscreen overlay with flex column for canvas + controls
-            wrap.style.cssText = `
-                position: fixed !important;
-                top: 0; left: 0; right: 0; bottom: 0;
-                width: 100vw !important; height: 100vh !important;
-                z-index: 9999 !important;
-                background: #0a0a1a;
-                display: block !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                border-radius: 0 !important;
-                overflow: hidden;
-            `;
+    isActive() { return this.active; },
+
+    _resize() {
+        const rect = this.canvas.parentElement.getBoundingClientRect();
+        this.W = Math.floor(rect.width);
+        this.H = Math.floor(rect.height);
+        this.canvas.width = this.W;
+        this.canvas.height = this.H;
+    },
+
+    // ===== GAME LOOP =====
+    _gameLoop() {
+        if (!this.active) return;
+        this._update();
+        this._render();
+        requestAnimationFrame(() => this._gameLoop());
+    },
+
+    _update() {
+        // Shake decay
+        if (this._shakeDecay > 0) {
+            this._shakeX = (Math.random() - 0.5) * this._shakeDecay * 8;
+            this._shakeY = (Math.random() - 0.5) * this._shakeDecay * 8;
+            this._shakeDecay *= 0.85;
+            if (this._shakeDecay < 0.01) { this._shakeDecay = 0; this._shakeX = 0; this._shakeY = 0; }
         }
 
-        // Resize canvas to fill FULL viewport (cards now drawn in canvas)
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
-        // Use full viewport — no aspect ratio constraint
-        this.canvas.width = Math.floor(vw);
-        this.canvas.height = Math.floor(vh);
-        this.W = this.canvas.width;
-        this.H = this.canvas.height;
-        this.canvas.style.cssText = `
-            display: block;
-            image-rendering: auto;
-            width: 100vw; height: 100vh;
-            border: none; box-shadow: none;
-            margin: 0; padding: 0;
-        `;
-
-        // Hide HTML card hand (now drawn in canvas)
-        const cardHand = document.getElementById('card-hand-area');
-        if (cardHand) cardHand.style.display = 'none';
-
-        // ===== CANVAS CLICK HANDLER FOR CARDS =====
-        this._cardClickHandler = (e) => this._onCanvasClick(e);
-        this.canvas.addEventListener('click', this._cardClickHandler);
-        this.canvas.style.cursor = 'default';
-        this._hoveredCard = -1;
-        this._cardMouseMove = (e) => this._onCanvasMouseMove(e);
-        this.canvas.addEventListener('mousemove', this._cardMouseMove);
-
-        // Mobile touch support — tap to play card
-        this._cardTouchHandler = (e) => {
-            e.preventDefault(); // prevent 300ms delay + scroll
-            const touch = e.touches[0] || e.changedTouches[0];
-            if (touch) {
-                const rect = this.canvas.getBoundingClientRect();
-                const fakeEvent = { clientX: touch.clientX, clientY: touch.clientY };
-                this._onCanvasClick(fakeEvent);
-            }
-        };
-        this.canvas.addEventListener('touchend', this._cardTouchHandler, { passive: false });
-        this.canvas.style.touchAction = 'none'; // prevent browser scroll/zoom on canvas
-
-        // Resize listener — adapt canvas on window resize / phone rotation
-        this._resizeHandler = () => {
-            if (!this.running) return;
-            const vw = window.innerWidth;
-            const vh = window.innerHeight;
-            this.canvas.width = Math.floor(vw);
-            this.canvas.height = Math.floor(vh);
-            this.W = this.canvas.width;
-            this.H = this.canvas.height;
-        };
-        window.addEventListener('resize', this._resizeHandler);
-
-        this._cardFlyAnims = []; // active card fly animations
-        this._playingCardIndex = -1; // card currently being animated
-
-        // Keep only action buttons visible below canvas
-        const actionRow = document.querySelector('.battle-action-row');
-        const controls = document.querySelector('.battle-controls');
-        [actionRow, controls].forEach(el => {
-            if (el && el.parentElement !== wrap) {
-                wrap.appendChild(el);
-            }
-            if (el) {
-                el.style.display = '';
-                el.style.position = 'relative';
-                el.style.zIndex = '10000';
-            }
+        // Damage numbers
+        this._damageNumbers = this._damageNumbers.filter(d => {
+            d.age += 16;
+            d.y -= 1.2;
+            d.alpha = 1 - (d.age / d.maxAge);
+            return d.age < d.maxAge;
         });
 
-        // Only hide nav/header (not battle controls)
-        ['.game-nav', '.game-header'].forEach(sel => {
-            const el = document.querySelector(sel);
-            if (el) el.style.display = 'none';
+        // Attack anims
+        this._attackAnims = this._attackAnims.filter(a => {
+            a.age += 16;
+            a.t = a.age / a.duration;
+            return a.age < a.duration;
         });
 
-        // Draw initial black frame immediately
-        this._drawBlackScreen();
-
-        // Start render loop
-        this._startRenderLoop();
-
-        // Hook battle engine attack callback
-        BattleEngine.onAttack = (info) => {
-            this.playAttack(0, 0, info.isPlayerAttacking, info.damage, info.isCrit);
-        };
-
-        // Hook battle engine draw callback
-        BattleEngine.onDraw = (info) => {
-            if (info.isPlayer) {
-                this._cardDrawAnims.push({
-                    startTime: performance.now(),
-                    duration: 400,
-                    x: this.W + 50, // start off-screen right
-                    targetX: 0, // will be set in _renderCardDrawAnims
-                });
-            }
-        };
-        this._cardDrawAnims = [];
-
-        // Transition complete callback
-        setTimeout(() => {
-            this.transitioning = false;
-            if (onComplete) onComplete();
-        }, this.TRANSITION_DURATION);
+        // Floating texts
+        this._floatingTexts = this._floatingTexts.filter(t => {
+            t.age += 16;
+            t.y -= 0.8;
+            t.alpha = 1 - (t.age / t.maxAge);
+            return t.age < t.maxAge;
+        });
     },
 
-    exit(onComplete) {
-        this.transitioning = true;
-        this.transitionType = 'exit';
-        this.transitionAlpha = 0.0;
-        this.transitionStartTime = Date.now();
-
-        setTimeout(() => {
-            this.active = false;
-            this.transitioning = false;
-            this._stopRenderLoop();
-
-            // Remove canvas event listeners
-            if (this._cardClickHandler && this.canvas) {
-                this.canvas.removeEventListener('click', this._cardClickHandler);
-                this.canvas.removeEventListener('mousemove', this._cardMouseMove);
-                if (this._cardTouchHandler) this.canvas.removeEventListener('touchend', this._cardTouchHandler);
-                if (this._resizeHandler) window.removeEventListener('resize', this._resizeHandler);
-                this._cardClickHandler = null;
-                this._cardMouseMove = null;
-            }
-            this._cardFlyAnims = [];
-            this._hoveredCard = -1;
-
-            // === RESTORE FROM FULLSCREEN ===
-            const wrap = document.querySelector('.battle-canvas-wrap');
-            const screenBattle = document.getElementById('screen-battle');
-
-            // Move elements back to screen-battle if they were moved into wrap
-            const movedEls = ['#card-hand-area', '.battle-action-row', '.battle-info-strip', '.battle-controls'];
-            movedEls.forEach(sel => {
-                const el = document.querySelector(sel);
-                if (el && wrap && el.parentElement === wrap && screenBattle) {
-                    screenBattle.appendChild(el);
-                    el.style.cssText = '';
-                }
-            });
-
-            if (wrap) {
-                wrap.style.cssText = ''; // Reset to CSS defaults
-            }
-
-            // Restore canvas size
-            if (this.canvas) {
-                this.canvas.width = 600;
-                this.canvas.height = 400;
-                this.W = 600;
-                this.H = 400;
-                this.canvas.style.cssText = '';
-            }
-
-            // Restore hidden UI elements (nav/header)
-            ['.game-nav', '.game-header'].forEach(sel => {
-                const el = document.querySelector(sel);
-                if (el) el.style.display = '';
-            });
-
-            if (onComplete) onComplete();
-        }, this.TRANSITION_DURATION);
-    },
-
-    // ===== RENDER LOOP =====
-    _renderLoopId: null,
-    _startRenderLoop() {
-        this._stopRenderLoop();
-        const loop = () => {
-            if (!this.active) return;
-            this._render();
-            this._renderLoopId = requestAnimationFrame(loop);
-        };
-        this._renderLoopId = requestAnimationFrame(loop);
-    },
-
-    _stopRenderLoop() {
-        if (this._renderLoopId) {
-            cancelAnimationFrame(this._renderLoopId);
-            this._renderLoopId = null;
-        }
-    },
-
-    // ===== MAIN RENDER =====
+    // ===== RENDER =====
     _render() {
         const ctx = this.ctx;
         const W = this.W;
         const H = this.H;
 
-        // Apply screen shake
         ctx.save();
-        if (this.shakeDecay > 0) {
-            ctx.translate(this.shakeX, this.shakeY);
-            this.shakeX *= 0.85;
-            this.shakeY *= 0.85;
-            this.shakeDecay -= 0.05;
-            if (this.shakeDecay < 0) this.shakeDecay = 0;
-        }
+        ctx.translate(this._shakeX, this._shakeY);
 
-        // Clear
-        ctx.fillStyle = '#0a0a1a';
-        ctx.fillRect(0, 0, W, H);
-
-        // Get battle state
-        const state = BattleEngine.getFieldState();
-        if (!state || !state.player || !state.enemy) {
-            ctx.restore();
-            return;
-        }
-
-        // Layout calculation
-        const layout = this._calcLayout();
-
-        // Draw battlefield background
-        this._drawBackground(ctx, W, H);
-
-        // Draw perspective floor grid (2.5D effect)
-        this._drawPerspectiveFloor(ctx, W, H);
-
-        // Draw enemy LP bar (top-left)
-        this._drawLPBar(ctx, state.enemy, false, layout.lpEnemy);
-
-        // Draw enemy hero zone (left side, facing right)
-        this._drawField(ctx, state.enemy, false, layout.fieldEnemy);
-
-        // Draw VS divider (center)
-        this._drawCenterDivider(ctx, state, layout.vsCenter);
-
-        // Draw player hero zone (right side, facing left)
-        this._drawField(ctx, state.player, true, layout.fieldPlayer);
-
-        // Draw player LP bar (top-right)
-        this._drawLPBar(ctx, state.player, true, layout.lpPlayer);
-
-        // Draw player hand as 2x2 card grid in bottom area
-        this._drawHand(ctx, state.player, layout.hand);
-
-        // Draw card fly animations (on top of everything)
-        this._renderCardFlyAnims(ctx);
-
-        // Draw card draw animations
-        this._renderCardDrawAnims(ctx);
-
-        // Draw vignette (dramatic edge darkening)
-        this._drawVignette(ctx, W, H);
-
-        // Draw attack animations
-        this._renderAttackAnims(ctx);
-
-        // Update hero lunge animation
-        if (this._heroLunge) {
-            const l = this._heroLunge;
-            if (l.phase === 'forward') {
-                l.progress += 0.15;
-                l.offsetX = l.targetOffsetX * Math.min(1, l.progress);
-                if (l.progress >= 1) { l.phase = 'hold'; l.progress = 0; }
-            } else if (l.phase === 'hold') {
-                l.progress += 0.1;
-                if (l.progress >= 0.5) { l.phase = 'back'; l.progress = 0; }
-            } else if (l.phase === 'back') {
-                l.progress += 0.1;
-                l.offsetX = l.targetOffsetX * (1 - Math.min(1, l.progress));
-                if (l.progress >= 1) { this._heroLunge = null; }
-            }
-        }
-
-        // Draw floating damage numbers
-        this._renderDamageNumbers(ctx);
-
-        // Draw phase banner if active
-        this._renderPhaseBanner(ctx);
-
-        // Draw battle end overlay if active
-        this._renderBattleEnd(ctx);
-
-        ctx.restore();
-
-        // Draw transition overlay on top (unaffected by shake)
-        if (this.transitioning) {
-            this._renderTransition(ctx);
-        }
-    },
-
-    // ===== LAYOUT =====
-    _calcLayout() {
-        const W = this.W;
-        const H = this.H;
-        const lpH = this.LP_BAR_H;
-        const centerW = this.CENTER_H; // reuse for VS divider width
-        const gap = this.FIELD_GAP;
-
-        // Reserve bottom 35% for card hand (4 cards horizontal row)
-        const handH = Math.floor(H * 0.35);
-        const battleH = H - handH;
-
-        // LP bars at top (enemy left, player right)
-        const lpW = (W - gap * 3) / 2;
-
-        // Battle area below LP bars — HORIZONTAL duel layout
-        const fieldTop = lpH + gap;
-        const fieldH = battleH - lpH - gap * 2;
-        const heroW = Math.floor((W - centerW - gap * 4) / 2);
-
-        return {
-            lpEnemy:     { x: 0, y: 0, w: lpW, h: lpH },
-            lpPlayer:    { x: lpW + gap * 2, y: 0, w: lpW, h: lpH },
-            fieldEnemy:  { x: 0, y: fieldTop, w: heroW, h: fieldH },
-            vsCenter:    { x: heroW + gap, y: fieldTop, w: centerW + gap * 2, h: fieldH },
-            fieldPlayer: { x: heroW + centerW + gap * 3, y: fieldTop, w: heroW, h: fieldH },
-            hand:        { x: 0, y: battleH, w: W, h: handH },
-        };
-    },
-
-    // ===== BACKGROUND =====
-    _drawBackground(ctx, W, H) {
-        // Use arena image if loaded
-        if (this._arenaImg && this._arenaImg.complete && this._arenaImg.naturalWidth > 0) {
-            ctx.drawImage(this._arenaImg, 0, 0, W, H);
-            return;
-        }
-
-        // Fallback: Cinematic gradient — deep space/sky at top, warm arena floor at bottom
+        // Background gradient
         const grad = ctx.createLinearGradient(0, 0, 0, H);
-        grad.addColorStop(0, '#050515');    // deep void
-        grad.addColorStop(0.2, '#0a0a2e');  // dark blue
-        grad.addColorStop(0.45, '#0f0d28');
-        grad.addColorStop(0.55, '#120e20');
-        grad.addColorStop(0.8, '#1a100d');  // warm ground
-        grad.addColorStop(1, '#200d0d');    // player warm
+        grad.addColorStop(0, '#0a0a1a');
+        grad.addColorStop(0.4, '#0d1020');
+        grad.addColorStop(0.6, '#0d1020');
+        grad.addColorStop(1, '#0a0a1a');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, W, H);
 
-        // Animated floating particles
-        if (!this._particles) {
-            this._particles = [];
-            for (let i = 0; i < 30; i++) {
-                this._particles.push({
-                    x: Math.random() * W,
-                    y: Math.random() * H,
-                    r: Math.random() * 2 + 0.5,
-                    speed: Math.random() * 0.3 + 0.1,
-                    alpha: Math.random() * 0.3 + 0.1,
-                    color: ['#4488ff', '#ff6644', '#88ff44', '#ff44ff'][Math.floor(Math.random() * 4)]
-                });
-            }
-        }
-        this._particles.forEach(p => {
-            p.y -= p.speed;
-            if (p.y < -5) { p.y = H + 5; p.x = Math.random() * W; }
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-            ctx.fillStyle = p.color;
-            ctx.globalAlpha = p.alpha;
-            ctx.fill();
-            ctx.globalAlpha = 1;
-        });
+        const state = BattleEngine.getFieldState();
+        if (!state.player || !state.enemy) { ctx.restore(); return; }
 
-        // Center arena glow
-        const arenaGlow = ctx.createRadialGradient(W/2, H*0.45, 0, W/2, H*0.45, W*0.35);
-        arenaGlow.addColorStop(0, 'rgba(68,136,255,0.06)');
-        arenaGlow.addColorStop(0.5, 'rgba(40,80,160,0.03)');
-        arenaGlow.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = arenaGlow;
-        ctx.fillRect(0, 0, W, H);
+        // Layout zones
+        const barH = Math.floor(H * 0.06);
+        const boardZoneH = Math.floor(H * 0.22);
+        const dividerH = Math.floor(H * 0.06);
+        const energyBarH = Math.floor(H * 0.05);
+        const handZoneH = H - barH * 2 - boardZoneH * 2 - dividerH - energyBarH;
+
+        let y = 0;
+
+        // 1. Enemy hero bar
+        this._drawHeroBar(ctx, 0, y, W, barH, state.enemy, '#cc2244');
+        y += barH;
+
+        // 2. Enemy board (5 slots)
+        this._drawBoard(ctx, 0, y, W, boardZoneH, state.enemy.board, 'enemy', state.phase);
+        y += boardZoneH;
+
+        // 3. Divider
+        this._drawDivider(ctx, 0, y, W, dividerH, state.turn, state.phase);
+        y += dividerH;
+
+        // 4. Player board (5 slots)
+        this._drawBoard(ctx, 0, y, W, boardZoneH, state.player.board, 'player', state.phase);
+        y += boardZoneH;
+
+        // 5. Player hero bar
+        this._drawHeroBar(ctx, 0, y, W, barH, state.player, '#4488ff');
+        y += barH;
+
+        // 6. Energy bar
+        this._drawEnergyBar(ctx, 0, y, W, energyBarH, state.player);
+        y += energyBarH;
+
+        // 7. Hand cards
+        this._drawHand(ctx, 0, y, W, handZoneH, state.player.hand, state.player.energy, state.phase);
+        y += handZoneH;
+
+        // 8. End Turn button (only in main phase)
+        if (state.phase === 'main') {
+            this._drawEndTurnButton(ctx);
+        }
+
+        // 9. Damage numbers
+        for (const d of this._damageNumbers) {
+            ctx.globalAlpha = d.alpha;
+            ctx.font = `bold ${d.size}px monospace`;
+            ctx.fillStyle = d.color;
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            ctx.textAlign = 'center';
+            ctx.strokeText(d.text, d.x, d.y);
+            ctx.fillText(d.text, d.x, d.y);
+            ctx.globalAlpha = 1;
+        }
+
+        // 10. Attack animations
+        for (const a of this._attackAnims) {
+            this._drawAttackAnim(ctx, a);
+        }
+
+        // 11. Floating texts
+        for (const t of this._floatingTexts) {
+            ctx.globalAlpha = t.alpha;
+            ctx.font = `bold ${t.size}px monospace`;
+            ctx.fillStyle = t.color;
+            ctx.textAlign = 'center';
+            ctx.fillText(t.text, t.x, t.y);
+            ctx.globalAlpha = 1;
+        }
+
+        // 12. Selection highlight on hand card
+        if (this._selectedHandIdx >= 0 && this._handRects[this._selectedHandIdx]) {
+            const r = this._handRects[this._selectedHandIdx];
+            ctx.strokeStyle = '#ffdd44';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4);
+        }
+
+        // 13. Hover highlight on empty player slot
+        if (this._selectedHandIdx >= 0 && this._hoveredSlot >= 0 && this._playerSlotRects[this._hoveredSlot]) {
+            const r = this._playerSlotRects[this._hoveredSlot];
+            ctx.strokeStyle = '#44ff88';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(r.x, r.y, r.w, r.h);
+            ctx.setLineDash([]);
+        }
+
+        ctx.restore();
     },
 
-    // ===== LP BAR =====
-    _drawLPBar(ctx, combatant, isPlayer, rect) {
-        const { x, y, w, h } = rect;
-        const maxLP = BattleEngine.MAX_LP || 4000;
-        const actualPct = Math.max(0, Math.min(1, combatant.lp / maxLP));
-
-        // Smooth LP animation
-        const lpKey = isPlayer ? '_playerLPDisplay' : '_enemyLPDisplay';
-        if (this[lpKey] === undefined) this[lpKey] = actualPct;
-        this[lpKey] += (actualPct - this[lpKey]) * 0.08; // Smooth lerp
-        const pct = this[lpKey];
-
-        // Animated LP number
-        const lpNumKey = isPlayer ? '_playerLPNum' : '_enemyLPNum';
-        if (this[lpNumKey] === undefined) this[lpNumKey] = combatant.lp;
-        this[lpNumKey] += (combatant.lp - this[lpNumKey]) * 0.1;
-        const displayLP = Math.round(this[lpNumKey]);
-
-        // Background
-        const bgGrad = ctx.createLinearGradient(x, y, x, y + h);
-        bgGrad.addColorStop(0, 'rgba(0,0,0,0.85)');
-        bgGrad.addColorStop(1, 'rgba(10,10,30,0.9)');
-        ctx.fillStyle = bgGrad;
+    // ===== DRAW: Hero Bar =====
+    _drawHeroBar(ctx, x, y, w, h, combatant, color) {
+        ctx.fillStyle = '#111122';
         ctx.fillRect(x, y, w, h);
 
-        // Accent line (gold top for player, blue top for enemy)
-        ctx.fillStyle = isPlayer ? 'rgba(255,215,0,0.5)' : 'rgba(68,136,255,0.5)';
-        ctx.fillRect(x, y, w, 1);
-
-        const pad = 8;
-        const barX = x + 160;
-        const barW = Math.min(240, w - 340);
-        const barY = y + 3;
-        const barH = h - 6;
-
-        // Portrait emoji
-        const hero = combatant.hero || (combatant.heroes && combatant.heroes[0]);
-        if (hero) {
-            const cls = CLASSES[hero.class || hero.cls];
-            if (cls) {
-                ctx.font = '14px sans-serif';
-                ctx.textAlign = 'left';
-                ctx.fillText(cls.emoji, x + pad, y + h - 5);
-            }
-        }
-
         // Name
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 9px "Press Start 2P"';
+        ctx.font = `bold ${Math.floor(h * 0.55)}px monospace`;
+        ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'left';
-        ctx.fillText(combatant.name || (isPlayer ? 'Player' : 'Enemy'), x + pad + 20, y + h - 5);
+        ctx.fillText(combatant.name, x + 10, y + h * 0.65);
 
-        // LP bar background
-        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        // HP bar
+        const barW = Math.floor(w * 0.45);
+        const barX = x + w - barW - 10;
+        const barY = y + Math.floor(h * 0.2);
+        const barH = Math.floor(h * 0.6);
+        const hpRatio = combatant.heroHp / combatant.heroMaxHp;
+
+        ctx.fillStyle = '#333';
         ctx.fillRect(barX, barY, barW, barH);
-
-        // LP bar fill with glow
-        if (pct > 0) {
-            const fillGrad = ctx.createLinearGradient(barX, barY, barX + barW * pct, barY);
-            let glowColor;
-            if (pct > 0.55) {
-                fillGrad.addColorStop(0, '#22cc66');
-                fillGrad.addColorStop(1, '#00ee77');
-                glowColor = '#00ff88';
-            } else if (pct > 0.25) {
-                fillGrad.addColorStop(0, '#ccaa22');
-                fillGrad.addColorStop(1, '#ffcc00');
-                glowColor = '#ffdd44';
-            } else {
-                fillGrad.addColorStop(0, '#cc2222');
-                fillGrad.addColorStop(1, '#ff3333');
-                glowColor = '#ff4444';
-            }
-
-            // Glow behind bar
-            ctx.shadowColor = glowColor;
-            ctx.shadowBlur = 8;
-            ctx.fillStyle = fillGrad;
-            ctx.fillRect(barX + 1, barY + 1, (barW - 2) * pct, barH - 2);
-            ctx.shadowBlur = 0;
-
-            // Damage trail (red overlay showing recent damage)
-            if (actualPct < pct - 0.01) {
-                ctx.fillStyle = 'rgba(255,50,50,0.4)';
-                ctx.fillRect(barX + 1 + (barW - 2) * actualPct, barY + 1, (barW - 2) * (pct - actualPct), barH - 2);
-            }
-
-            // Shine
-            ctx.fillStyle = 'rgba(255,255,255,0.12)';
-            ctx.fillRect(barX + 1, barY + 1, (barW - 2) * pct, (barH - 2) / 2);
-        }
-
-        // LP bar border with glow
-        ctx.strokeStyle = pct > 0.55 ? 'rgba(0,255,136,0.3)' : pct > 0.25 ? 'rgba(255,200,0,0.3)' : 'rgba(255,50,50,0.3)';
+        ctx.fillStyle = hpRatio > 0.5 ? '#44dd44' : hpRatio > 0.25 ? '#dddd44' : '#dd4444';
+        ctx.fillRect(barX, barY, Math.floor(barW * hpRatio), barH);
+        ctx.strokeStyle = '#666';
         ctx.lineWidth = 1;
         ctx.strokeRect(barX, barY, barW, barH);
 
-        // LP text with color
-        ctx.fillStyle = pct > 0.55 ? '#88ffbb' : pct > 0.25 ? '#ffdd88' : '#ff8888';
-        ctx.font = 'bold 7px "Press Start 2P"';
+        ctx.font = `bold ${Math.floor(h * 0.5)}px monospace`;
+        ctx.fillStyle = '#fff';
         ctx.textAlign = 'center';
-        ctx.fillText(`LP ${displayLP} / ${maxLP}`, barX + barW / 2, barY + barH - 4);
-
-        // Deck + Graveyard (right side)
-        ctx.fillStyle = 'rgba(180,180,180,0.7)';
-        ctx.font = '6px "Press Start 2P"';
-        ctx.textAlign = 'right';
-        ctx.fillText(`DECK: ${combatant.deck ? combatant.deck.length : 0}`, x + w - pad, y + h - 10);
-        ctx.fillStyle = 'rgba(136,136,136,0.5)';
-        ctx.fillText(`GY: ${combatant.graveyard ? combatant.graveyard.length : 0}`, x + w - pad, y + h - 3);
+        ctx.fillText(`❤ ${combatant.heroHp}/${combatant.heroMaxHp}`, barX + barW / 2, y + h * 0.68);
     },
 
-    // ===== FIELD ZONES (2.5D Perspective) =====
-    _drawPerspectiveFloor(ctx, W, H) {
-        // Vanishing point at center-top of canvas
-        const vpX = W / 2;
-        const vpY = H * 0.12;
+    // ===== DRAW: Board (5 slots) =====
+    _drawBoard(ctx, x, y, w, h, board, side, phase) {
+        const slotCount = 5;
+        const padding = Math.floor(w * 0.03);
+        const gap = Math.floor(w * 0.015);
+        const slotW = Math.floor((w - padding * 2 - gap * (slotCount - 1)) / slotCount);
+        const slotH = Math.floor(h * 0.85);
+        const slotY = y + Math.floor((h - slotH) / 2);
 
-        // Horizontal grid lines (perspective depth)
-        ctx.strokeStyle = 'rgba(100,150,255,0.06)';
-        ctx.lineWidth = 1;
-        const numLines = 12;
-        for (let i = 0; i <= numLines; i++) {
-            const t = i / numLines;
-            const ly = vpY + (H - vpY) * t;
-            // Lines get wider as they go down (perspective)
-            const spread = t * t; // quadratic spread
-            const lx1 = vpX - (W * 0.6) * spread;
-            const lx2 = vpX + (W * 0.6) * spread;
-            ctx.beginPath();
-            ctx.moveTo(lx1, ly);
-            ctx.lineTo(lx2, ly);
-            ctx.stroke();
+        const rects = [];
+        for (let i = 0; i < slotCount; i++) {
+            const slotX = x + padding + i * (slotW + gap);
+            rects.push({ x: slotX, y: slotY, w: slotW, h: slotH });
+
+            const unit = board[i];
+
+            if (unit && unit.hp > 0) {
+                // Draw unit card
+                this._drawUnitCard(ctx, slotX, slotY, slotW, slotH, unit, side === 'player');
+            } else {
+                // Empty slot
+                const isSelected = side === 'player' && this._selectedHandIdx >= 0 && this._hoveredSlot === i;
+                ctx.fillStyle = isSelected ? 'rgba(68,255,136,0.15)' : 'rgba(255,255,255,0.03)';
+                ctx.fillRect(slotX, slotY, slotW, slotH);
+                ctx.strokeStyle = isSelected ? '#44ff88' : 'rgba(255,255,255,0.1)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(slotX, slotY, slotW, slotH);
+
+                // Slot number
+                ctx.font = `${Math.floor(slotH * 0.15)}px monospace`;
+                ctx.fillStyle = 'rgba(255,255,255,0.15)';
+                ctx.textAlign = 'center';
+                ctx.fillText(`SLOT ${i + 1}`, slotX + slotW / 2, slotY + slotH / 2);
+            }
         }
 
-        // Vertical perspective lines converging to vanishing point
-        const numVLines = 8;
-        for (let i = 0; i <= numVLines; i++) {
-            const t = i / numVLines;
-            const bx = W * 0.05 + (W * 0.9) * t; // bottom x
-            ctx.beginPath();
-            ctx.moveTo(vpX, vpY);
-            ctx.lineTo(bx, H);
-            ctx.stroke();
-        }
+        if (side === 'player') this._playerSlotRects = rects;
     },
 
-    _drawVignette(ctx, W, H) {
-        // Strong dramatic vignette — dark edges, bright center
-        const grad = ctx.createRadialGradient(W / 2, H * 0.45, W * 0.2, W / 2, H * 0.45, W * 0.75);
-        grad.addColorStop(0, 'rgba(0,0,0,0)');
-        grad.addColorStop(0.5, 'rgba(0,0,0,0.1)');
-        grad.addColorStop(0.8, 'rgba(0,0,0,0.35)');
-        grad.addColorStop(1, 'rgba(0,0,0,0.65)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, W, H);
-
-        // Top/bottom extra darkening
-        const topGrad = ctx.createLinearGradient(0, 0, 0, H * 0.15);
-        topGrad.addColorStop(0, 'rgba(0,0,0,0.4)');
-        topGrad.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = topGrad;
-        ctx.fillRect(0, 0, W, H * 0.15);
-
-        const botGrad = ctx.createLinearGradient(0, H * 0.85, 0, H);
-        botGrad.addColorStop(0, 'rgba(0,0,0,0)');
-        botGrad.addColorStop(1, 'rgba(0,0,0,0.3)');
-        ctx.fillStyle = botGrad;
-        ctx.fillRect(0, H * 0.85, W, H * 0.15);
-    },
-
-    _drawField(ctx, combatant, isPlayer, rect) {
-        const { x, y, w, h } = rect;
-        const zoneW = this.ZONE_W;
-        const zoneH = this.ZONE_H;
-        const skillW = this.SKILL_ZONE_W;
-        const skillH = this.SKILL_ZONE_H;
-        const gap = this.ZONE_GAP;
-
-        // 2.5D perspective scaling — enemy (left) slightly smaller, player (right) bigger
-        const scale = isPlayer ? 1.1 : 0.9;
-        const scaledZoneW = zoneW * scale;
-        const scaledZoneH = zoneH * scale;
-        const scaledSkillW = skillW * scale;
-        const scaledSkillH = skillH * scale;
-        const scaledGap = gap * scale;
-
-        // Horizontal layout: hero centered, skills above and below
-        const totalH = scaledZoneH + scaledSkillH * 2 + scaledGap * 2;
-        const startY = y + (h - totalH) / 2;
-        const heroX = x + (w - scaledZoneW) / 2;
-
-        // Field decoration
-        ctx.fillStyle = isPlayer ? 'rgba(0,100,0,0.04)' : 'rgba(0,0,100,0.04)';
+    // ===== DRAW: Unit Card on Board =====
+    _drawUnitCard(ctx, x, y, w, h, unit, isPlayer) {
+        // Card background
+        ctx.fillStyle = unit.pixelColor || '#4466aa';
+        ctx.globalAlpha = 0.3;
         ctx.fillRect(x, y, w, h);
+        ctx.globalAlpha = 1;
 
-        // Draw the main hero
-        const rawHero = combatant.hero || (combatant.heroes && combatant.heroes[0]) || null;
-        let hero = rawHero;
-        if (rawHero && combatant.battleHero) {
-            hero = { ...rawHero };
-            hero.currentHp = combatant.battleHero.heroHP || combatant.battleHero.hp || rawHero.stats?.hp || 0;
-            hero.maxHp = combatant.battleHero.heroMaxHP || combatant.battleHero.maxHp || rawHero.stats?.maxHp || 0;
-            hero.atk = combatant.battleHero.heroATK || rawHero.stats?.atk || 0;
-            hero.def = combatant.battleHero.heroDEF || rawHero.stats?.def || 0;
-        } else if (rawHero && rawHero.stats) {
-            hero = { ...rawHero };
-            hero.currentHp = rawHero.stats.hp;
-            hero.maxHp = rawHero.stats.maxHp;
-        }
-
-        const heroY = startY + scaledSkillH + scaledGap;
-
-        // Apply hero lunge offset if attacking
-        let lungeOffsetX = 0;
-        if (this._heroLunge && this._heroLunge.isPlayer === isPlayer) {
-            lungeOffsetX = this._heroLunge.offsetX || 0;
-        }
-
-        // Flip enemy hero to face right, player hero faces left
-        if (!isPlayer) {
-            ctx.save();
-            ctx.translate(heroX + scaledZoneW + lungeOffsetX, heroY);
-            ctx.scale(-1, 1);
-            this._drawHeroZone(ctx, 0, 0, scaledZoneW, scaledZoneH, hero, isPlayer, 0);
-            ctx.restore();
-        } else {
-            this._drawHeroZone(ctx, heroX + lungeOffsetX, heroY, scaledZoneW, scaledZoneH, hero, isPlayer, 0);
-        }
-
-        // Draw skill zones above and below hero
-        const skillX = x + (w - scaledSkillW) / 2;
-        const topSkillY = startY;
-        const botSkillY = startY + scaledSkillH + scaledGap + scaledZoneH + scaledGap;
-
-        const leftSkill = combatant.skillZones ? combatant.skillZones[0] : null;
-        const rightSkill = combatant.skillZones ? combatant.skillZones[1] : null;
-
-        this._drawSkillZone(ctx, skillX, topSkillY, scaledSkillW, scaledSkillH, leftSkill, 0);
-        this._drawSkillZone(ctx, skillX, botSkillY, scaledSkillW, scaledSkillH, rightSkill, 1);
-    },
-
-    _drawHeroZone(ctx, x, y, w, h, hero, isPlayer, index) {
-        if (!hero) {
-            // Empty zone
-            ctx.fillStyle = 'rgba(20,20,50,0.4)';
-            ctx.fillRect(x, y, w, h);
-            ctx.strokeStyle = 'rgba(68,136,255,0.15)';
-            ctx.lineWidth = 1;
-            ctx.setLineDash([4, 4]);
-            ctx.strokeRect(x, y, w, h);
-            ctx.setLineDash([]);
-
-            // Placeholder icon
-            ctx.fillStyle = 'rgba(68,136,255,0.12)';
-            ctx.font = '20px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('⚔', x + w / 2, y + h / 2 + 6);
-
-            // Zone label
-            ctx.fillStyle = 'rgba(68,136,255,0.3)';
-            ctx.font = '5px "Press Start 2P"';
-            ctx.fillText(`HERO ${index + 1}`, x + w / 2, y - 3);
-            return;
-        }
-
-        // Rarity glow
-        const rarityColor = RARITIES[hero.rarity] ? RARITIES[hero.rarity].color : '#555';
-        const cls = CLASSES[hero.class || hero.type] || {};
-        const clsColor = cls.color || '#888';
-
-        // Zone glow
-        ctx.shadowColor = rarityColor;
-        ctx.shadowBlur = 6;
-        ctx.strokeStyle = rarityColor;
+        // Border
+        ctx.strokeStyle = isPlayer ? '#4488ff' : '#cc4444';
         ctx.lineWidth = 2;
         ctx.strokeRect(x, y, w, h);
-        ctx.shadowBlur = 0;
 
-        // Card body
-        ctx.fillStyle = 'rgba(0,10,30,0.85)';
-        ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
-
-        // Class-colored top strip
-        ctx.fillStyle = clsColor;
-        ctx.fillRect(x + 1, y + 1, w - 2, 3);
-
-        // Header — name + HP
-        const pad = 4;
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(x + pad, y + 5, w - pad * 2, 13);
-
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 5px "Press Start 2P"';
-        ctx.textAlign = 'left';
-        ctx.fillText(hero.name, x + pad + 2, y + 14);
-
-        ctx.fillStyle = '#ff4444';
-        ctx.textAlign = 'right';
-        ctx.fillText(`HP ${hero.currentHp}`, x + w - pad - 2, y + 14);
-
-        // Sprite area
-        const artY = y + 19;
-        const artH = h * 0.4;
-        ctx.fillStyle = '#0f3460';
-        ctx.fillRect(x + pad, artY, w - pad * 2, artH);
-
-        // Draw sprite
-        const spriteSize = Math.min(w - pad * 2 - 4, artH - 4);
-        const spriteX = x + pad + (w - pad * 2 - spriteSize) / 2;
-        const spriteY = artY + (artH - spriteSize) / 2;
-        this._drawSprite(ctx, hero, spriteX, spriteY, spriteSize);
-
-        // Golden art frame
-        ctx.strokeStyle = '#c8a832';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x + pad, artY, w - pad * 2, artH);
-
-        // Type + rarity line
-        const infoY = artY + artH + 2;
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.fillRect(x + pad, infoY, w - pad * 2, 8);
-        ctx.fillStyle = clsColor;
-        ctx.font = '4px "Press Start 2P"';
-        ctx.textAlign = 'left';
-        ctx.fillText(cls.name || 'Hero', x + pad + 2, infoY + 6);
-        ctx.fillStyle = rarityColor;
-        ctx.textAlign = 'right';
-        ctx.fillText(RARITIES[hero.rarity] ? RARITIES[hero.rarity].name : '', x + w - pad - 2, infoY + 6);
-
-        // Stats box
-        const statsY = infoY + 10;
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(x + pad, statsY, w - pad * 2, h - statsY + y - pad);
-
-        // HP bar
-        const hpBarX = x + pad + 2;
-        const hpBarW = w - pad * 2 - 4;
-        const hpBarY2 = statsY + 2;
-        const hpBarH = 6;
-        const hpPct = Math.max(0, hero.currentHp / hero.maxHp);
-
-        ctx.fillStyle = '#222';
-        ctx.fillRect(hpBarX, hpBarY2, hpBarW, hpBarH);
-        const hpColor = hpPct > 0.6 ? '#22cc66' : hpPct > 0.3 ? '#ffcc00' : '#ff3333';
-        ctx.fillStyle = hpColor;
-        ctx.fillRect(hpBarX, hpBarY2, hpBarW * hpPct, hpBarH);
-        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-        ctx.lineWidth = 0.5;
-        ctx.strokeRect(hpBarX, hpBarY2, hpBarW, hpBarH);
-        ctx.fillStyle = '#fff';
-        ctx.font = '4px "Press Start 2P"';
+        // Emoji (centered, large)
+        const emojiSize = Math.floor(h * 0.35);
+        ctx.font = `${emojiSize}px serif`;
         ctx.textAlign = 'center';
-        ctx.fillText(`${hero.currentHp}/${hero.maxHp}`, x + pad + (w - pad * 2) / 2, hpBarY2 + 5);
-
-        // ATK / DEF
-        const totalAtk = (hero.stats?.atk || hero.atk || 0) + (hero.atkBuff || 0);
-        const totalDef = (hero.stats?.def || hero.def || 0) + (hero.defBuff || 0);
-        const statBoxY = hpBarY2 + hpBarH + 2;
-        const halfW = (w - pad * 2 - 6) / 2;
-
-        ctx.fillStyle = 'rgba(233,69,96,0.5)';
-        ctx.fillRect(x + pad + 2, statBoxY, halfW, 8);
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 5px "Press Start 2P"';
-        ctx.textAlign = 'left';
-        ctx.fillText(`⚔${totalAtk}`, x + pad + 4, statBoxY + 6);
-
-        ctx.fillStyle = 'rgba(68,136,255,0.5)';
-        ctx.fillRect(x + pad + 4 + halfW, statBoxY, halfW, 8);
-        ctx.fillStyle = '#fff';
-        ctx.textAlign = 'right';
-        ctx.fillText(`🛡${totalDef}`, x + w - pad - 4, statBoxY + 6);
-
-        // Position indicator (attack/defense)
-        if (hero.position === 'defense') {
-            ctx.fillStyle = 'rgba(68,136,255,0.2)';
-            ctx.fillRect(x, y, w, h);
-            ctx.fillStyle = 'rgba(68,136,255,0.9)';
-            ctx.font = 'bold 4px "Press Start 2P"';
-            ctx.textAlign = 'center';
-            ctx.fillText('🛡 DEF', x + w / 2, y + h - 4);
-        }
-
-        // Can-attack pulse glow
-        if (hero.canAttack && !hero.hasAttacked && hero.position === 'attack') {
-            const pulseAlpha = 0.4 + 0.3 * Math.sin(Date.now() / 250);
-            ctx.shadowColor = '#ffd700';
-            ctx.shadowBlur = 10;
-            ctx.strokeStyle = `rgba(255,215,0,${pulseAlpha})`;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
-            ctx.shadowBlur = 0;
-        }
-    },
-
-    _drawSkillZone(ctx, x, y, w, h, card, index) {
-        if (!card) {
-            ctx.fillStyle = 'rgba(20,20,50,0.3)';
-            ctx.fillRect(x, y, w, h);
-            ctx.strokeStyle = 'rgba(155,89,182,0.15)';
-            ctx.lineWidth = 1;
-            ctx.setLineDash([3, 3]);
-            ctx.strokeRect(x, y, w, h);
-            ctx.setLineDash([]);
-            ctx.fillStyle = 'rgba(155,89,182,0.12)';
-            ctx.font = '16px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('✨', x + w / 2, y + h / 2 + 5);
-            ctx.fillStyle = 'rgba(155,89,182,0.3)';
-            ctx.font = '4px "Press Start 2P"';
-            ctx.fillText(`SPELL ${index + 1}`, x + w / 2, y - 3);
-            return;
-        }
-
-        const typeInfo = CARD_TYPES[card.type] || { emoji: '✨', color: '#888' };
-        const rarityColor = RARITIES[card.rarity] ? RARITIES[card.rarity].color : '#aaa';
-
-        // Background
-        ctx.fillStyle = 'rgba(20,10,40,0.8)';
-        ctx.fillRect(x, y, w, h);
-        ctx.strokeStyle = rarityColor;
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(x, y, w, h);
-
-        // Icon
-        ctx.font = '18px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(typeInfo.emoji, x + w / 2, y + h / 2 - 4);
+        ctx.fillText(unit.emoji || '❓', x + w / 2, y + h * 0.4);
 
         // Name
-        ctx.fillStyle = rarityColor;
-        ctx.font = '4px "Press Start 2P"';
-        ctx.fillText(card.name, x + w / 2, y + h - 10);
-
-        // Description
-        if (card.description) {
-            ctx.fillStyle = 'rgba(170,170,255,0.6)';
-            ctx.font = '3px "Press Start 2P"';
-            const desc = card.description.length > 18 ? card.description.substring(0, 18) + '...' : card.description;
-            ctx.fillText(desc, x + w / 2, y + h - 4);
-        }
-
-        // Inner border
-        ctx.strokeStyle = rarityColor;
-        ctx.lineWidth = 0.5;
-        ctx.strokeRect(x + 3, y + 3, w - 6, h - 6);
-    },
-
-    // ===== CENTER DIVIDER =====
-    _drawCenterDivider(ctx, state, rect) {
-        const { x, y, w, h } = rect;
-
-        // Background gradient (vertical stripe)
-        const grad = ctx.createLinearGradient(x, 0, x + w, 0);
-        grad.addColorStop(0, 'rgba(0,0,0,0.9)');
-        grad.addColorStop(0.5, 'rgba(15,15,35,0.95)');
-        grad.addColorStop(1, 'rgba(0,0,0,0.9)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(x, y, w, h);
-
-        // Gold accent lines (left/right edges)
-        ctx.fillStyle = 'rgba(255,215,0,0.5)';
-        ctx.fillRect(x, y, 1, h);
-        ctx.fillRect(x + w - 1, y, 1, h);
-
-        // VS badge (center)
-        const vsX = x + w / 2;
-        const vsY = y + h / 2;
-
-        // VS glow (pulsing)
-        const pulse = 0.7 + 0.3 * Math.sin(performance.now() * 0.003);
-        ctx.shadowColor = '#ffd700';
-        ctx.shadowBlur = 12 * pulse;
-        ctx.fillStyle = '#ffd700';
-        ctx.font = 'bold 14px "Press Start 2P"';
+        const nameSize = Math.max(8, Math.floor(w * 0.12));
+        ctx.font = `bold ${nameSize}px monospace`;
+        ctx.fillStyle = '#fff';
         ctx.textAlign = 'center';
-        ctx.fillText('VS', vsX, vsY + 5);
-        ctx.shadowBlur = 0;
+        const name = unit.name.length > 10 ? unit.name.substring(0, 9) + '…' : unit.name;
+        ctx.fillText(name, x + w / 2, y + h * 0.6);
 
-        // Active player indicator (glow on active side)
-        if (state.phase !== 'idle') {
-            const activeIsPlayer = state.isPlayerTurn;
-            const indicatorX = activeIsPlayer ? x + w - 15 : x + 15;
-            ctx.fillStyle = `rgba(68, 204, 136, ${0.5 + 0.3 * pulse})`;
-            ctx.beginPath();
-            ctx.arc(indicatorX, vsY, 4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#fff';
-            ctx.font = '4px "Press Start 2P"';
-            ctx.textAlign = 'center';
-            ctx.fillText(activeIsPlayer ? 'YOU' : 'CPU', indicatorX, vsY + 12);
-        }
+        // Stats: ATK | HP
+        const statSize = Math.max(8, Math.floor(w * 0.13));
+        ctx.font = `bold ${statSize}px monospace`;
 
-        // Turn info (above VS)
-        ctx.fillStyle = 'rgba(255,255,255,0.6)';
-        ctx.font = '6px "Press Start 2P"';
-        ctx.fillText(`Turn ${state.turn}`, vsX, vsY - 20);
-
-        // Phase info (below VS)
-        const phaseNames = { draw: '📥 DRAW', main: '🃏 MAIN', battle: '⚔️ BATTLE', end: '⏳ END', idle: '' };
-        ctx.fillStyle = 'rgba(68,204,136,0.8)';
-        ctx.font = '5px "Press Start 2P"';
-        ctx.fillText(phaseNames[state.phase] || '', vsX, vsY + 25);
-
-        // Decorative lines from edges toward VS
-        const lineGrad = ctx.createLinearGradient(0, 0, w / 2 - 60, 0);
-        lineGrad.addColorStop(0, 'rgba(255,215,0,0)');
-        lineGrad.addColorStop(1, 'rgba(255,215,0,0.25)');
-        ctx.strokeStyle = lineGrad;
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(20, vsY); ctx.lineTo(vsX - 60, vsY); ctx.stroke();
-
-        const lineGrad2 = ctx.createLinearGradient(w / 2 + 60, 0, w - 20, 0);
-        lineGrad2.addColorStop(0, 'rgba(255,215,0,0.25)');
-        lineGrad2.addColorStop(1, 'rgba(255,215,0,0)');
-        ctx.strokeStyle = lineGrad2;
-        ctx.beginPath(); ctx.moveTo(vsX + 60, vsY); ctx.lineTo(w - 20, vsY); ctx.stroke();
-    },
-
-    // ===== SPRITE DRAWING =====
-    _drawSprite(ctx, card, x, y, size) {
-        // Try template image first
-        const template = typeof getTemplateByName === 'function' 
-            ? getTemplateByName(card.templateId || card.name) 
-            : null;
-        
-        if (template && template.image) {
-            const img = this._loadImage(template.image);
-            if (img.complete && img.naturalWidth > 0 && !img._failed) {
-                ctx.imageSmoothingEnabled = false;
-                ctx.drawImage(img, x, y, size, size);
-                return;
-            }
-        }
-
-        // Fallback: use CardRenderer's procedural sprite
-        if (typeof CardRenderer !== 'undefined' && CardRenderer.drawCardSprite) {
-            const spriteCanvas = document.createElement('canvas');
-            spriteCanvas.width = size;
-            spriteCanvas.height = size;
-            CardRenderer.drawCardSprite(spriteCanvas, card, size);
-            ctx.drawImage(spriteCanvas, x, y);
-        } else {
-            // Final fallback: colored rectangle with emoji
-            const cls = CLASSES[card.class || card.type] || {};
-            ctx.fillStyle = cls.color || '#444';
-            ctx.fillRect(x, y, size, size);
-            ctx.font = `${Math.floor(size * 0.4)}px sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.fillText(cls.emoji || '⚔', x + size / 2, y + size / 2 + Math.floor(size * 0.15));
-        }
-    },
-
-    _loadImage(src) {
-        if (this._spriteCache[src]) return this._spriteCache[src];
-        const img = new Image();
-        img.src = src;
-        img.onerror = () => { img._failed = true; };
-        this._spriteCache[src] = img;
-        return img;
-    },
-
-    // ===== HAND CARDS (4 cards horizontal row at bottom) =====
-    _drawHand(ctx, combatant, rect) {
-        const { x, y, w, h } = rect;
-        const hand = combatant.hand || [];
-        if (!hand.length) return;
-
-        // Hand area background
-        ctx.fillStyle = 'rgba(5, 5, 20, 0.85)';
-        ctx.fillRect(x, y, w, h);
-
-        // Top border line
-        ctx.strokeStyle = 'rgba(68, 136, 255, 0.3)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + w, y);
-        ctx.stroke();
-
-        // "YOUR HAND" label
-        const handLabelSize = Math.max(5, Math.min(10, w * 0.02));
-        ctx.font = handLabelSize + 'px "Press Start 2P", monospace';
-        ctx.fillStyle = 'rgba(68, 136, 255, 0.5)';
-        ctx.textAlign = 'center';
-        ctx.fillText('YOUR HAND', x + w / 2, y + handLabelSize + 4);
-
-        // 4 cards horizontal row
-        const cardsToShow = hand.slice(0, 4);
-        const pad = 10;
-        const gap = 8;
-        const gridTop = y + handLabelSize + 10;
-        const gridH = h - handLabelSize - 14;
-        const totalGaps = gap * (cardsToShow.length - 1);
-        const cardW = (w - pad * 2 - totalGaps) / cardsToShow.length;
-        const cardH = gridH;
-
-        for (let i = 0; i < cardsToShow.length; i++) {
-            // Skip card being animated (flying to arena)
-            if (this._playingCardIndex === i) continue;
-            const card = cardsToShow[i];
-            const cx = x + pad + i * (cardW + gap);
-            const cy = gridTop;
-            this._drawCard(ctx, card, cx, cy, cardW, cardH, i + 1);
-        }
-    },
-
-    _drawCard(ctx, card, x, y, w, h, index) {
-        const color = card.pixelColor || '#4488ff';
-        const rarity = card.rarity || 'common';
-        const isHovered = this._hoveredCard === (index - 1);
-        const isPlayable = BattleEngine.isPlayerTurn && BattleEngine.currentPhase === 'main' && BattleEngine._cardsPlayedThisTurn < BattleEngine.MAX_CARDS_PER_TURN;
-        const rarityColors = {
-            common: '#8a8a8a',
-            rare: '#4488ff',
-            epic: '#aa44ff',
-            legendary: '#ffaa00',
-            mythic: '#ff4488',
-        };
-        const borderColor = rarityColors[rarity] || '#8a8a8a';
-
-        // Card type info
-        const typeEmojis = {
-            attack: '⚔️', damage: '💥', defense: '🛡️', buff: '⬆️',
-            debuff: '⬇️', heal: '💚', special: '⭐', draw: '📥',
-            shield: '🛡️', speed: '💨', poison: '☠️', burn: '🔥',
-        };
-        const cardType = card.type || card.cardType || '';
-        const emoji = typeEmojis[cardType] || '🃏';
-        const cardName = card.name || 'Card';
-        const damageVal = card.damage || card.value || card.healAmount || 0;
-        const manaCost = card.manaCost ?? card.mana ?? 0;
-        const effectVal = card.effect?.value || 0;
-
-        // Scale fonts based on card size
-        const fontSize = Math.max(6, Math.min(11, w * 0.12));
-        const nameFontSize = Math.max(5, Math.min(10, w * 0.09));
-        const smallFontSize = Math.max(4, Math.min(8, w * 0.07));
-        const tinyFontSize = Math.max(3, Math.min(6, w * 0.05));
-
-        // ===== CARD SHAPE =====
-        // Outer shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.fillRect(x + 2, y + 2, w, h);
-
-        // Card base (dark background)
-        ctx.fillStyle = isHovered && isPlayable ? '#1e1835' : '#12101f';
-        ctx.fillRect(x, y, w, h);
-
-        // Inner border (rarity colored)
-        const pad = 2;
-        ctx.strokeStyle = isHovered && isPlayable ? '#ffd700' : borderColor;
-        ctx.lineWidth = isHovered ? 2.5 : 1.5;
-        ctx.strokeRect(x + pad, y + pad, w - pad * 2, h - pad * 2);
-
-        // Outer glow when hovered
-        if (isHovered && isPlayable) {
-            ctx.shadowColor = '#ffd700';
-            ctx.shadowBlur = 12;
-            ctx.strokeStyle = '#ffd700';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x, y, w, h);
-            ctx.shadowBlur = 0;
-        }
-
-        // Playable indicator glow
-        if (isPlayable && !isHovered) {
-            ctx.shadowColor = 'rgba(255,215,0,0.3)';
-            ctx.shadowBlur = 6;
-            ctx.strokeStyle = 'rgba(255,215,0,0.2)';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(x, y, w, h);
-            ctx.shadowBlur = 0;
-        }
-
-        // ===== ART AREA (top ~40% of card) =====
-        const artH = h * 0.38;
-        const artY = y + pad + 1;
-        const artW = w - pad * 2 - 2;
-        const artX = x + pad + 1;
-
-        // Art background gradient (color-themed)
-        const artGrad = ctx.createLinearGradient(artX, artY, artX, artY + artH);
-        artGrad.addColorStop(0, color + '60');
-        artGrad.addColorStop(1, color + '15');
-        ctx.fillStyle = artGrad;
-        ctx.fillRect(artX, artY, artW, artH);
-
-        // Big emoji icon centered in art area
-        const iconSize = Math.min(artH * 0.65, artW * 0.4, 32);
-        ctx.font = `${iconSize}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(emoji, artX + artW / 2, artY + artH / 2);
-
-        // Art area bottom separator line
-        ctx.strokeStyle = borderColor + '60';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(artX, artY + artH);
-        ctx.lineTo(artX + artW, artY + artH);
-        ctx.stroke();
-
-        // ===== MANA COST BADGE (top-left) =====
-        const badgeW = Math.min(22, w * 0.22);
-        const badgeH = Math.min(16, h * 0.1);
-        const badgeX = artX + 2;
-        const badgeY = artY + 2;
-        // Mana crystal background
-        ctx.fillStyle = '#2244aa';
-        ctx.beginPath();
-        ctx.moveTo(badgeX + badgeW / 2, badgeY);
-        ctx.lineTo(badgeX + badgeW, badgeY + badgeH / 2);
-        ctx.lineTo(badgeX + badgeW / 2, badgeY + badgeH);
-        ctx.lineTo(badgeX, badgeY + badgeH / 2);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = '#4488ff';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        // Mana cost number
-        ctx.font = `bold ${smallFontSize}px "Press Start 2P", monospace`;
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(manaCost, badgeX + badgeW / 2, badgeY + badgeH / 2);
-
-        // ===== DAMAGE / VALUE NUMBER (top-right of art) =====
-        if (damageVal > 0) {
-            const numW = Math.min(24, w * 0.25);
-            const numH = Math.min(16, h * 0.1);
-            const numX = artX + artW - numW - 2;
-            const numY = artY + 2;
-            ctx.fillStyle = '#ff4444';
-            ctx.fillRect(numX, numY, numW, numH);
-            ctx.strokeStyle = '#aa0000';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(numX, numY, numW, numH);
-            ctx.font = `bold ${smallFontSize}px "Press Start 2P", monospace`;
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(damageVal, numX + numW / 2, numY + numH / 2);
-        }
-
-        // ===== NAME BANNER (below art) =====
-        const nameY = artY + artH + 2;
-        const nameH = Math.min(18, h * 0.12);
-
-        // Name background strip
-        ctx.fillStyle = borderColor + '30';
-        ctx.fillRect(artX, nameY, artW, nameH);
-
-        // Card name text
-        ctx.font = `${nameFontSize}px "Press Start 2P", monospace`;
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        // Truncate name if too long
-        let displayName = cardName;
-        while (ctx.measureText(displayName).width > artW - 4 && displayName.length > 3) {
-            displayName = displayName.slice(0, -1);
-        }
-        ctx.fillText(displayName, artX + artW / 2, nameY + nameH / 2);
-
-        // ===== STATS AREA (below name — shows type + effect value) =====
-        const statsY = nameY + nameH + 2;
-        const statsH = h * 0.15;
-
-        // Stats bar with icon and value
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.fillRect(artX, statsY, artW, statsH);
-
-        // Type badge on left
-        const typeText = (cardType || 'SKILL').toUpperCase();
-        ctx.font = `${tinyFontSize}px "Press Start 2P", monospace`;
-        ctx.fillStyle = borderColor;
+        // ATK (left)
+        ctx.fillStyle = '#ff6644';
         ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(typeText, artX + 3, statsY + statsH / 2);
+        ctx.fillText(`⚔${unit.atk}`, x + 4, y + h * 0.82);
 
-        // Effect value on right (if applicable)
-        if (effectVal > 0) {
-            const effectLabel = cardType === 'buff' || cardType === 'debuff'
-                ? `+${Math.floor(effectVal * 100)}%`
-                : `${effectVal}`;
-            ctx.fillStyle = '#ffcc44';
-            ctx.textAlign = 'right';
-            ctx.fillText(effectLabel, artX + artW - 3, statsY + statsH / 2);
+        // HP (right)
+        const hpRatio = unit.hp / unit.maxHp;
+        ctx.fillStyle = hpRatio > 0.5 ? '#44dd44' : hpRatio > 0.25 ? '#dddd44' : '#dd4444';
+        ctx.textAlign = 'right';
+        ctx.fillText(`❤${unit.hp}`, x + w - 4, y + h * 0.82);
+
+        // HP bar at bottom
+        const barH = Math.max(3, Math.floor(h * 0.05));
+        const barY = y + h - barH - 2;
+        ctx.fillStyle = '#333';
+        ctx.fillRect(x + 4, barY, w - 8, barH);
+        ctx.fillStyle = hpRatio > 0.5 ? '#44dd44' : hpRatio > 0.25 ? '#dddd44' : '#dd4444';
+        ctx.fillRect(x + 4, barY, Math.floor((w - 8) * hpRatio), barH);
+    },
+
+    // ===== DRAW: Divider =====
+    _drawDivider(ctx, x, y, w, h, turn, phase) {
+        ctx.fillStyle = '#151525';
+        ctx.fillRect(x, y, w, h);
+
+        ctx.font = `bold ${Math.floor(h * 0.55)}px monospace`;
+        ctx.textAlign = 'center';
+
+        // Turn info
+        ctx.fillStyle = '#aaaacc';
+        ctx.fillText(`TURN ${turn}`, x + w * 0.2, y + h * 0.65);
+
+        // Phase
+        const phaseColors = { draw: '#ffdd44', main: '#44ff88', battle: '#ff4444', end: '#aaaacc' };
+        ctx.fillStyle = phaseColors[phase] || '#fff';
+        const phaseLabel = { draw: 'DRAW', main: 'PLAY CARDS', battle: '⚔ BATTLE', end: 'RESULT' };
+        ctx.fillText(phaseLabel[phase] || phase.toUpperCase(), x + w * 0.5, y + h * 0.65);
+
+        // VS
+        ctx.fillStyle = '#444';
+        ctx.fillText('VS', x + w * 0.8, y + h * 0.65);
+    },
+
+    // ===== DRAW: Energy Bar =====
+    _drawEnergyBar(ctx, x, y, w, h, player) {
+        ctx.fillStyle = '#0a0a15';
+        ctx.fillRect(x, y, w, h);
+
+        const crystalW = Math.floor(w * 0.04);
+        const gap = Math.floor(w * 0.01);
+        const startX = x + 10;
+        const maxShow = Math.min(player.maxEnergy, 10);
+
+        ctx.font = `bold ${Math.floor(h * 0.6)}px monospace`;
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#88aaff';
+        ctx.fillText('⚡', startX, y + h * 0.7);
+
+        for (let i = 0; i < maxShow; i++) {
+            const cx = startX + 20 + i * (crystalW + gap);
+            const cy = y + Math.floor(h * 0.15);
+            const ch = Math.floor(h * 0.7);
+
+            if (i < player.energy) {
+                // Filled crystal
+                ctx.fillStyle = '#4488ff';
+                ctx.fillRect(cx, cy, crystalW, ch);
+                ctx.strokeStyle = '#88bbff';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(cx, cy, crystalW, ch);
+            } else {
+                // Empty crystal
+                ctx.fillStyle = '#222244';
+                ctx.fillRect(cx, cy, crystalW, ch);
+                ctx.strokeStyle = '#333355';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(cx, cy, crystalW, ch);
+            }
         }
 
-        // Stats separator line
-        ctx.strokeStyle = borderColor + '30';
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(artX, statsY + statsH);
-        ctx.lineTo(artX + artW, statsY + statsH);
-        ctx.stroke();
+        // Energy text
+        ctx.font = `bold ${Math.floor(h * 0.55)}px monospace`;
+        ctx.fillStyle = '#88aaff';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${player.energy}/${player.maxEnergy}`, x + w - 10, y + h * 0.7);
+    },
 
-        // ===== DESCRIPTION AREA (bottom section) =====
-        const descY = statsY + statsH + 2;
-        const descH = y + h - pad - descY - 2;
+    // ===== DRAW: Hand Cards =====
+    _drawHand(ctx, x, y, w, h, hand, energy, phase) {
+        ctx.fillStyle = '#0a0a15';
+        ctx.fillRect(x, y, w, h);
 
-        // Card description (truncated)
-        if (card.description && descH > tinyFontSize * 2) {
-            ctx.font = `${tinyFontSize}px "Press Start 2P", monospace`;
-            ctx.fillStyle = '#888888';
+        if (!hand || hand.length === 0) {
+            ctx.font = `${Math.floor(h * 0.2)}px monospace`;
+            ctx.fillStyle = '#444';
             ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            let desc = card.description;
-            if (desc.length > 35) desc = desc.slice(0, 33) + '...';
-            // Word wrap
-            const words = desc.split(' ');
-            let line = '';
-            let lineY = descY + 1;
-            for (const word of words) {
-                const test = line + word + ' ';
-                if (ctx.measureText(test).width > artW - 4) {
-                    ctx.fillText(line.trim(), artX + artW / 2, lineY);
-                    line = word + ' ';
-                    lineY += tinyFontSize + 2;
-                    if (lineY > y + h - pad - tinyFontSize) break;
-                } else {
-                    line = test;
-                }
-            }
-            if (lineY <= y + h - pad - tinyFontSize) {
-                ctx.fillText(line.trim(), artX + artW / 2, lineY);
-            }
-        }
-
-        // ===== RARITY GEM (bottom-center) =====
-        const gemR = Math.min(5, w * 0.04);
-        const gemX = artX + artW / 2;
-        const gemY = y + h - pad - gemR - 3;
-        ctx.beginPath();
-        ctx.arc(gemX, gemY, gemR, 0, Math.PI * 2);
-        ctx.fillStyle = borderColor;
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff40';
-        ctx.lineWidth = 0.5;
-        ctx.stroke();
-
-        // Reset text baseline
-        ctx.textBaseline = 'alphabetic';
-    },
-
-    // ===== CARD CLICK & FLY ANIMATION =====
-    _getCardRects() {
-        const layout = this._calcLayout();
-        const { x, y, w, h } = layout.hand;
-        const state = BattleEngine.getFieldState();
-        const hand = state.player.hand || [];
-        if (!hand.length) return [];
-
-        // Must match _drawHand layout exactly
-        const handLabelSize = Math.max(5, Math.min(10, w * 0.02));
-        const pad = 10;
-        const gap = 8;
-        const gridTop = y + handLabelSize + 10;
-        const gridH = h - handLabelSize - 14;
-        const count = Math.min(hand.length, 4);
-        const totalGaps = gap * (count - 1);
-        const cardW = (w - pad * 2 - totalGaps) / count;
-        const cardH = gridH;
-
-        return hand.slice(0, 4).map((card, i) => ({
-            card, index: i,
-            x: x + pad + i * (cardW + gap), y: gridTop,
-            w: cardW, h: cardH
-        }));
-    },
-
-    _onCanvasMouseMove(e) {
-        if (!this.active || this.transitioning) return;
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.W / rect.width;
-        const scaleY = this.H / rect.height;
-        const mx = (e.clientX - rect.left) * scaleX;
-        const my = (e.clientY - rect.top) * scaleY;
-
-        const cards = this._getCardRects();
-        let hovered = -1;
-        for (const c of cards) {
-            if (mx >= c.x && mx <= c.x + c.w && my >= c.y && my <= c.y + c.h) {
-                hovered = c.index;
-                break;
-            }
-        }
-        this._hoveredCard = hovered;
-        this.canvas.style.cursor = hovered >= 0 ? 'pointer' : 'default';
-    },
-
-    _onCanvasClick(e) {
-        if (!this.active || this.transitioning) return;
-        if (!BattleEngine.isRunning || !BattleEngine.isPlayerTurn) return;
-        if (BattleEngine.currentPhase !== 'main') return;
-
-        const rect = this.canvas.getBoundingClientRect();
-        const scaleX = this.W / rect.width;
-        const scaleY = this.H / rect.height;
-        const mx = (e.clientX - rect.left) * scaleX;
-        const my = (e.clientY - rect.top) * scaleY;
-
-        const cards = this._getCardRects();
-        for (const c of cards) {
-            if (mx >= c.x && mx <= c.x + c.w && my >= c.y && my <= c.y + c.h) {
-                this._playCardAnim(c.index);
-                return;
-            }
-        }
-    },
-
-    _playCardAnim(cardIndex) {
-        // Check if card can be played
-        if (BattleEngine._cardsPlayedThisTurn >= BattleEngine.MAX_CARDS_PER_TURN) {
-            BattleEngine.addLog('❌ Already played a card this turn!', 'info');
+            ctx.fillText('No cards in hand', x + w / 2, y + h / 2);
+            this._handRects = [];
             return;
         }
 
-        const cards = this._getCardRects();
-        const card = cards[cardIndex];
-        if (!card) return;
+        const padding = Math.floor(w * 0.02);
+        const gap = Math.floor(w * 0.01);
+        const cardW = Math.floor((w - padding * 2 - gap * (hand.length - 1)) / Math.max(hand.length, 1));
+        const cardH = Math.floor(h * 0.85);
+        const cardY = y + Math.floor((h - cardH) / 2);
 
-        // Calculate target position (player hero zone center)
-        const layout = this._calcLayout();
-        const targetX = layout.fieldPlayer.x + layout.fieldPlayer.w / 2;
-        const targetY = layout.fieldPlayer.y + layout.fieldPlayer.h / 2;
+        this._handRects = [];
+        for (let i = 0; i < hand.length; i++) {
+            const card = hand[i];
+            const cardX = x + padding + i * (cardW + gap);
+            this._handRects.push({ x: cardX, y: cardY, w: cardW, h: cardH });
 
-        // Capture card data BEFORE playCard removes it from hand
-        const cardData = { ...card.card };
+            const isSelected = this._selectedHandIdx === i;
+            const isHovered = this._hoveredHandIdx === i;
+            const canAfford = card.cost <= energy && phase === 'main';
 
-        // Start fly animation
-        const anim = {
-            card: cardData,
-            index: cardIndex,
-            startX: card.x + card.w / 2,
-            startY: card.y + card.h / 2,
-            startW: card.w,
-            startH: card.h,
-            targetX,
-            targetY,
-            startTime: performance.now(),
-            duration: 500,
-            done: false
-        };
-        this._cardFlyAnims.push(anim);
+            // Card background
+            const bgAlpha = canAfford ? (isSelected ? 0.5 : isHovered ? 0.4 : 0.25) : 0.1;
+            ctx.fillStyle = card.pixelColor || '#4466aa';
+            ctx.globalAlpha = bgAlpha;
+            ctx.fillRect(cardX, cardY, cardW, cardH);
+            ctx.globalAlpha = 1;
 
-        // Mark card as "being played" so _drawHand skips it
-        this._playingCardIndex = cardIndex;
+            // Border
+            if (isSelected) {
+                ctx.strokeStyle = '#ffdd44';
+                ctx.lineWidth = 3;
+            } else if (canAfford) {
+                ctx.strokeStyle = '#4488ff';
+                ctx.lineWidth = 1;
+            } else {
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 1;
+            }
+            ctx.strokeRect(cardX, cardY, cardW, cardH);
 
-        // Play the card after animation completes
-        setTimeout(() => {
-            this._playingCardIndex = -1;
-            BattleEngine.playCard(cardIndex);
-        }, anim.duration + 50);
-    },
-
-    _renderCardFlyAnims(ctx) {
-        if (!this._cardFlyAnims.length) return;
-        const now = performance.now();
-        this._cardFlyAnims = this._cardFlyAnims.filter(anim => {
-            const t = Math.min(1, (now - anim.startTime) / anim.duration);
-            const ease = 1 - Math.pow(1 - t, 3); // ease out cubic
-
-            const cx = anim.startX + (anim.targetX - anim.startX) * ease;
-            const cy = anim.startY + (anim.targetY - anim.startY) * ease;
-            const cw = anim.startW * (1 - ease * 0.7);
-            const ch = anim.startH * (1 - ease * 0.7);
-
-            ctx.save();
-            ctx.globalAlpha = 1 - ease * 0.5;
-
-            // Glow trail
-            ctx.shadowColor = '#ffd700';
-            ctx.shadowBlur = 20 * (1 - ease);
-
-            // Card body
-            const color = anim.card.pixelColor || '#4488ff';
-            ctx.fillStyle = color;
-            ctx.fillRect(cx - cw / 2, cy - ch / 2, cw, ch);
-            ctx.strokeStyle = '#ffd700';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(cx - cw / 2, cy - ch / 2, cw, ch);
-
-            // Card name
-            ctx.shadowBlur = 0;
-            ctx.font = 'bold 7px "Press Start 2P", monospace';
+            // Cost diamond (top-left)
+            const diamondSize = Math.floor(cardW * 0.18);
+            ctx.fillStyle = canAfford ? '#4488ff' : '#663333';
+            this._drawDiamond(ctx, cardX + diamondSize + 4, cardY + diamondSize + 4, diamondSize);
+            ctx.font = `bold ${Math.floor(diamondSize * 0.9)}px monospace`;
             ctx.fillStyle = '#fff';
             ctx.textAlign = 'center';
-            ctx.fillText(anim.card.name || 'Card', cx, cy + 3);
+            ctx.fillText(card.cost, cardX + diamondSize + 4, cardY + diamondSize + 7);
 
-            ctx.restore();
-
-            if (t >= 1) {
-                anim.done = true;
-                return false;
-            }
-            return true;
-        });
-    },
-
-    // ===== CARD DRAW ANIMATION =====
-    _renderCardDrawAnims(ctx) {
-        if (!this._cardDrawAnims || !this._cardDrawAnims.length) return;
-        const now = performance.now();
-        const layout = this._calcLayout();
-        const handRect = layout.hand;
-
-        this._cardDrawAnims = this._cardDrawAnims.filter(anim => {
-            const t = Math.min(1, (now - anim.startTime) / anim.duration);
-            const ease = 1 - Math.pow(1 - t, 3);
-
-            // Animate from right side to hand area
-            const startX = this.W + 50;
-            const endX = handRect.x + handRect.w / 2;
-            const y = handRect.y + handRect.h / 2;
-            const cx = startX + (endX - startX) * ease;
-
-            // Draw card sliding in
-            const cw = 60 * (0.5 + ease * 0.5);
-            const ch = 80 * (0.5 + ease * 0.5);
-
-            ctx.save();
-            ctx.globalAlpha = ease;
-            ctx.shadowColor = '#4488ff';
-            ctx.shadowBlur = 15 * (1 - ease);
-
-            ctx.fillStyle = 'rgba(15, 12, 30, 0.95)';
-            ctx.fillRect(cx - cw / 2, y - ch / 2, cw, ch);
-            ctx.strokeStyle = '#4488ff';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(cx - cw / 2, y - ch / 2, cw, ch);
-
-            ctx.shadowBlur = 0;
-            ctx.font = '6px "Press Start 2P"';
-            ctx.fillStyle = '#4488ff';
+            // Emoji
+            const emojiSize = Math.floor(cardH * 0.3);
+            ctx.font = `${emojiSize}px serif`;
             ctx.textAlign = 'center';
-            ctx.fillText('📥 DRAW', cx, y + 3);
+            ctx.fillText(card.emoji || '❓', cardX + cardW / 2, cardY + cardH * 0.35);
 
-            ctx.restore();
+            // Name
+            const nameSize = Math.max(7, Math.floor(cardW * 0.12));
+            ctx.font = `bold ${nameSize}px monospace`;
+            ctx.fillStyle = canAfford ? '#fff' : '#666';
+            ctx.textAlign = 'center';
+            const name = card.name.length > 12 ? card.name.substring(0, 11) + '…' : card.name;
+            ctx.fillText(name, cardX + cardW / 2, cardY + cardH * 0.55);
 
-            return t < 1;
-        });
-    },
+            // Stats
+            const statSize = Math.max(8, Math.floor(cardW * 0.14));
+            ctx.font = `bold ${statSize}px monospace`;
+            ctx.fillStyle = '#ff6644';
+            ctx.textAlign = 'left';
+            ctx.fillText(`⚔${card.atk}`, cardX + 4, cardY + cardH * 0.75);
+            ctx.fillStyle = '#44dd44';
+            ctx.textAlign = 'right';
+            ctx.fillText(`❤${card.hp}`, cardX + cardW - 4, cardY + cardH * 0.75);
 
-    // ===== ATTACK ANIMATIONS =====
-    playAttack(attackIdx, targetIdx, isPlayerAttacking, damage, isCrit) {
-        const layout = this._calcLayout();
-        const fieldSrc = isPlayerAttacking ? layout.fieldPlayer : layout.fieldEnemy;
-        const fieldDst = isPlayerAttacking ? layout.fieldEnemy : layout.fieldPlayer;
+            // Description (tiny)
+            const descSize = Math.max(6, Math.floor(cardW * 0.09));
+            ctx.font = `${descSize}px monospace`;
+            ctx.fillStyle = canAfford ? '#aaa' : '#555';
+            ctx.textAlign = 'center';
+            ctx.fillText(card.desc || '', cardX + cardW / 2, cardY + cardH * 0.92);
 
-        // Single hero centered in field
-        const srcX = fieldSrc.x + fieldSrc.w / 2;
-        const srcY = fieldSrc.y + fieldSrc.h / 2;
-        const tgtX = fieldDst.x + fieldDst.w / 2;
-        const tgtY = fieldDst.y + fieldDst.h / 2;
-
-        // Hero lunge effect — shift hero toward enemy briefly
-        this._heroLunge = {
-            isPlayer: isPlayerAttacking,
-            offsetX: 0,
-            phase: 'forward', // forward → hold → back
-            progress: 0,
-            targetOffsetX: isPlayerAttacking ? -30 : 30, // toward enemy
-        };
-
-        this.attackAnims.push({
-            srcX, srcY, tgtX, tgtY,
-            progress: 0,
-            speed: 0.04,
-            damage: damage,
-            isCrit: isCrit,
-            isPlayer: isPlayerAttacking,
-            phase: 'lunge', // lunge → impact → retreat
-            impactDone: false,
-        });
-    },
-
-    _renderAttackAnims(ctx) {
-        for (let i = this.attackAnims.length - 1; i >= 0; i--) {
-            const anim = this.attackAnims[i];
-            
-            if (anim.phase === 'lunge') {
-                anim.progress += anim.speed;
-                const t = Math.min(1, anim.progress);
-                const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-                
-                const curX = anim.srcX + (anim.tgtX - anim.srcX) * eased;
-                const curY = anim.srcY + (anim.tgtY - anim.srcY) * eased;
-
-                // Trail line with glow
-                ctx.strokeStyle = anim.isCrit ? 'rgba(255,50,50,0.8)' : 'rgba(255,200,50,0.6)';
-                ctx.lineWidth = anim.isCrit ? 4 : 3;
-                ctx.shadowColor = anim.isCrit ? '#ff4444' : '#ffd700';
-                ctx.shadowBlur = 10;
-                ctx.beginPath();
-                ctx.moveTo(anim.srcX, anim.srcY);
-                ctx.lineTo(curX, curY);
-                ctx.stroke();
-                ctx.shadowBlur = 0;
-
-                // Bright projectile
-                ctx.fillStyle = anim.isCrit ? '#ff6666' : '#ffdd44';
-                ctx.shadowColor = anim.isCrit ? '#ff4444' : '#ffd700';
-                ctx.shadowBlur = 20;
-                ctx.beginPath();
-                ctx.arc(curX, curY, anim.isCrit ? 8 : 6, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.shadowBlur = 0;
-
-                if (t >= 1) {
-                    anim.phase = 'impact';
-                    anim.progress = 0;
-                }
-            } else if (anim.phase === 'impact') {
-                anim.progress += 0.04; // Slower for drama
-                
-                if (!anim.impactDone) {
-                    // Spawn damage number (bigger)
-                    this.spawnDamageNumber(
-                        anim.tgtX + (Math.random() - 0.5) * 20,
-                        anim.tgtY - 30,
-                        anim.damage,
-                        anim.isCrit
-                    );
-                    // Strong screen shake
-                    this.triggerShake(anim.isCrit ? 12 : 6, anim.isCrit ? 0.8 : 0.5);
-                    anim.impactDone = true;
-                }
-
-                // Full-screen flash
-                const flashAlpha = Math.max(0, 0.4 * (1 - anim.progress));
-                if (flashAlpha > 0) {
-                    ctx.fillStyle = anim.isCrit ? `rgba(255,50,50,${flashAlpha})` : `rgba(255,255,200,${flashAlpha})`;
-                    ctx.fillRect(0, 0, this.W, this.H);
-                }
-
-                // Radial burst at impact point
-                const burstProgress = Math.min(1, anim.progress * 2);
-                const burstRadius = 40 * burstProgress;
-                const burstAlpha = Math.max(0, 0.6 * (1 - burstProgress));
-                if (burstAlpha > 0) {
-                    ctx.strokeStyle = anim.isCrit ? `rgba(255,100,50,${burstAlpha})` : `rgba(255,220,100,${burstAlpha})`;
-                    ctx.lineWidth = 3;
-                    for (let r = 0; r < 8; r++) {
-                        const angle = (r / 8) * Math.PI * 2;
-                        ctx.beginPath();
-                        ctx.moveTo(anim.tgtX, anim.tgtY);
-                        ctx.lineTo(
-                            anim.tgtX + Math.cos(angle) * burstRadius,
-                            anim.tgtY + Math.sin(angle) * burstRadius
-                        );
-                        ctx.stroke();
-                    }
-                    // Impact ring
-                    ctx.strokeStyle = anim.isCrit ? `rgba(255,50,50,${burstAlpha * 0.5})` : `rgba(255,220,100,${burstAlpha * 0.5})`;
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.arc(anim.tgtX, anim.tgtY, burstRadius, 0, Math.PI * 2);
-                    ctx.stroke();
-                }
-
-                if (anim.progress >= 1) {
-                    this.attackAnims.splice(i, 1);
-                }
+            // Dim overlay if can't afford
+            if (!canAfford) {
+                ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                ctx.fillRect(cardX, cardY, cardW, cardH);
             }
         }
     },
 
-    // ===== DAMAGE NUMBERS =====
-    spawnDamageNumber(x, y, amount, isCrit) {
-        this.damageNumbers.push({
-            x, y,
-            text: isCrit ? `💥${amount}` : `-${amount}`,
-            color: isCrit ? '#ff4444' : '#ffffff',
-            outline: isCrit ? '#880000' : '#000000',
-            fontSize: isCrit ? 22 : 16,
-            alpha: 1.0,
-            vy: -2,
-            scale: isCrit ? 1.5 : 1.2,
-            life: 1.0,
-        });
+    // ===== DRAW: Diamond shape =====
+    _drawDiamond(ctx, cx, cy, size) {
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - size);
+        ctx.lineTo(cx + size, cy);
+        ctx.lineTo(cx, cy + size);
+        ctx.lineTo(cx - size, cy);
+        ctx.closePath();
+        ctx.fill();
     },
 
-    spawnHealNumber(x, y, amount) {
-        this.damageNumbers.push({
-            x, y,
-            text: `+${amount}`,
-            color: '#44ff88',
-            outline: '#006622',
-            fontSize: 12,
-            alpha: 1.0,
-            vy: -1.2,
-            scale: 1.0,
-            life: 1.0,
-        });
+    // ===== DRAW: End Turn Button =====
+    _drawEndTurnButton(ctx) {
+        const bw = Math.min(160, Math.floor(this.W * 0.25));
+        const bh = 40;
+        const bx = this.W - bw - 15;
+        const by = this.H - bh - 60;
+
+        // Button bg
+        ctx.fillStyle = '#22aa44';
+        ctx.fillRect(bx, by, bw, bh);
+        ctx.strokeStyle = '#44dd66';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bx, by, bw, bh);
+
+        ctx.font = 'bold 16px monospace';
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'center';
+        ctx.fillText('END TURN ▶', bx + bw / 2, by + 26);
+
+        this._endTurnRect = { x: bx, y: by, w: bw, h: bh };
     },
 
-    _renderDamageNumbers(ctx) {
-        for (let i = this.damageNumbers.length - 1; i >= 0; i--) {
-            const dn = this.damageNumbers[i];
-            dn.y += dn.vy;
-            dn.life -= 0.02;
-            dn.alpha = Math.max(0, dn.life);
+    // ===== DRAW: Attack Animation =====
+    _drawAttackAnim(ctx, a) {
+        const t = a.t;
+        const fromX = a.fromX, fromY = a.fromY;
+        const toX = a.toX, toY = a.toY;
 
-            if (dn.life <= 0) {
-                this.damageNumbers.splice(i, 1);
-                continue;
-            }
+        // Slash line
+        const x = fromX + (toX - fromX) * Math.min(t * 2, 1);
+        const y = fromY + (toY - fromY) * Math.min(t * 2, 1);
 
-            ctx.save();
-            ctx.globalAlpha = dn.alpha;
-            ctx.translate(dn.x, dn.y);
-            ctx.scale(dn.scale, dn.scale);
-
-            // Outline
-            ctx.font = `bold ${dn.fontSize}px "Press Start 2P"`;
-            ctx.textAlign = 'center';
+        if (t < 0.5) {
+            // Moving phase
+            ctx.strokeStyle = '#ff4444';
             ctx.lineWidth = 3;
-            ctx.strokeStyle = dn.outline;
-            ctx.strokeText(dn.text, 0, 0);
-
-            // Fill
-            ctx.fillStyle = dn.color;
-            ctx.fillText(dn.text, 0, 0);
-
-            ctx.restore();
-        }
-    },
-
-    // ===== PHASE BANNER =====
-    _phaseBanner: null,
-
-    showPhaseBanner(text, isPlayer) {
-        this._phaseBanner = {
-            text: text.toUpperCase(),
-            color: isPlayer ? '#ffd700' : '#88ccff',
-            alpha: 0,
-            scale: 0.5,
-            life: 1.0,
-            phase: 'in', // in → hold → out
-        };
-    },
-
-    _renderPhaseBanner(ctx) {
-        const pb = this._phaseBanner;
-        if (!pb) return;
-
-        if (pb.phase === 'in') {
-            pb.alpha = Math.min(1, pb.alpha + 0.08);
-            pb.scale = Math.min(1.0, pb.scale + 0.04);
-            if (pb.alpha >= 1) pb.phase = 'hold';
-        } else if (pb.phase === 'hold') {
-            pb.life -= 0.02;
-            if (pb.life <= 0.3) pb.phase = 'out';
-        } else if (pb.phase === 'out') {
-            pb.alpha -= 0.04;
-            if (pb.alpha <= 0) {
-                this._phaseBanner = null;
-                return;
-            }
-        }
-
-        // Semi-transparent backdrop
-        ctx.fillStyle = `rgba(0,0,0,${pb.alpha * 0.5})`;
-        ctx.fillRect(0, this.H / 2 - 20, this.W, 40);
-
-        ctx.save();
-        ctx.globalAlpha = pb.alpha;
-        ctx.translate(this.W / 2, this.H / 2);
-        ctx.scale(pb.scale, pb.scale);
-
-        // Shadow
-        ctx.shadowColor = pb.color;
-        ctx.shadowBlur = 20;
-        ctx.fillStyle = pb.color;
-        ctx.font = 'bold 16px "Press Start 2P"';
-        ctx.textAlign = 'center';
-        ctx.fillText(pb.text, 0, 6);
-        ctx.shadowBlur = 0;
-
-        ctx.restore();
-    },
-
-    // ===== BATTLE END OVERLAY =====
-    showBattleEnd(result) {
-        this._battleEnd = {
-            result: result, // 'win' or 'lose'
-            alpha: 0,
-            scale: 0.5,
-            phase: 'in',
-            startTime: performance.now(),
-        };
-    },
-
-    _renderBattleEnd(ctx) {
-        const be = this._battleEnd;
-        if (!be) return;
-
-        if (be.phase === 'in') {
-            be.alpha = Math.min(1, be.alpha + 0.03);
-            be.scale = Math.min(1.0, be.scale + 0.025);
-            if (be.alpha >= 1) be.phase = 'hold';
-        }
-
-        const W = this.W;
-        const H = this.H;
-
-        // Full screen dark overlay
-        ctx.fillStyle = `rgba(0,0,0,${be.alpha * 0.7})`;
-        ctx.fillRect(0, 0, W, H);
-
-        ctx.save();
-        ctx.globalAlpha = be.alpha;
-        ctx.translate(W / 2, H / 2);
-        ctx.scale(be.scale, be.scale);
-
-        const isWin = be.result === 'win';
-        const color = isWin ? '#ffd700' : '#ff4444';
-        const text = isWin ? '🏆 VICTORY!' : '💀 DEFEATED';
-        const subText = isWin ? 'Stage Clear!' : 'Try Again...';
-
-        // Glow
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 30;
-
-        // Main text
-        ctx.fillStyle = color;
-        ctx.font = 'bold 20px "Press Start 2P"';
-        ctx.textAlign = 'center';
-        ctx.fillText(text, 0, -10);
-
-        // Sub text
-        ctx.shadowBlur = 10;
-        ctx.fillStyle = 'rgba(255,255,255,0.8)';
-        ctx.font = '8px "Press Start 2P"';
-        ctx.fillText(subText, 0, 20);
-
-        ctx.shadowBlur = 0;
-        ctx.restore();
-
-        // Particles burst for victory
-        if (isWin && be.alpha > 0.5) {
-            const t = (performance.now() - be.startTime) / 1000;
-            for (let i = 0; i < 12; i++) {
-                const angle = (i / 12) * Math.PI * 2 + t;
-                const dist = 50 + t * 40;
-                const px = W / 2 + Math.cos(angle) * dist;
-                const py = H / 2 + Math.sin(angle) * dist;
-                ctx.beginPath();
-                ctx.arc(px, py, 2, 0, Math.PI * 2);
-                ctx.fillStyle = ['#ffd700', '#ff6644', '#44ff88', '#4488ff'][i % 4];
-                ctx.globalAlpha = Math.max(0, 1 - t * 0.3);
-                ctx.fill();
-                ctx.globalAlpha = 1;
-            }
-        }
-    },
-
-    // ===== SCREEN SHAKE =====
-    triggerShake(intensity, duration) {
-        this.shakeDecay = duration || 0.3;
-        this.shakeX = (Math.random() - 0.5) * intensity;
-        this.shakeY = (Math.random() - 0.5) * intensity;
-    },
-
-    // ===== TRANSITION =====
-    _renderTransition(ctx) {
-        const elapsed = Date.now() - this.transitionStartTime;
-        const progress = Math.min(1, elapsed / this.TRANSITION_DURATION);
-
-        if (this.transitionType === 'enter') {
-            this.transitionAlpha = 1 - progress;
+            ctx.globalAlpha = 0.8;
+            ctx.beginPath();
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.globalAlpha = 1;
         } else {
-            this.transitionAlpha = progress;
-        }
-
-        if (this.transitionAlpha > 0.01) {
-            // Dramatic effect: radial wipe + fade
-            ctx.save();
-            ctx.globalAlpha = this.transitionAlpha;
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, this.W, this.H);
-
-            // Center glow during transition
-            if (this.transitionAlpha > 0.3) {
-                const glowAlpha = (this.transitionAlpha - 0.3) / 0.7;
-                const gradient = ctx.createRadialGradient(
-                    this.W / 2, this.H / 2, 0,
-                    this.W / 2, this.H / 2, this.W * 0.5
-                );
-                gradient.addColorStop(0, `rgba(255,215,0,${glowAlpha * 0.3})`);
-                gradient.addColorStop(0.5, `rgba(68,136,255,${glowAlpha * 0.15})`);
-                gradient.addColorStop(1, 'rgba(0,0,0,0)');
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, this.W, this.H);
-            }
-
-            // "DUEL!" text during enter
-            if (this.transitionType === 'enter' && this.transitionAlpha > 0.5) {
-                const textAlpha = Math.min(1, (this.transitionAlpha - 0.5) * 3);
-                ctx.globalAlpha = textAlpha;
-                ctx.shadowColor = '#ffd700';
-                ctx.shadowBlur = 30;
-                ctx.fillStyle = '#ffd700';
-                ctx.font = 'bold 28px "Press Start 2P"';
-                ctx.textAlign = 'center';
-                ctx.fillText('⚔ DUEL! ⚔', this.W / 2, this.H / 2 + 10);
-                ctx.shadowBlur = 0;
-            }
-
-            ctx.restore();
+            // Impact flash
+            const flashAlpha = (1 - t) * 2;
+            ctx.fillStyle = '#ff4444';
+            ctx.globalAlpha = flashAlpha * 0.4;
+            ctx.beginPath();
+            ctx.arc(toX, toY, 30 * (1 - t), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
         }
     },
 
-    _drawBlackScreen() {
-        const ctx = this.ctx;
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, this.W, this.H);
+    // ===== HIT TESTING =====
+    _getHitSlot(mx, my) {
+        for (let i = 0; i < this._playerSlotRects.length; i++) {
+            const r = this._playerSlotRects[i];
+            if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) return i;
+        }
+        return -1;
     },
 
-    // ===== UTILITY =====
-    /** Get pixel position of a hero zone for external animation targeting */
-    getHeroZonePosition(zoneIndex, isPlayer) {
-        const layout = this._calcLayout();
-        const field = isPlayer ? layout.fieldPlayer : layout.fieldEnemy;
-        // Single hero centered in field
-        return {
-            x: field.x + field.w / 2,
-            y: field.y + field.h / 2,
-        };
+    _getHitHand(mx, my) {
+        for (let i = 0; i < this._handRects.length; i++) {
+            const r = this._handRects[i];
+            if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) return i;
+        }
+        return -1;
     },
 
-    isActive() {
-        return this.active;
+    _isHitEndTurn(mx, my) {
+        if (!this._endTurnRect) return false;
+        const r = this._endTurnRect;
+        return mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
+    },
+
+    // ===== EVENT HANDLERS =====
+    _onClick(e) {
+        if (!this.active || !BattleEngine.isRunning) return;
+
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.W / rect.width;
+        const scaleY = this.H / rect.height;
+        const mx = (e.clientX - rect.left) * scaleX;
+        const my = (e.clientY - rect.top) * scaleY;
+
+        const state = BattleEngine.getFieldState();
+        if (state.phase !== 'main') return;
+
+        // Check End Turn button
+        if (this._isHitEndTurn(mx, my)) {
+            this._selectedHandIdx = -1;
+            BattleEngine.endTurn();
+            return;
+        }
+
+        // Check hand card click
+        const handIdx = this._getHitHand(mx, my);
+        if (handIdx >= 0) {
+            if (this._selectedHandIdx === handIdx) {
+                // Deselect
+                this._selectedHandIdx = -1;
+            } else {
+                // Select
+                this._selectedHandIdx = handIdx;
+            }
+            return;
+        }
+
+        // Check board slot click (play selected card)
+        const slotIdx = this._getHitSlot(mx, my);
+        if (slotIdx >= 0 && this._selectedHandIdx >= 0) {
+            const success = BattleEngine.playCard(this._selectedHandIdx, slotIdx);
+            if (success) {
+                this._addFloatingText(`Placed!`, mx, my - 20, '#44ff88', 20);
+                this._selectedHandIdx = -1;
+            } else {
+                this._addFloatingText(`Can't play!`, mx, my - 20, '#ff4444', 18);
+            }
+            return;
+        }
+
+        // Click empty area = deselect
+        this._selectedHandIdx = -1;
+    },
+
+    _onMove(e) {
+        if (!this.active) return;
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.W / rect.width;
+        const scaleY = this.H / rect.height;
+        const mx = (e.clientX - rect.left) * scaleX;
+        const my = (e.clientY - rect.top) * scaleY;
+
+        this._hoveredHandIdx = this._getHitHand(mx, my);
+        this._hoveredSlot = this._getHitSlot(mx, my);
+    },
+
+    // ===== CALLBACKS =====
+    _onAttack(atk) {
+        // Get positions for attack animation
+        const playerRects = this._playerSlotRects;
+        const slot = atk.attacker.slot;
+        const side = atk.attacker.side;
+
+        let fromX, fromY, toX, toY;
+
+        if (side === 'player') {
+            const r = playerRects[slot];
+            if (r) { fromX = r.x + r.w / 2; fromY = r.y; }
+            // Target is enemy board (mirror: same slot index, upper area)
+            toX = fromX;
+            toY = fromY - this.H * 0.25;
+        } else {
+            // Enemy attacks down
+            const r = playerRects[slot];
+            if (r) { toX = r.x + r.w / 2; toY = r.y + r.h; }
+            fromX = toX;
+            fromY = toY - this.H * 0.25;
+        }
+
+        if (fromX !== undefined) {
+            this._attackAnims.push({
+                fromX, fromY, toX, toY,
+                age: 0, duration: 400, t: 0,
+            });
+        }
+
+        // Damage number
+        const dmgX = toX || this.W / 2;
+        const dmgY = (toY || this.H / 2) - 10;
+        this._addDamageNumber(`-${atk.damage}`, dmgX, dmgY, '#ff4444');
+
+        // Screen shake
+        this._shakeDecay = 1;
+    },
+
+    _onPhaseChange(phase) {
+        if (phase === 'battle') {
+            this._selectedHandIdx = -1;
+        }
+    },
+
+    // ===== HELPERS =====
+    _addDamageNumber(text, x, y, color, size = 24) {
+        this._damageNumbers.push({ text, x, y, color, size, alpha: 1, age: 0, maxAge: 1200 });
+    },
+
+    _addFloatingText(text, x, y, color, size = 16) {
+        this._floatingTexts.push({ text, x, y, color, size, alpha: 1, age: 0, maxAge: 1000 });
+    },
+
+    // ===== STOP =====
+    stop() {
+        this.active = false;
+        this._selectedHandIdx = -1;
+        this._hoveredSlot = -1;
+        this._hoveredHandIdx = -1;
+        this._handRects = [];
+        this._playerSlotRects = [];
+        this._endTurnRect = null;
+        this._damageNumbers = [];
+        this._attackAnims = [];
+        this._floatingTexts = [];
+        if (this.canvas && this.canvas.parentElement) {
+            this.canvas.parentElement.innerHTML = '';
+        }
     },
 };
