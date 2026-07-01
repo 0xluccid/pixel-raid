@@ -517,6 +517,8 @@ const PhaserBattleScene = new Phaser.Class({
 
     // ===== RENDER UNITS ON BOARD SLOTS =====
     _boardUnitTexts: { player: [], enemy: [] },
+    _arrangeHighlights: [],
+    _selectedArrangeSlot: null,
 
     _renderBoardUnits: function (board, side) {
         var scene = this;
@@ -526,8 +528,16 @@ const PhaserBattleScene = new Phaser.Class({
         }
         scene._boardUnitTexts[side] = [];
 
+        // Clean up arrange highlights
+        if (scene._arrangeHighlights) {
+            scene._arrangeHighlights.forEach(function (h) { if (h && h.destroy) h.destroy(); });
+            scene._arrangeHighlights = [];
+        }
+
         // Find slots belonging to this side
         var sideSlots = scene.skillSlots.filter(function (s) { return s.side === side; });
+        var isArrangePhase = BattleEngine.currentPhase === 'arrange';
+        var isPlayerSide = side === 'player';
 
         for (var i = 0; i < board.length && i < sideSlots.length; i++) {
             var unit = board[i];
@@ -581,6 +591,65 @@ const PhaserBattleScene = new Phaser.Class({
             });
             atkText.setOrigin(0, 0);
             scene._boardUnitTexts[side].push(atkText);
+
+            // === ARRANGE PHASE: Make player slots clickable for swap ===
+            if (isArrangePhase && isPlayerSide) {
+                // Create invisible interactive zone over every player slot (occupied or empty)
+                var hitZone = scene.add.zone(slot.x + slot.w / 2, slot.y + slot.h / 2, slot.w, slot.h);
+                hitZone.setInteractive({ useHandCursor: !!unit });
+                hitZone.setDepth(100);
+
+                var slotIndex = i;
+                hitZone.on('pointerdown', function () {
+                    if (scene._selectedArrangeSlot === null || scene._selectedArrangeSlot === undefined) {
+                        // First selection — only if slot has a unit
+                        if (!unit) return;
+                        scene._selectedArrangeSlot = slotIndex;
+                        // Re-render to show highlight
+                        scene._renderBoardUnits(scene.playerData.board, 'player');
+                    } else if (scene._selectedArrangeSlot === slotIndex) {
+                        // Deselect
+                        scene._selectedArrangeSlot = null;
+                        scene._renderBoardUnits(scene.playerData.board, 'player');
+                    } else {
+                        // Swap!
+                        var from = scene._selectedArrangeSlot;
+                        var to = slotIndex;
+                        scene._selectedArrangeSlot = null;
+                        BattleEngine.rearrangeUnit(from, to);
+                        // renderField called via _notifyFieldUpdate
+                    }
+                });
+
+                scene._boardUnitTexts[side].push(hitZone);
+            }
+        }
+
+        // Re-draw selection highlight if a slot is selected (survives re-render)
+        if (isArrangePhase && isPlayerSide && (scene._selectedArrangeSlot || scene._selectedArrangeSlot === 0)) {
+            var selIdx = scene._selectedArrangeSlot;
+            if (selIdx < sideSlots.length) {
+                var selSlot = sideSlots[selIdx];
+                var selHl = scene.add.graphics();
+                selHl.lineStyle(2, 0xffd700, 1);
+                selHl.strokeRect(selSlot.x - 1, selSlot.y - 1, selSlot.w + 2, selSlot.h + 2);
+                selHl.setDepth(99);
+                scene._arrangeHighlights.push(selHl);
+            }
+        }
+
+        // Arrange phase instruction text
+        if (isArrangePhase && isPlayerSide) {
+            var instrText = scene.add.text(scene.W / 2, scene.H - 55, '✦ TAP UNIT TO SELECT, TAP ANOTHER TO SWAP ✦', {
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: '5px',
+                color: '#ffd700',
+                align: 'center'
+            });
+            instrText.setOrigin(0.5, 0.5);
+            instrText.setAlpha(0.8);
+            instrText.setDepth(90);
+            scene._boardUnitTexts[side].push(instrText);
         }
     },
 
