@@ -202,13 +202,13 @@
         .card.legendary:hover { box-shadow: 4px 6px 0 rgba(0,0,0,0.5), 0 0 22px rgba(255,136,0,0.3); }
         .card.mythic { border-color: var(--rarity-mythic); }
         .card.mythic:hover { box-shadow: 4px 6px 0 rgba(0,0,0,0.5), 0 0 24px rgba(255,68,68,0.35); }
-        .card-name { font-family: 'Press Start 2P'; font-size: 7px; margin-top: 6px; letter-spacing: 0.5px; }
+        .card-name { font-family: 'Press Start 2P'; font-size: 9px; margin-top: 6px; letter-spacing: 0.5px; }
         .card-class { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
         .card-stats { font-size: 9px; margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap; }
 
         /* Buttons — 3D retro push */
         .btn {
-            font-family: 'Press Start 2P'; font-size: 7px; padding: 10px 20px;
+            font-family: 'Press Start 2P'; font-size: 8px; padding: 10px 20px;
             border: none; cursor: pointer;
             transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
             text-transform: uppercase;
@@ -249,7 +249,7 @@
         .battle-controls { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
         .speed-controls { display: flex; gap: 2px; margin-left: auto; }
         .speed-btn {
-            font-family: 'Press Start 2P'; font-size: 7px; padding: 6px 10px;
+            font-family: 'Press Start 2P'; font-size: 8px; padding: 6px 10px;
             background: rgba(255,215,0,0.06); color: var(--text-dim);
             border: 1px solid rgba(255,215,0,0.15); cursor: pointer;
             box-shadow: 2px 2px 0 rgba(0,0,0,0.4);
@@ -275,7 +275,7 @@
         .hp-fill.hp-warning { background: var(--gold); }
         .hp-fill.hp-critical { background: var(--red); }
         .hp-text { font-size: 8px; color: var(--text-dim); font-family: 'Silkscreen', monospace; }
-        .hero-stats-line { font-size: 7px; color: var(--text-dim); margin-top: 2px; }
+        .hero-stats-line { font-size: 8px; color: var(--text-dim); margin-top: 2px; }
         .shield-badge { font-size: 8px; color: #4488ff; }
 
         /* Pixel Raid Battle Layout */
@@ -290,7 +290,7 @@
         .info-strip-left, .info-strip-right { display: flex; gap: 12px; align-items: center; }
         .battle-turn-text { font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--gold); letter-spacing: 1px; }
         .battle-phase-text { font-size: 8px; color: var(--green-accent); font-weight: bold; }
-        .deck-info, .graveyard-info { font-size: 7px; color: var(--text-dim); }
+        .deck-info, .graveyard-info { font-size: 8px; color: var(--text-dim); }
 
         .card-hand-area {
             display: flex; justify-content: center; gap: 8px; padding: 8px 12px;
@@ -321,7 +321,7 @@
         .hand-card:hover { transform: translateY(-14px) scale(1.05); box-shadow: 0 8px 20px rgba(0,0,0,0.5), 0 0 12px rgba(255,215,0,0.2); border-color: var(--gold); }
         .hand-card.disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.6); }
         .hand-card.disabled:hover { transform: none; box-shadow: none; border-color: var(--border-pixel); }
-        .hand-card .card-name { font-size: 6px; font-family: 'Press Start 2P', monospace; color: var(--text); padding: 3px 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgba(0,0,0,0.4); text-align: left; }
+        .hand-card .card-name { font-size: 8px; font-family: 'Press Start 2P', monospace; color: var(--text); padding: 3px 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgba(0,0,0,0.4); text-align: left; }
         .hand-card .card-mana { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; background: #2244aa; color: #aaccff; font-size: 8px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 1px solid #4466cc; font-family: 'Press Start 2P', monospace; z-index: 2; }
         .hand-card .card-type { font-size: 8px; color: var(--text-dim); text-transform: uppercase; }
         .hand-card .card-desc { font-size: 8px; color: #aaccaa; margin-top: 2px; line-height: 1.3; }
@@ -671,7 +671,7 @@
             white-space: nowrap;
         }
         .skill-desc {
-            font-size: 7px; color: #aaf; margin-top: 2px;
+            font-size: 8px; color: #aaf; margin-top: 2px;
             text-shadow: 1px 1px 0 #000;
         }
         @keyframes skillPop {
@@ -684,7 +684,7 @@
         /* Log timestamp styling */
         .log-turn-num {
             color: #666;
-            font-size: 7px;
+            font-size: 8px;
             margin-right: 4px;
         }
         .log-entry { padding: 1px 0; }
@@ -739,8 +739,8 @@
         .fg-cell.fg-occupied { border-style: solid; }
         .fg-cell.fg-drag-over { border-color: #4488ff; background: rgba(68,136,255,0.12); box-shadow: 0 0 14px rgba(68,136,255,0.35); }
         .fg-cell.fg-dragging { opacity: 0.4; }
-        .fg-row-label { font-family: 'Press Start 2P'; font-size: 7px; color: var(--text-dim); text-transform: uppercase; position: absolute; top: 2px; left: 4px; opacity: 0.6; }
-        .fg-slot-num { font-family: 'Press Start 2P'; font-size: 7px; color: var(--text-dim); position: absolute; top: 2px; right: 4px; opacity: 0.4; }
+        .fg-row-label { font-family: 'Press Start 2P'; font-size: 8px; color: var(--text-dim); text-transform: uppercase; position: absolute; top: 2px; left: 4px; opacity: 0.6; }
+        .fg-slot-num { font-family: 'Press Start 2P'; font-size: 8px; color: var(--text-dim); position: absolute; top: 2px; right: 4px; opacity: 0.4; }
         .fg-sprite { image-rendering: pixelated; }
         .fg-hero-name { font-family: 'Press Start 2P'; font-size: 8px; margin-top: 2px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 72px; }
         .fg-hero-stats { font-size: 9px; color: var(--text-dim); display: flex; gap: 6px; }
@@ -748,7 +748,7 @@
         .fg-stat-atk { color: #ff6644; }
         .fg-remove-btn {
             position: absolute; top: 1px; right: 1px;
-            font-size: 7px; color: #ff4444; cursor: pointer;
+            font-size: 8px; color: #ff4444; cursor: pointer;
             opacity: 0; transition: opacity 0.15s;
             background: rgba(0,0,0,0.5); padding: 1px 3px;
         }
@@ -797,19 +797,19 @@
             opacity: 0.5;
         }
         .fg-syn-icon { font-size: 12px; flex-shrink: 0; }
-        .fg-syn-name { font-family: 'Press Start 2P'; font-size: 7px; font-weight: 700; }
+        .fg-syn-name { font-family: 'Press Start 2P'; font-size: 9px; font-weight: 700; }
         .fg-syn-desc { font-size: 8px; color: rgba(255,215,0,0.8); }
-        .fg-syn-missing { font-size: 7px; color: var(--text-dim); font-style: italic; }
+        .fg-syn-missing { font-size: 8px; color: var(--text-dim); font-style: italic; }
 
         /* Inventory Screen */
         .inv-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
-        .inv-tab { font-family: 'Press Start 2P'; font-size: 7px; padding: 6px 14px; background: rgba(255,215,0,0.04); border: 1px solid var(--border-pixel); cursor: pointer; color: var(--text-dim); text-transform: uppercase; }
+        .inv-tab { font-family: 'Press Start 2P'; font-size: 9px; padding: 6px 14px; background: rgba(255,215,0,0.04); border: 1px solid var(--border-pixel); cursor: pointer; color: var(--text-dim); text-transform: uppercase; }
         .inv-tab.active { background: var(--gold); border-color: var(--gold-dark); color: #000; box-shadow: var(--shadow-pixel); }
         #inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 
         /* Shop Screen */
         .shop-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
-        .shop-tab { font-family: 'Press Start 2P'; font-size: 7px; padding: 6px 14px; background: rgba(255,215,0,0.04); border: 1px solid var(--border-pixel); cursor: pointer; color: var(--text-dim); text-transform: uppercase; }
+        .shop-tab { font-family: 'Press Start 2P'; font-size: 9px; padding: 6px 14px; background: rgba(255,215,0,0.04); border: 1px solid var(--border-pixel); cursor: pointer; color: var(--text-dim); text-transform: uppercase; }
         .shop-tab.active { background: var(--gold); border-color: var(--gold-dark); color: #000; box-shadow: var(--shadow-pixel); }
         #shop-content { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
 
@@ -835,7 +835,7 @@
             padding: 10px; transition: border-color 0.2s; cursor: pointer;
         }
         .market-card:hover { border-color: var(--gold); }
-        .market-card-name { font-family: 'Press Start 2P'; font-size: 7px; color: var(--gold); margin-bottom: 4px; line-height: 1.3; }
+        .market-card-name { font-family: 'Press Start 2P'; font-size: 9px; color: var(--gold); margin-bottom: 4px; line-height: 1.3; }
         .market-card-set { font-size: 8px; color: var(--text-dim); margin-bottom: 4px; }
         .market-card-grade { font-family: 'Press Start 2P'; font-size: 8px; padding: 2px 6px; border-radius: 4px; display: inline-block; }
         .market-card-price { font-family: 'Press Start 2P'; font-size: 9px; color: #00ff88; margin-top: 4px; }
@@ -892,7 +892,7 @@
         .tutorial-dot.current { background: var(--gold); box-shadow: 0 0 8px rgba(212,160,23,0.6); }
 
         /* skip all button */
-        .tutorial-btn-skip-all { font-size: 7px; padding: 6px 12px; border-radius: 4px; background: rgba(0,255,136,0.12); border: 1px solid rgba(0,255,136,0.25); color: var(--text-dim); cursor: pointer; }
+        .tutorial-btn-skip-all { font-size: 8px; padding: 6px 12px; border-radius: 4px; background: rgba(0,255,136,0.12); border: 1px solid rgba(0,255,136,0.25); color: var(--text-dim); cursor: pointer; }
 
         /* arrow connector positioning classes */
         .tutorial-arrow { position: absolute; width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 14px solid var(--gold); pointer-events: none; filter: drop-shadow(0 0 4px rgba(212,160,23,0.4)); }
@@ -1041,11 +1041,11 @@
             .header-info { flex-wrap: wrap; }
             #formation-grid { max-width: 280px; gap: 6px; }
             .heroes-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-            .nav-btn { font-size: 7px; padding: 10px 12px; min-height: 44px; display: flex; align-items: center; }
+            .nav-btn { font-size: 8px; padding: 10px 12px; min-height: 44px; display: flex; align-items: center; }
             .card { padding: 8px; }
-            .card-name { font-size: 7px; }
+            .card-name { font-size: 8px; }
             #battle-canvas-container { width: 100%; height: 100%; }
-            .btn { font-size: 7px; padding: 10px 16px; min-height: 44px; }
+            .btn { font-size: 8px; padding: 10px 16px; min-height: 44px; }
             .hand-card { width: 100px; min-height: 140px; }
         }
         @media (max-width: 380px) {
