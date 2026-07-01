@@ -915,14 +915,29 @@ const BattleArenaScene = {
         const vsX = x + w / 2;
         const vsY = y + h / 2;
 
-        // VS glow
+        // VS glow (pulsing)
+        const pulse = 0.7 + 0.3 * Math.sin(performance.now() * 0.003);
         ctx.shadowColor = '#ffd700';
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = 12 * pulse;
         ctx.fillStyle = '#ffd700';
         ctx.font = 'bold 14px "Press Start 2P"';
         ctx.textAlign = 'center';
         ctx.fillText('VS', vsX, vsY + 5);
         ctx.shadowBlur = 0;
+
+        // Active player indicator (glow on active side)
+        if (state.phase !== 'idle') {
+            const activeIsPlayer = state.isPlayerTurn;
+            const indicatorX = activeIsPlayer ? x + w - 15 : x + 15;
+            ctx.fillStyle = `rgba(68, 204, 136, ${0.5 + 0.3 * pulse})`;
+            ctx.beginPath();
+            ctx.arc(indicatorX, vsY, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.font = '4px "Press Start 2P"';
+            ctx.textAlign = 'center';
+            ctx.fillText(activeIsPlayer ? 'YOU' : 'CPU', indicatorX, vsY + 12);
+        }
 
         // Turn info (above VS)
         ctx.fillStyle = 'rgba(255,255,255,0.6)';
