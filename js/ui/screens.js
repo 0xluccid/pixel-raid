@@ -222,6 +222,26 @@ const UI = {
         // Init card hand renderer
         if (typeof CardHand !== 'undefined') {
             CardHand.init('card-hand-area');
+            // Wire up card click → play card to first empty board slot
+            CardHand.onCardPlay = (handIndex, card) => {
+                if (BattleEngine.currentPhase !== 'play') return;
+                // Find first empty slot
+                const board = BattleEngine.player.board;
+                let emptySlot = -1;
+                for (let i = 0; i < board.length; i++) {
+                    if (board[i] === null) { emptySlot = i; break; }
+                }
+                if (emptySlot < 0) return; // board full
+                const success = BattleEngine.playCard(handIndex, emptySlot);
+                if (success) {
+                    // Animate card out, then re-render
+                    CardHand.animateCardPlay(handIndex, () => {
+                        CardHand.renderHand(BattleEngine.player.hand, BattleEngine.player.energy);
+                    });
+                } else {
+                    CardHand.shakeCard(handIndex);
+                }
+            };
         }
 
         // Create or update the action row for phase buttons

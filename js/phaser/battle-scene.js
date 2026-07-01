@@ -438,25 +438,25 @@ const PhaserBattleScene = new Phaser.Class({
 
     // ===== SKILL SLOTS (battlefield center area) =====
     _createSkillSlots: function () {
-        // 3 slots on each side of center divider for showing played skills
+        // 5 slots on each side of center divider for board units
         var W = this.W;
         var H = this.H;
-        var slotW = 70;
-        var slotH = 50;
-        var slotGap = 15;
-        var totalW = slotW * 3 + slotGap * 2;
+        var slotW = 58;
+        var slotH = 45;
+        var slotGap = 6;
+        var totalW = slotW * 5 + slotGap * 4;
         var startX = (W - totalW) / 2;
         var centerY = H / 2;
 
-        // Player skill slots (just below center)
-        for (var i = 0; i < 3; i++) {
+        // Player board slots (just below center)
+        for (var i = 0; i < 5; i++) {
             var sx = startX + i * (slotW + slotGap);
             var sy = centerY + 25;
             this._drawSkillSlot(sx, sy, slotW, slotH, 'player', i);
         }
 
-        // Enemy skill slots (just above center)
-        for (var i = 0; i < 3; i++) {
+        // Enemy board slots (just above center)
+        for (var i = 0; i < 5; i++) {
             var sx = startX + i * (slotW + slotGap);
             var sy = centerY - 25 - slotH;
             this._drawSkillSlot(sx, sy, slotW, slotH, 'enemy', i);
@@ -503,13 +503,85 @@ const PhaserBattleScene = new Phaser.Class({
             phase: BattleEngine.currentPhase
         };
 
-        // Update hero panels
         // Update hero panels — pass player object directly (battleHero is not a sub-property)
         this._updateHeroPanel('player', player.battleHero || player);
         this._updateHeroPanel('enemy', enemy.battleHero || enemy);
 
         // Update center divider
         this.updateCenterDivider(state);
+
+        // Render board units on the slots
+        this._renderBoardUnits(player.board, 'player');
+        this._renderBoardUnits(enemy.board, 'enemy');
+    },
+
+    // ===== RENDER UNITS ON BOARD SLOTS =====
+    _boardUnitTexts: { player: [], enemy: [] },
+
+    _renderBoardUnits: function (board, side) {
+        var scene = this;
+        // Clean up old unit texts for this side
+        if (scene._boardUnitTexts[side]) {
+            scene._boardUnitTexts[side].forEach(function (t) { if (t && t.destroy) t.destroy(); });
+        }
+        scene._boardUnitTexts[side] = [];
+
+        // Find slots belonging to this side
+        var sideSlots = scene.skillSlots.filter(function (s) { return s.side === side; });
+
+        for (var i = 0; i < board.length && i < sideSlots.length; i++) {
+            var unit = board[i];
+            var slot = sideSlots[i];
+            if (!unit) continue;
+
+            var cx = slot.x + slot.w / 2;
+            var cy = slot.y + slot.h / 2;
+
+            // Unit emoji sprite
+            var emoji = unit.emoji || '⚔️';
+            var unitText = scene.add.text(cx, cy - 4, emoji, {
+                fontSize: '20px'
+            });
+            unitText.setOrigin(0.5, 0.5);
+            scene._boardUnitTexts[side].push(unitText);
+
+            // Unit name (truncated)
+            var nameStr = (unit.name || '?').substring(0, 6);
+            var nameText = scene.add.text(cx, cy + 14, nameStr, {
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: '5px',
+                color: '#ffd700'
+            });
+            nameText.setOrigin(0.5, 0.5);
+            scene._boardUnitTexts[side].push(nameText);
+
+            // HP bar mini
+            var hpPct = unit.hp / (unit.maxHp || 1);
+            var barW = slot.w - 8;
+            var barH = 3;
+            var barX = slot.x + 4;
+            var barY = slot.y + slot.h - 6;
+
+            var hpBg = scene.add.graphics();
+            hpBg.fillStyle(0x330000, 0.8);
+            hpBg.fillRect(barX, barY, barW, barH);
+            scene._boardUnitTexts[side].push(hpBg);
+
+            var hpFill = scene.add.graphics();
+            var hpColor = hpPct > 0.5 ? 0x00ff88 : (hpPct > 0.25 ? 0xffaa00 : 0xff3333);
+            hpFill.fillStyle(hpColor, 0.9);
+            hpFill.fillRect(barX, barY, barW * Math.max(0, hpPct), barH);
+            scene._boardUnitTexts[side].push(hpFill);
+
+            // ATK badge
+            var atkText = scene.add.text(slot.x + 4, slot.y + 3, '⚔' + (unit.atk || 0), {
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: '5px',
+                color: '#ff6644'
+            });
+            atkText.setOrigin(0, 0);
+            scene._boardUnitTexts[side].push(atkText);
+        }
     },
 
     // ===== PHASE BANNER =====
