@@ -153,7 +153,7 @@ const BlockchainBridge = {
                             chainId: targetChainId,
                             chainName: 'BNB Smart Chain Testnet',
                             nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
-                            rpcUrls: ['https://data-seed-prebsc-1-s1.binance.org/'],
+                            rpcUrls: ['https://bsc-testnet-rpc.publicnode.com', 'https://data-seed-prebsc-1-s1.binance.org/'],
                             blockExplorerUrls: ['https://testnet.bscscan.com/'],
                         }],
                     });
