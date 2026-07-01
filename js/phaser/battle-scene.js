@@ -539,6 +539,11 @@ const PhaserBattleScene = new Phaser.Class({
         var isArrangePhase = BattleEngine.currentPhase === 'arrange';
         var isPlayerSide = side === 'player';
 
+        // Clear arrange selection when not in arrange phase
+        if (!isArrangePhase) {
+            scene._selectedArrangeSlot = null;
+        }
+
         for (var i = 0; i < board.length && i < sideSlots.length; i++) {
             var unit = board[i];
             var slot = sideSlots[i];
@@ -640,14 +645,16 @@ const PhaserBattleScene = new Phaser.Class({
 
         // Arrange phase instruction text
         if (isArrangePhase && isPlayerSide) {
-            var instrText = scene.add.text(scene.W / 2, scene.H - 55, '✦ TAP UNIT TO SELECT, TAP ANOTHER TO SWAP ✦', {
+            var instrText = scene.add.text(scene.W / 2, scene.H - 48, '✦ TAP TO SELECT • TAP AGAIN TO SWAP ✦', {
                 fontFamily: '"Press Start 2P", monospace',
-                fontSize: '5px',
+                fontSize: '7px',
                 color: '#ffd700',
-                align: 'center'
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 2
             });
             instrText.setOrigin(0.5, 0.5);
-            instrText.setAlpha(0.8);
+            instrText.setAlpha(0.9);
             instrText.setDepth(90);
             scene._boardUnitTexts[side].push(instrText);
         }
