@@ -203,7 +203,7 @@
         .card.mythic { border-color: var(--rarity-mythic); }
         .card.mythic:hover { box-shadow: 4px 6px 0 rgba(0,0,0,0.5), 0 0 24px rgba(255,68,68,0.35); }
         .card-name { font-family: 'Press Start 2P'; font-size: 7px; margin-top: 6px; letter-spacing: 0.5px; }
-        .card-class { font-size: 9px; color: var(--text-dim); margin-top: 2px; }
+        .card-class { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
         .card-stats { font-size: 9px; margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap; }
 
         /* Buttons — 3D retro push */
@@ -346,7 +346,7 @@
             image-rendering: pixelated;
         }
         .hand-card .card-type-badge {
-            font-size: 6px;
+            font-size: 8px;
             font-family: 'Press Start 2P', monospace;
             color: var(--text-dim);
             padding: 2px 5px;
@@ -358,20 +358,20 @@
             padding: 3px 5px;
             background: rgba(0,0,0,0.5);
             border-top: 1px solid rgba(255,255,255,0.05);
-            font-size: 6px;
+            font-size: 8px;
             font-family: 'Press Start 2P', monospace;
         }
         .hand-card .card-stats-bar .stat-atk { color: #ff6644; }
         .hand-card .card-stats-bar .stat-def { color: #4488ff; }
         .hand-card .card-effect-text {
-            font-size: 5px;
-            color: #88aa88;
+            font-size: 8px;
+            color: #bbddbb;
             padding: 2px 5px;
             line-height: 1.4;
             flex-shrink: 0;
         }
         .hand-card .card-cooldown-badge {
-            font-size: 6px;
+            font-size: 8px;
             font-family: 'Press Start 2P', monospace;
             color: #88ccff;
             padding: 2px 5px;
@@ -379,7 +379,7 @@
             background: rgba(34,68,170,0.2);
         }
         .hand-card .card-rarity-stars {
-            font-size: 6px;
+            font-size: 8px;
             color: var(--gold);
             padding: 1px 5px;
             letter-spacing: 1px;
@@ -739,11 +739,11 @@
         .fg-cell.fg-occupied { border-style: solid; }
         .fg-cell.fg-drag-over { border-color: #4488ff; background: rgba(68,136,255,0.12); box-shadow: 0 0 14px rgba(68,136,255,0.35); }
         .fg-cell.fg-dragging { opacity: 0.4; }
-        .fg-row-label { font-family: 'Press Start 2P'; font-size: 5px; color: var(--text-dim); text-transform: uppercase; position: absolute; top: 2px; left: 4px; opacity: 0.6; }
-        .fg-slot-num { font-family: 'Press Start 2P'; font-size: 5px; color: var(--text-dim); position: absolute; top: 2px; right: 4px; opacity: 0.4; }
+        .fg-row-label { font-family: 'Press Start 2P'; font-size: 7px; color: var(--text-dim); text-transform: uppercase; position: absolute; top: 2px; left: 4px; opacity: 0.6; }
+        .fg-slot-num { font-family: 'Press Start 2P'; font-size: 7px; color: var(--text-dim); position: absolute; top: 2px; right: 4px; opacity: 0.4; }
         .fg-sprite { image-rendering: pixelated; }
-        .fg-hero-name { font-family: 'Press Start 2P'; font-size: 6px; margin-top: 2px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 72px; }
-        .fg-hero-stats { font-size: 7px; color: var(--text-dim); display: flex; gap: 6px; }
+        .fg-hero-name { font-family: 'Press Start 2P'; font-size: 8px; margin-top: 2px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 72px; }
+        .fg-hero-stats { font-size: 9px; color: var(--text-dim); display: flex; gap: 6px; }
         .fg-stat-hp { color: #44cc44; }
         .fg-stat-atk { color: #ff6644; }
         .fg-remove-btn {
@@ -756,7 +756,7 @@
 
         /* Bench */
         .bench-section { margin-top: 16px; }
-        .bench-title { font-family: 'Press Start 2P'; font-size: 8px; color: var(--text-dim); margin-bottom: 8px; }
+        .bench-title { font-family: 'Press Start 2P'; font-size: 9px; color: var(--text-dim); margin-bottom: 8px; }
         #bench-heroes { display: flex; gap: 6px; flex-wrap: wrap; }
         .fg-bench-card {
             display: flex; align-items: center; gap: 6px;
@@ -769,14 +769,14 @@
         .fg-bench-card:hover { border-color: var(--gold); }
         .fg-bench-card:active { cursor: grabbing; }
         .fg-bench-info { display: flex; flex-direction: column; }
-        .fg-bench-name { font-family: 'Press Start 2P'; font-size: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
-        .fg-bench-meta { font-size: 7px; color: var(--text-dim); }
-        .fg-bench-empty { font-size: 8px; color: var(--text-dim); padding: 12px; text-align: center; }
+        .fg-bench-name { font-family: 'Press Start 2P'; font-size: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
+        .fg-bench-meta { font-size: 9px; color: var(--text-dim); }
+        .fg-bench-empty { font-size: 9px; color: var(--text-dim); padding: 12px; text-align: center; }
 
         /* Synergy Panel */
         #synergy-panel { margin-top: 16px; }
-        .fg-synergy-header { font-family: 'Press Start 2P'; font-size: 8px; color: var(--text-dim); margin-bottom: 8px; letter-spacing: 1px; }
-        .fg-synergy-empty { font-size: 8px; color: var(--text-dim); padding: 8px; }
+        .fg-synergy-header { font-family: 'Press Start 2P'; font-size: 9px; color: var(--text-dim); margin-bottom: 8px; letter-spacing: 1px; }
+        .fg-synergy-empty { font-size: 9px; color: var(--text-dim); padding: 8px; }
         .fg-synergy-badge {
             display: flex; align-items: center; gap: 8px;
             padding: 6px 12px; margin-bottom: 4px;
