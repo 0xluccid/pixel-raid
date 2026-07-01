@@ -68,8 +68,8 @@ const BlockchainBridge = {
             this.provider = new ethers.BrowserProvider(window.ethereum); // ethers v6 (was .providers.Web3Provider in v5)
             this.signer = await this.provider.getSigner();
 
-            // Check chain
-            await this.checkAndSwitchChain();
+            // Check chain (non-blocking)
+            try { await this.checkAndSwitchChain(); } catch (e) { console.warn('⚠️ Chain switch:', e.message); }
 
             // Initialize contract
             if (this.CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000') {
@@ -366,6 +366,7 @@ const BlockchainBridge = {
 
             case 'disconnected':
                 connectBtn.textContent = '🦊 Connect Wallet';
+                connectBtn.classList.remove('connected');
                 connectBtn.onclick = () => this.connect();
                 if (walletInfo) walletInfo.style.display = 'none';
                 if (walletStatus) walletStatus.textContent = 'Not connected';
@@ -373,6 +374,7 @@ const BlockchainBridge = {
 
             case 'connected':
                 connectBtn.textContent = '✅ Connected';
+                connectBtn.classList.add('connected');
                 connectBtn.onclick = () => this.disconnect();
                 if (walletInfo) walletInfo.style.display = 'block';
                 if (walletAddress) walletAddress.textContent = 

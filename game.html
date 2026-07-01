@@ -1115,7 +1115,7 @@
         <div class="wallet-title">🔗 WALLET</div>
         <div class="wallet-desc">Connect MetaMask to save progress to cloud & mint NFT cards.</div>
         <button id="btn-connect-wallet">Connect Wallet</button>
-        <div class="wallet-info">
+        <div class="wallet-info" id="wallet-info">
             <div>Address: <span id="wallet-address" class="wallet-address"></span></div>
         </div>
         <div id="wallet-status"></div>
@@ -1267,6 +1267,7 @@
     <script src="js/ui/screens.js?v=s2fix"></script>
     <script src="js/systems/blockchain.js?v=s2fix"></script>
     <script src="js/systems/backend.js?v=s2fix"></script>
+    <script>Backend.init();</script>
     <script src="js/systems/renaiss.js?v=s2fix"></script>
     <script src="js/ui/market.js?v=s2fix"></script>
     <script src="js/main.js?v=s2fix"></script>
