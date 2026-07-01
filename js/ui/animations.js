@@ -12,7 +12,7 @@ const BattleAnimations = {
     _phaseBanner: null,
     _screenShake: { intensity: 0, duration: 0, elapsed: 0 },
     _cardMoves: [],
-    _lpAnim: { player: null, enemy: null },
+    _hpAnim: { player: null, enemy: null },
     _raf: null,
     _summonEffects: [],
     _attackFlashes: [],
@@ -229,28 +229,28 @@ const BattleAnimations = {
         });
     },
 
-    // ===== LP ANIMATION — Smooth width transition =====
-    animateLP(side, fromLP, toLP, maxLP) {
-        this._lpAnim[side] = {
-            fromLP, toLP, maxLP,
-            currentLP: fromLP,
+    // ===== HP ANIMATION — Smooth width transition =====
+    animateHP(side, fromHP, toHP, maxHP) {
+        this._hpAnim[side] = {
+            fromHP, toHP, maxHP,
+            currentHP: fromHP,
             startTime: performance.now(),
             duration: 400,
         };
     },
 
-    getAnimatedLP(side) {
-        const anim = this._lpAnim[side];
+    getAnimatedHP(side) {
+        const anim = this._hpAnim[side];
         if (!anim) return null;
         const elapsed = performance.now() - anim.startTime;
         const t = Math.min(1, elapsed / anim.duration);
         const ease = 1 - Math.pow(1 - t, 3); // ease out cubic
-        anim.currentLP = Math.round(anim.fromLP + (anim.toLP - anim.fromLP) * ease);
+        anim.currentHP = Math.round(anim.fromHP + (anim.toHP - anim.fromHP) * ease);
         if (t >= 1) {
-            this._lpAnim[side] = null;
-            return anim.toLP;
+            this._hpAnim[side] = null;
+            return anim.toHP;
         }
-        return anim.currentLP;
+        return anim.currentHP;
     },
 
     // ===== UPDATE CALLED EACH FRAME =====
@@ -464,8 +464,8 @@ const BattleAnimations = {
             50% { box-shadow: 0 0 14px var(--rarity-glow, #ffd700), 0 0 24px var(--rarity-glow, #ffd700), 0 2px 4px rgba(0,0,0,0.5); }
         }
 
-        /* LP change flash */
-        @keyframes animLPFlash {
+        /* HP change flash */
+        @keyframes animHPFlash {
             0% { text-shadow: 0 0 20px #e94560; }
             100% { text-shadow: none; }
         }

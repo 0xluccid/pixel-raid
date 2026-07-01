@@ -285,7 +285,7 @@ var BattlePhaser = {
         }
     },
 
-    // ===== LEGACY: UPDATE LP (redirects to hero HP) =====
+    // ===== LEGACY: UPDATE LP (delegates to updateHeroHP) =====
     updateLP: function (isPlayer, current, max) {
         this.updateHeroHP(isPlayer, current, max);
     },

@@ -278,7 +278,7 @@
         .hero-stats-line { font-size: 7px; color: var(--text-dim); margin-top: 2px; }
         .shield-badge { font-size: 8px; color: #4488ff; }
 
-        /* Yu-Gi-Oh Style Battle Layout */
+        /* Pixel Raid Battle Layout */
         .battle-info-strip {
             display: flex; justify-content: space-between; align-items: center;
             padding: 6px 12px;
@@ -1123,12 +1123,12 @@
 
     <!-- ====== BATTLE SCREEN ====== -->
     <div class="screen active" id="screen-battle">
-        <!-- Yu-Gi-Oh Style Battle Field -->
-        <!-- LP Bars are rendered on the canvas itself (top & bottom info bars) -->
+        <!-- Pixel Raid Battle Field -->
+        <!-- HP Bars are rendered on the canvas itself (top & bottom info bars) -->
 
         <!-- Battle Deck Preview — shows hero + skill cards before battle starts -->
         <div id="battle-deck-preview" class="battle-deck-preview"></div>
-        <!-- Battle Canvas — Full Yu-Gi-Oh field layout -->
+        <!-- Battle Canvas — Full battlefield layout -->
         <div class="battle-canvas-wrap">
             <div id="battle-canvas-container"></div>
         </div>
@@ -1245,32 +1245,32 @@
     </div>
 
     <!-- ====== SCRIPTS (load order matters!) ====== -->
-    <script src="js/core/sound.js?v=sprint2f"></script>
-    <script src="js/core/heroes.js?v=sprint2f"></script>
+    <script src="js/core/sound.js?v=sprint2g"></script>
+    <script src="js/core/heroes.js?v=sprint2g"></script>
     <!-- cards.js MERGED into heroes.js (Sprint 1 cleanup) -->
-    <script src="js/core/deck.js?v=sprint2f"></script>
-    <script src="js/core/items.js?v=sprint2f"></script>
-    <script src="js/core/game.js?v=sprint2f"></script>
-    <script src="js/core/units.js?v=sprint2f"></script>
-    <script src="js/systems/battle.js?v=sprint2f"></script>
-    <script src="js/systems/economy.js?v=sprint2f"></script>
-    <script src="js/systems/formation.js?v=sprint2f"></script>
-    <script src="js/ui/animations.js?v=sprint2f"></script>
-    <script src="js/ui/renderer.js?v=sprint2f"></script>
+    <script src="js/core/deck.js?v=sprint2g"></script>
+    <script src="js/core/items.js?v=sprint2g"></script>
+    <script src="js/core/game.js?v=sprint2g"></script>
+    <script src="js/core/units.js?v=sprint2g"></script>
+    <script src="js/systems/battle.js?v=sprint2g"></script>
+    <script src="js/systems/economy.js?v=sprint2g"></script>
+    <script src="js/systems/formation.js?v=sprint2g"></script>
+    <script src="js/ui/animations.js?v=sprint2g"></script>
+    <script src="js/ui/renderer.js?v=sprint2g"></script>
     <!-- battle-arena-scene.js REMOVED — using Phaser only -->
-    <script src="js/phaser/battle-scene.js?v=sprint2f"></script>
-    <script src="js/phaser/card-sprite.js?v=sprint2f"></script>
-    <script src="js/phaser/animations.js?v=sprint2f"></script>
-    <script src="js/phaser/bridge.js?v=sprint2f"></script>
-    <script src="js/ui/cardhand.js?v=sprint2f"></script>
-    <script src="js/ui/tutorial.js?v=sprint2f"></script>
-    <script src="js/ui/screens.js?v=sprint2f"></script>
-    <script src="js/systems/blockchain.js?v=sprint2f"></script>
-    <script src="js/systems/backend.js?v=sprint2f"></script>
+    <script src="js/phaser/battle-scene.js?v=sprint2g"></script>
+    <script src="js/phaser/card-sprite.js?v=sprint2g"></script>
+    <script src="js/phaser/animations.js?v=sprint2g"></script>
+    <script src="js/phaser/bridge.js?v=sprint2g"></script>
+    <script src="js/ui/cardhand.js?v=sprint2g"></script>
+    <script src="js/ui/tutorial.js?v=sprint2g"></script>
+    <script src="js/ui/screens.js?v=sprint2g"></script>
+    <script src="js/systems/blockchain.js?v=sprint2g"></script>
+    <script src="js/systems/backend.js?v=sprint2g"></script>
     <script>Backend.init();</script>
-    <script src="js/systems/renaiss.js?v=sprint2f"></script>
-    <script src="js/ui/market.js?v=sprint2f"></script>
-    <script src="js/main.js?v=sprint2f"></script>
+    <script src="js/systems/renaiss.js?v=sprint2g"></script>
+    <script src="js/ui/market.js?v=sprint2g"></script>
+    <script src="js/main.js?v=sprint2g"></script>
 >>>>>>> Stashed changes
 </body>
 </html>

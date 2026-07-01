@@ -21,6 +21,8 @@ const CardHand = {
             console.warn('CardHand container not found:', containerId);
             return;
         }
+        // Inject card CSS styles on first init
+        this.injectStyles();
         // Clear old state on re-init (e.g. after retry)
         this.container.innerHTML = '';
         this.container.classList.add('card-hand-container');

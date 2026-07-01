@@ -1,6 +1,6 @@
 /* ========================================
  * PIXEL RAID — Premium Canvas Renderer (v4)
- * Yu-Gi-Oh style field with TCG Chaos Rising aesthetics
+ * Pixel Raid style field with TCG Chaos Rising aesthetics
  * Dark gradient backgrounds, glowing zones, animated HP bars
  * ======================================== */
 
@@ -533,7 +533,7 @@ const BattleRenderer = {
         // Use animated HP if available
         let displayHP = combatant.heroHp;
         if (typeof BattleAnimations !== 'undefined') {
-            const animatedHP = BattleAnimations.getAnimatedLP(isPlayer ? 'player' : 'enemy');
+            const animatedHP = BattleAnimations.getAnimatedHP(isPlayer ? 'player' : 'enemy');
             if (animatedHP !== null) {
                 displayHP = animatedHP;
                 const animPct = Math.max(0, animatedHP / maxHP);
@@ -597,7 +597,7 @@ const BattleRenderer = {
         ctx.lineWidth = 1;
         ctx.strokeRect(x, y, w, h);
 
-        // LP text
+        // HP text
         ctx.fillStyle = PR_COLORS.textPrimary;
         ctx.font = 'bold 7px "Press Start 2P"';
         ctx.textAlign = 'center';
