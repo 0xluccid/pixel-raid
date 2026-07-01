@@ -108,11 +108,11 @@ const BattleArenaScene = {
             `;
         }
 
-        // Resize canvas to fill most of viewport (leave ~160px for hand/controls)
+        // Resize canvas to fill FULL viewport (cards now drawn in canvas)
         const vw = window.innerWidth;
-        const canvasArea = window.innerHeight - 160; // leave room for card hand + controls
+        const vh = window.innerHeight;
         const aspect = 600 / 400; // 3:2
-        let cw = canvasArea * aspect > vw ? vw : canvasArea * aspect;
+        let cw = vh * aspect > vw ? vw : vh * aspect;
         let ch = cw / aspect;
         this.canvas.width = Math.floor(cw);
         this.canvas.height = Math.floor(ch);
@@ -126,12 +126,14 @@ const BattleArenaScene = {
             margin: 0 auto;
         `;
 
-        // Move card hand and action buttons INSIDE the wrap (after canvas)
+        // Hide HTML card hand (now drawn in canvas)
         const cardHand = document.getElementById('card-hand-area');
+        if (cardHand) cardHand.style.display = 'none';
+
+        // Keep only action buttons visible below canvas
         const actionRow = document.querySelector('.battle-action-row');
-        const infoStrip = document.querySelector('.battle-info-strip');
         const controls = document.querySelector('.battle-controls');
-        [cardHand, actionRow, infoStrip, controls].forEach(el => {
+        [actionRow, controls].forEach(el => {
             if (el && el.parentElement !== wrap) {
                 wrap.appendChild(el);
             }
@@ -279,6 +281,9 @@ const BattleArenaScene = {
         // Draw player LP bar (bottom)
         this._drawLPBar(ctx, state.player, true, layout.lpPlayer);
 
+        // Draw player hand as 2x2 card grid in bottom area
+        this._drawHand(ctx, state.player, layout.hand);
+
         // Draw vignette (dramatic edge darkening)
         this._drawVignette(ctx, W, H);
 
@@ -307,16 +312,21 @@ const BattleArenaScene = {
         const centerH = this.CENTER_H;
         const gap = this.FIELD_GAP;
 
-        // Vertical split: LP_bar | field | center | field | LP_bar
+        // Reserve bottom 35% for card hand (2x2 grid)
+        const handH = Math.floor(H * 0.35);
+        const battleH = H - handH;
+
+        // Vertical split within battle area: LP_bar | field | center | field | LP_bar
         const totalFixed = lpH * 2 + centerH + gap * 4;
-        const fieldH = (H - totalFixed) / 2;
+        const fieldH = (battleH - totalFixed) / 2;
 
         return {
             lpEnemy:    { x: 0, y: 0, w: W, h: lpH },
             fieldEnemy: { x: 0, y: lpH + gap, w: W, h: fieldH },
             center:     { x: 0, y: lpH + gap + fieldH + gap, w: W, h: centerH },
             fieldPlayer:{ x: 0, y: lpH + gap + fieldH + gap + centerH + gap, w: W, h: fieldH },
-            lpPlayer:   { x: 0, y: H - lpH, w: W, h: lpH },
+            lpPlayer:   { x: 0, y: battleH - lpH, w: W, h: lpH },
+            hand:       { x: 0, y: battleH, w: W, h: handH },
         };
     },
 
@@ -554,9 +564,9 @@ const BattleArenaScene = {
         const scaledSkillH = skillH * scale;
         const scaledGap = gap * scale;
 
-        // 3 hero zones centered
-        const totalHeroW = scaledZoneW * 3 + scaledGap * 2;
-        const heroStartX = x + (w - totalHeroW) / 2;
+        // Single hero in center (Yu-Gi-Oh style: 1 hero + 2 skill zones)
+        const totalW = scaledZoneW + scaledSkillW * 2 + scaledGap * 2;
+        const startX = x + (w - totalW) / 2;
         const heroY = y + (h - scaledZoneH) / 2;
 
         // Field decoration — perspective ground
@@ -579,17 +589,28 @@ const BattleArenaScene = {
             ctx.stroke();
         }
 
-        // Draw 3 hero zones with perspective scaling
-        for (let i = 0; i < 3; i++) {
-            const zx = heroStartX + i * (scaledZoneW + scaledGap);
-            const hero = combatant.heroZones ? combatant.heroZones[i] : null;
-            this._drawHeroZone(ctx, zx, heroY, scaledZoneW, scaledZoneH, hero, isPlayer, i);
+        // Draw the main hero (combatant.hero has the battle hero data)
+        const rawHero = combatant.hero || (combatant.heroes && combatant.heroes[0]) || null;
+        // Merge battle hero HP into hero object for display
+        let hero = rawHero;
+        if (rawHero && combatant.battleHero) {
+            hero = { ...rawHero };
+            hero.currentHp = combatant.battleHero.heroHP || combatant.battleHero.hp || rawHero.stats?.hp || 0;
+            hero.maxHp = combatant.battleHero.heroMaxHP || combatant.battleHero.maxHp || rawHero.stats?.maxHp || 0;
+            hero.atk = combatant.battleHero.heroATK || rawHero.stats?.atk || 0;
+            hero.def = combatant.battleHero.heroDEF || rawHero.stats?.def || 0;
+        } else if (rawHero && rawHero.stats) {
+            hero = { ...rawHero };
+            hero.currentHp = rawHero.stats.hp;
+            hero.maxHp = rawHero.stats.maxHp;
         }
+        const heroX = startX + scaledSkillW + scaledGap;
+        this._drawHeroZone(ctx, heroX, heroY, scaledZoneW, scaledZoneH, hero, isPlayer, 0);
 
-        // Draw 2 skill zones flanking with perspective scaling
+        // Draw 2 skill zones flanking the hero
         const skillY = y + (h - scaledSkillH) / 2;
-        const leftSkillX = heroStartX - scaledSkillW - (18 * scale);
-        const rightSkillX = heroStartX + totalHeroW + (18 * scale);
+        const leftSkillX = startX;
+        const rightSkillX = startX + scaledSkillW + scaledGap + scaledZoneW + scaledGap;
         
         const leftSkill = combatant.skillZones ? combatant.skillZones[0] : null;
         const rightSkill = combatant.skillZones ? combatant.skillZones[1] : null;
@@ -905,6 +926,137 @@ const BattleArenaScene = {
         img.onerror = () => { img._failed = true; };
         this._spriteCache[src] = img;
         return img;
+    },
+
+    // ===== HAND CARDS (2x2 grid at bottom) =====
+    _drawHand(ctx, combatant, rect) {
+        const { x, y, w, h } = rect;
+        const hand = combatant.hand || [];
+        if (!hand.length) return;
+
+        // Hand area background
+        ctx.fillStyle = 'rgba(5, 5, 20, 0.85)';
+        ctx.fillRect(x, y, w, h);
+
+        // Top border line
+        ctx.strokeStyle = 'rgba(68, 136, 255, 0.3)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + w, y);
+        ctx.stroke();
+
+        // "YOUR HAND" label
+        ctx.font = '10px "Press Start 2P", monospace';
+        ctx.fillStyle = 'rgba(68, 136, 255, 0.5)';
+        ctx.textAlign = 'center';
+        ctx.fillText('YOUR HAND', x + w / 2, y + 14);
+
+        // 2x2 grid for first 4 cards
+        const cardsToShow = hand.slice(0, 4);
+        const pad = 8;
+        const gap = 6;
+        const gridTop = y + 22;
+        const gridH = h - 28;
+        const cardW = (w - pad * 2 - gap) / 2;
+        const cardH = (gridH - gap) / 2;
+
+        const positions = [
+            { cx: x + pad, cy: gridTop },
+            { cx: x + pad + cardW + gap, cy: gridTop },
+            { cx: x + pad, cy: gridTop + cardH + gap },
+            { cx: x + pad + cardW + gap, cy: gridTop + cardH + gap },
+        ];
+
+        for (let i = 0; i < cardsToShow.length; i++) {
+            const card = cardsToShow[i];
+            const pos = positions[i];
+            this._drawCard(ctx, card, pos.cx, pos.cy, cardW, cardH, i + 1);
+        }
+    },
+
+    _drawCard(ctx, card, x, y, w, h, index) {
+        const color = card.pixelColor || '#4488ff';
+        const rarity = card.rarity || 'common';
+        const rarityColors = {
+            common: '#8a8a8a',
+            rare: '#4488ff',
+            epic: '#aa44ff',
+            legendary: '#ffaa00',
+            mythic: '#ff4488',
+        };
+        const borderColor = rarityColors[rarity] || '#8a8a8a';
+
+        // Card background
+        ctx.fillStyle = 'rgba(15, 12, 30, 0.95)';
+        ctx.fillRect(x, y, w, h);
+
+        // Card border (rarity color)
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, w, h);
+
+        // Color strip at top
+        ctx.fillStyle = color;
+        ctx.fillRect(x + 2, y + 2, w - 4, 4);
+
+        // Card icon area (colored rectangle)
+        const iconSize = Math.min(w * 0.3, h * 0.25);
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.3;
+        ctx.fillRect(x + (w - iconSize) / 2, y + 10, iconSize, iconSize);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + (w - iconSize) / 2, y + 10, iconSize, iconSize);
+
+        // Card name
+        ctx.font = 'bold 8px "Press Start 2P", monospace';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        const name = card.name || 'Card';
+        ctx.fillText(name, x + w / 2, y + 10 + iconSize + 10);
+
+        // Card type
+        ctx.font = '6px "Press Start 2P", monospace';
+        ctx.fillStyle = borderColor;
+        const type = (card.type || '').toUpperCase();
+        ctx.fillText(type, x + w / 2, y + 10 + iconSize + 20);
+
+        // Mana cost (top-right corner)
+        if (card.manaCost !== undefined) {
+            const manaR = 8;
+            const mx = x + w - manaR - 3;
+            const my = y + manaR + 3;
+            ctx.beginPath();
+            ctx.arc(mx, my, manaR, 0, Math.PI * 2);
+            ctx.fillStyle = '#2244aa';
+            ctx.fill();
+            ctx.strokeStyle = '#4488ff';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.font = 'bold 7px "Press Start 2P", monospace';
+            ctx.fillStyle = '#88ccff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(String(card.manaCost), mx, my);
+            ctx.textBaseline = 'alphabetic';
+        }
+
+        // Description (truncated)
+        if (card.description) {
+            ctx.font = '5px "Press Start 2P", monospace';
+            ctx.fillStyle = 'rgba(200, 200, 200, 0.7)';
+            ctx.textAlign = 'center';
+            const desc = card.description.length > 30 ? card.description.slice(0, 28) + '..' : card.description;
+            ctx.fillText(desc, x + w / 2, y + h - 6);
+        }
+
+        // Keybind number (top-left)
+        ctx.font = 'bold 7px "Press Start 2P", monospace';
+        ctx.fillStyle = '#ffcc00';
+        ctx.textAlign = 'left';
+        ctx.fillText(String(index), x + 4, y + 12);
     },
 
     // ===== ATTACK ANIMATIONS =====
