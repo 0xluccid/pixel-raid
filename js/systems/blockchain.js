@@ -52,8 +52,10 @@ const BlockchainBridge = {
      * Connect wallet
      */
     async connect() {
+        console.log('🔌 BlockchainBridge.connect() called');
         try {
             if (!window.ethereum) {
+                console.error('❌ window.ethereum not found');
                 alert('Please install MetaMask first!');
                 window.open('https://metamask.io/', '_blank');
                 return false;
@@ -65,7 +67,9 @@ const BlockchainBridge = {
             });
             
             this.account = accounts[0];
-            this.provider = new ethers.BrowserProvider(window.ethereum); // ethers v6 (was .providers.Web3Provider in v5)
+            console.log('✅ Got account:', this.account);
+            this.provider = new ethers.BrowserProvider(window.ethereum);
+            console.log('✅ Provider created'); // ethers v6 (was .providers.Web3Provider in v5)
             this.signer = await this.provider.getSigner();
 
             // Check chain (non-blocking — if fails, still connect wallet)
@@ -81,7 +85,9 @@ const BlockchainBridge = {
             }
 
             this.isConnected = true;
+            console.log('✅ isConnected=true, calling updateUI');
             this.updateUI('connected');
+            console.log('✅ updateUI called');
 
             // Sync wallet to Supabase backend
             if (typeof Backend !== 'undefined' && Backend.supabase) {
@@ -405,7 +411,15 @@ const BlockchainBridge = {
     },
 };
 
-// Auto-init when DOM ready
-document.addEventListener('DOMContentLoaded', () => {
-    BlockchainBridge.init();
-});
+// Auto-init when DOM ready (with fallback for late-loading scripts)
+function _initBlockchain() {
+    if (!BlockchainBridge._inited) {
+        BlockchainBridge._inited = true;
+        BlockchainBridge.init();
+    }
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _initBlockchain);
+} else {
+    _initBlockchain();
+}
