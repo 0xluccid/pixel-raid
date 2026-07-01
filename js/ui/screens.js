@@ -219,6 +219,11 @@ const UI = {
         // Init Phaser renderer and activate bridge
         BattlePhaser.init('battle-canvas-container');
 
+        // Init card hand renderer
+        if (typeof CardHand !== 'undefined') {
+            CardHand.init('card-hand-area');
+        }
+
         // Create or update the action row for phase buttons
         this._ensureActionRow();
 
