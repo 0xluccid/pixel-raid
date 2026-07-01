@@ -220,11 +220,11 @@ const UI = {
             playerSkillIds = SKILL_CARD_TEMPLATES.slice(0, 4).map(c => c.id);
         }
 
-        // Generate enemy: 1 hero + skill cards
+        // Generate enemy: 1 hero + skill cards (scaled to player power)
         const stage = GameState.player.stage;
-        const enemyDeck = GameState.generateEnemyDeck(stage);
+        const enemyDeck = GameState.generateEnemyDeck(stage, playerHero);
         const enemyHero = enemyDeck[0]; // pick first generated enemy
-        const enemySkillIds = GameState.generateEnemySkillDeck(stage);
+        const enemySkillIds = GameState.generateEnemySkillDeck(stage, playerHero);
 
         // BUG FIX: Properly reset battle state between battles (Issue 2)
         BattleEngine.stop();
@@ -341,8 +341,8 @@ const UI = {
         } else {
             // Fallback: init canvas scene and enter fullscreen overlay
             BattleArenaScene.init('battle-canvas-container');
-            const enemyDeck = GameState.generateEnemyDeck(GameState.player.stage);
-            const enemySkillIds = GameState.generateEnemySkillDeck(GameState.player.stage);
+            const enemyDeck = GameState.generateEnemyDeck(GameState.player.stage, playerHero);
+            const enemySkillIds = GameState.generateEnemySkillDeck(GameState.player.stage, playerHero);
             BattleArenaScene.enter(
                 { hero: playerHero, skillCards: playerSkillIds },
                 { hero: enemyHero, skillCards: enemySkillIds },

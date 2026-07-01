@@ -402,8 +402,8 @@ const BattleArenaScene = {
         const centerW = this.CENTER_H; // reuse for VS divider width
         const gap = this.FIELD_GAP;
 
-        // Reserve bottom 30% for card hand (2x2 grid)
-        const handH = Math.floor(H * 0.30);
+        // Reserve bottom 35% for card hand (4 cards horizontal row)
+        const handH = Math.floor(H * 0.35);
         const battleH = H - handH;
 
         // LP bars at top (enemy left, player right)
@@ -1034,7 +1034,7 @@ const BattleArenaScene = {
         return img;
     },
 
-    // ===== HAND CARDS (2x2 grid at bottom) =====
+    // ===== HAND CARDS (4 cards horizontal row at bottom) =====
     _drawHand(ctx, combatant, rect) {
         const { x, y, w, h } = rect;
         const hand = combatant.hand || [];
@@ -1053,34 +1053,29 @@ const BattleArenaScene = {
         ctx.stroke();
 
         // "YOUR HAND" label
-        const handLabelSize = Math.max(5, Math.min(10, w * 0.025));
+        const handLabelSize = Math.max(5, Math.min(10, w * 0.02));
         ctx.font = handLabelSize + 'px "Press Start 2P", monospace';
         ctx.fillStyle = 'rgba(68, 136, 255, 0.5)';
         ctx.textAlign = 'center';
-        ctx.fillText('YOUR HAND', x + w / 2, y + 14);
+        ctx.fillText('YOUR HAND', x + w / 2, y + handLabelSize + 4);
 
-        // 2x2 grid for first 4 cards
+        // 4 cards horizontal row
         const cardsToShow = hand.slice(0, 4);
-        const pad = 8;
-        const gap = 6;
-        const gridTop = y + 22;
-        const gridH = h - 28;
-        const cardW = (w - pad * 2 - gap) / 2;
-        const cardH = (gridH - gap) / 2;
-
-        const positions = [
-            { cx: x + pad, cy: gridTop },
-            { cx: x + pad + cardW + gap, cy: gridTop },
-            { cx: x + pad, cy: gridTop + cardH + gap },
-            { cx: x + pad + cardW + gap, cy: gridTop + cardH + gap },
-        ];
+        const pad = 10;
+        const gap = 8;
+        const gridTop = y + handLabelSize + 10;
+        const gridH = h - handLabelSize - 14;
+        const totalGaps = gap * (cardsToShow.length - 1);
+        const cardW = (w - pad * 2 - totalGaps) / cardsToShow.length;
+        const cardH = gridH;
 
         for (let i = 0; i < cardsToShow.length; i++) {
             // Skip card being animated (flying to arena)
             if (this._playingCardIndex === i) continue;
             const card = cardsToShow[i];
-            const pos = positions[i];
-            this._drawCard(ctx, card, pos.cx, pos.cy, cardW, cardH, i + 1);
+            const cx = x + pad + i * (cardW + gap);
+            const cy = gridTop;
+            this._drawCard(ctx, card, cx, cy, cardW, cardH, i + 1);
         }
     },
 
@@ -1108,11 +1103,14 @@ const BattleArenaScene = {
         const emoji = typeEmojis[cardType] || '🃏';
         const cardName = card.name || 'Card';
         const damageVal = card.damage || card.value || card.healAmount || 0;
+        const manaCost = card.manaCost ?? card.mana ?? 0;
+        const effectVal = card.effect?.value || 0;
 
         // Scale fonts based on card size
-        const fontSize = Math.max(6, Math.min(10, w * 0.1));
-        const nameFontSize = Math.max(5, Math.min(9, w * 0.08));
-        const smallFontSize = Math.max(4, Math.min(7, w * 0.06));
+        const fontSize = Math.max(6, Math.min(11, w * 0.12));
+        const nameFontSize = Math.max(5, Math.min(10, w * 0.09));
+        const smallFontSize = Math.max(4, Math.min(8, w * 0.07));
+        const tinyFontSize = Math.max(3, Math.min(6, w * 0.05));
 
         // ===== CARD SHAPE =====
         // Outer shadow
@@ -1163,7 +1161,7 @@ const BattleArenaScene = {
         ctx.fillRect(artX, artY, artW, artH);
 
         // Big emoji icon centered in art area
-        const iconSize = Math.min(artH * 0.65, artW * 0.5, 28);
+        const iconSize = Math.min(artH * 0.65, artW * 0.4, 32);
         ctx.font = `${iconSize}px sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -1177,10 +1175,34 @@ const BattleArenaScene = {
         ctx.lineTo(artX + artW, artY + artH);
         ctx.stroke();
 
+        // ===== MANA COST BADGE (top-left) =====
+        const badgeW = Math.min(22, w * 0.22);
+        const badgeH = Math.min(16, h * 0.1);
+        const badgeX = artX + 2;
+        const badgeY = artY + 2;
+        // Mana crystal background
+        ctx.fillStyle = '#2244aa';
+        ctx.beginPath();
+        ctx.moveTo(badgeX + badgeW / 2, badgeY);
+        ctx.lineTo(badgeX + badgeW, badgeY + badgeH / 2);
+        ctx.lineTo(badgeX + badgeW / 2, badgeY + badgeH);
+        ctx.lineTo(badgeX, badgeY + badgeH / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#4488ff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        // Mana cost number
+        ctx.font = `bold ${smallFontSize}px "Press Start 2P", monospace`;
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(manaCost, badgeX + badgeW / 2, badgeY + badgeH / 2);
+
         // ===== DAMAGE / VALUE NUMBER (top-right of art) =====
         if (damageVal > 0) {
-            const numW = Math.min(24, w * 0.28);
-            const numH = Math.min(14, h * 0.1);
+            const numW = Math.min(24, w * 0.25);
+            const numH = Math.min(16, h * 0.1);
             const numX = artX + artW - numW - 2;
             const numY = artY + 2;
             ctx.fillStyle = '#ff4444';
@@ -1197,7 +1219,7 @@ const BattleArenaScene = {
 
         // ===== NAME BANNER (below art) =====
         const nameY = artY + artH + 2;
-        const nameH = Math.min(16, h * 0.12);
+        const nameH = Math.min(18, h * 0.12);
 
         // Name background strip
         ctx.fillStyle = borderColor + '30';
@@ -1215,48 +1237,74 @@ const BattleArenaScene = {
         }
         ctx.fillText(displayName, artX + artW / 2, nameY + nameH / 2);
 
-        // ===== DESCRIPTION / TYPE AREA (bottom section) =====
-        const descY = nameY + nameH + 2;
+        // ===== STATS AREA (below name — shows type + effect value) =====
+        const statsY = nameY + nameH + 2;
+        const statsH = h * 0.15;
+
+        // Stats bar with icon and value
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(artX, statsY, artW, statsH);
+
+        // Type badge on left
+        const typeText = (cardType || 'SKILL').toUpperCase();
+        ctx.font = `${tinyFontSize}px "Press Start 2P", monospace`;
+        ctx.fillStyle = borderColor;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(typeText, artX + 3, statsY + statsH / 2);
+
+        // Effect value on right (if applicable)
+        if (effectVal > 0) {
+            const effectLabel = cardType === 'buff' || cardType === 'debuff'
+                ? `+${Math.floor(effectVal * 100)}%`
+                : `${effectVal}`;
+            ctx.fillStyle = '#ffcc44';
+            ctx.textAlign = 'right';
+            ctx.fillText(effectLabel, artX + artW - 3, statsY + statsH / 2);
+        }
+
+        // Stats separator line
+        ctx.strokeStyle = borderColor + '30';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(artX, statsY + statsH);
+        ctx.lineTo(artX + artW, statsY + statsH);
+        ctx.stroke();
+
+        // ===== DESCRIPTION AREA (bottom section) =====
+        const descY = statsY + statsH + 2;
         const descH = y + h - pad - descY - 2;
 
-        // Type badge
-        ctx.font = `${smallFontSize}px "Press Start 2P", monospace`;
-        ctx.fillStyle = borderColor;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        const typeText = (cardType || 'SKILL').toUpperCase();
-        ctx.fillText(typeText, artX + artW / 2, descY + 2);
-
         // Card description (truncated)
-        if (card.description && descH > smallFontSize * 3) {
-            ctx.font = `${Math.max(4, smallFontSize - 1)}px "Press Start 2P", monospace`;
+        if (card.description && descH > tinyFontSize * 2) {
+            ctx.font = `${tinyFontSize}px "Press Start 2P", monospace`;
             ctx.fillStyle = '#888888';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             let desc = card.description;
-            if (desc.length > 30) desc = desc.slice(0, 28) + '...';
+            if (desc.length > 35) desc = desc.slice(0, 33) + '...';
             // Word wrap
             const words = desc.split(' ');
             let line = '';
-            let lineY = descY + smallFontSize + 4;
+            let lineY = descY + 1;
             for (const word of words) {
                 const test = line + word + ' ';
                 if (ctx.measureText(test).width > artW - 4) {
                     ctx.fillText(line.trim(), artX + artW / 2, lineY);
                     line = word + ' ';
-                    lineY += smallFontSize + 2;
-                    if (lineY > y + h - pad - smallFontSize) break;
+                    lineY += tinyFontSize + 2;
+                    if (lineY > y + h - pad - tinyFontSize) break;
                 } else {
                     line = test;
                 }
             }
-            if (lineY <= y + h - pad - smallFontSize) {
+            if (lineY <= y + h - pad - tinyFontSize) {
                 ctx.fillText(line.trim(), artX + artW / 2, lineY);
             }
         }
 
         // ===== RARITY GEM (bottom-center) =====
-        const gemR = Math.min(5, w * 0.05);
+        const gemR = Math.min(5, w * 0.04);
         const gemX = artX + artW / 2;
         const gemY = y + h - pad - gemR - 3;
         ctx.beginPath();
@@ -1279,23 +1327,20 @@ const BattleArenaScene = {
         const hand = state.player.hand || [];
         if (!hand.length) return [];
 
-        const pad = 8;
-        const gap = 6;
-        const gridTop = y + 22;
-        const gridH = h - 28;
-        const cardW = (w - pad * 2 - gap) / 2;
-        const cardH = (gridH - gap) / 2;
-
-        const positions = [
-            { cx: x + pad, cy: gridTop },
-            { cx: x + pad + cardW + gap, cy: gridTop },
-            { cx: x + pad, cy: gridTop + cardH + gap },
-            { cx: x + pad + cardW + gap, cy: gridTop + cardH + gap },
-        ];
+        // Must match _drawHand layout exactly
+        const handLabelSize = Math.max(5, Math.min(10, w * 0.02));
+        const pad = 10;
+        const gap = 8;
+        const gridTop = y + handLabelSize + 10;
+        const gridH = h - handLabelSize - 14;
+        const count = Math.min(hand.length, 4);
+        const totalGaps = gap * (count - 1);
+        const cardW = (w - pad * 2 - totalGaps) / count;
+        const cardH = gridH;
 
         return hand.slice(0, 4).map((card, i) => ({
             card, index: i,
-            x: positions[i].cx, y: positions[i].cy,
+            x: x + pad + i * (cardW + gap), y: gridTop,
             w: cardW, h: cardH
         }));
     },
