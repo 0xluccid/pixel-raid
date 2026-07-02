@@ -254,7 +254,7 @@ var BattlePhaser = {
     // ===== ANIMATE ATTACK =====
     animateAttack: function (attackerIdx, targetIdx, isPlayer, damage, isCrit) {
         if (!this._scene || !this._active) return;
-        this._scene.playAttack(0, 0, isPlayer, damage, isCrit || false);
+        this._scene.playAttack(attackerIdx, targetIdx, isPlayer, damage, isCrit || false);
     },
 
     // ===== SPAWN DAMAGE TEXT =====
