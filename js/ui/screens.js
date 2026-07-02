@@ -43,9 +43,7 @@ const UI = {
             case 'formation': this.renderStrategyScreen(); break;
             case 'inventory': this.renderInventoryScreen(); break;
             case 'shop': this.renderShopScreen(); break;
-            case 'market':
-                el.innerHTML = '<div style="text-align:center;padding:40px;"><div style="font-size:32px;margin-bottom:12px;">📈</div><div style="font-family:var(--pixel-font);font-size:10px;color:var(--gold);">MARKETPLACE</div><div style="font-size:8px;color:var(--text-dim);margin-top:8px;">Coming Soon — Trade cards with other players!</div></div>';
-                break;
+            case 'market': break; // Market screen uses static HTML, no dynamic render needed
         }
     },
 
