@@ -166,7 +166,7 @@
         }
 
         /* Screen container */
-        .screen { display: none; padding: 16px; max-width: 900px; margin: 0 auto; }
+        .screen { display: none; padding: 24px 32px; max-width: 1280px; margin: 0 auto; width: 100%; }
         .screen.active { display: block; }
 
         /* Cards — pixel-step borders, RPG feel */
@@ -697,7 +697,7 @@
         .battle-canvas-wrap { position: relative; }
 
         /* Heroes Screen — RPG panels */
-        .heroes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+        .heroes-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
         .hero-detail {
             background: linear-gradient(180deg, #1a1a2e, #0f0f23);
             border: 2px solid var(--border-pixel);
@@ -805,13 +805,13 @@
         .inv-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
         .inv-tab { font-family: 'Press Start 2P'; font-size: 9px; padding: 6px 14px; background: rgba(255,215,0,0.04); border: 1px solid var(--border-pixel); cursor: pointer; color: var(--text-dim); text-transform: uppercase; }
         .inv-tab.active { background: var(--gold); border-color: var(--gold-dark); color: #000; box-shadow: var(--shadow-pixel); }
-        #inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+        #inventory-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 
         /* Shop Screen */
         .shop-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
         .shop-tab { font-family: 'Press Start 2P'; font-size: 9px; padding: 6px 14px; background: rgba(255,215,0,0.04); border: 1px solid var(--border-pixel); cursor: pointer; color: var(--text-dim); text-transform: uppercase; }
         .shop-tab.active { background: var(--gold); border-color: var(--gold-dark); color: #000; box-shadow: var(--shadow-pixel); }
-        #shop-content { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+        #shop-content { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 
         /* Blockchain / Wallet Section */
         .wallet-section {
@@ -1036,11 +1036,16 @@
         }
 
         /* Responsive */
-        @media (max-width: 600px) {
+        @media (max-width: 1024px) {
+            .screen { padding: 20px 24px; }
+            .heroes-grid, #inventory-grid, #shop-content { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 768px) {
             .game-header { flex-wrap: wrap; gap: 8px; }
             .header-info { flex-wrap: wrap; }
+            .screen { padding: 16px; }
             #formation-grid { max-width: 280px; gap: 6px; }
-            .heroes-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .heroes-grid, #inventory-grid, #shop-content { grid-template-columns: repeat(2, 1fr); gap: 8px; }
             .nav-btn { font-size: 8px; padding: 10px 12px; min-height: 44px; display: flex; align-items: center; }
             .card { padding: 8px; }
             .card-name { font-size: 8px; }
@@ -1049,6 +1054,7 @@
             .hand-card { width: 100px; min-height: 140px; }
         }
         @media (max-width: 380px) {
+            .screen { padding: 12px; }
             .heroes-grid { grid-template-columns: 1fr; }
             #inventory-grid { grid-template-columns: 1fr; }
             #shop-content { grid-template-columns: 1fr; }
