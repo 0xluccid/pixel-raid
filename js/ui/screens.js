@@ -777,106 +777,113 @@ const UI = {
     },
 
     showHeroDetail(card) {
-            // Render into right panel instead of modal
-            const panel = document.getElementById('hero-detail');
-            const content = document.getElementById('hero-detail-content');
-            if (!panel || !content) return;
+        // Remove any existing detail modal
+        const old = document.getElementById('hero-detail-modal');
+        if (old) old.remove();
 
-            // Highlight selected card
-            document.querySelectorAll('.heroes-grid .card').forEach(c => c.style.borderColor = '');
-            const cards = document.querySelectorAll('.heroes-grid .card');
-            cards.forEach(c => {
-                if (c.onclick && c.textContent.includes(card.name)) {
-                    c.style.borderColor = RARITIES[card.rarity]?.color || 'var(--gold)';
-                }
-            });
+        const overlay = document.createElement('div');
+        overlay.id = 'hero-detail-modal';
+        overlay.style.cssText = `
+            position:fixed;top:0;left:0;right:0;bottom:0;
+            z-index:99999;display:flex;align-items:center;justify-content:center;
+            background:rgba(0,0,0,0.75);animation:s3FadeIn 0.2s ease;
+        `;
+        overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 
-            const r = RARITIES[card.rarity] || {};
-            const cls = CLASSES[card.class] || {};
-            const rarityOrder = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
-            const stars = '\u2605'.repeat((rarityOrder[card.rarity] || 0) + 1);
-            const skillDesc = card.skill ? card.skill.name + (card.skill.chance ? ` ($\{Math.floor(card.skill.chance * 100)}\% chance)` : '') : 'None';
+        const r = RARITIES[card.rarity] || {};
+        const cls = CLASSES[card.class] || {};
+        const rarityOrder = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
+        const stars = '★'.repeat((rarityOrder[card.rarity] || 0) + 1);
+        const skillDesc = card.skill ? card.skill.name + (card.skill.chance ? ` (${Math.floor(card.skill.chance * 100)}% chance)` : '') : 'None';
 
-            const maxHP = 140, maxATK = 38, maxDEF = 25, maxSPD = 24;
-            const statBars = [
-                { label: 'HP', val: card.stats.hp, max: maxHP, color: '#44cc44' },
-                { label: 'ATK', val: card.stats.atk, max: maxATK, color: '#ff6644' },
-                { label: 'DEF', val: card.stats.def, max: maxDEF, color: '#4488ff' },
-                { label: 'SPD', val: card.stats.spd, max: maxSPD, color: '#ffaa00' },
-            ];
+        const maxHP = 140, maxATK = 38, maxDEF = 25, maxSPD = 24;
+        const statBars = [
+            { label: 'HP', val: card.stats.hp, max: maxHP, color: '#44cc44' },
+            { label: 'ATK', val: card.stats.atk, max: maxATK, color: '#ff6644' },
+            { label: 'DEF', val: card.stats.def, max: maxDEF, color: '#4488ff' },
+            { label: 'SPD', val: card.stats.spd, max: maxSPD, color: '#ffaa00' },
+        ];
 
-            const spriteContainerId = 'detail-sprite-container';
+        const spriteContainerId = 'detail-sprite-container';
 
-            content.innerHTML = `
-                <div style="text-align:center;">
-                    <div id="${spriteContainerId}" style="width:80px;height:80px;margin:0 auto 8px;"></div>
-                    <div style="font-family:'Press Start 2P';font-size:11px;color:${r.color};margin-bottom:4px;">
-                        ${card.name}${card.level > 1 ? ` Lv.${card.level}` : ''}
-                    </div>
-                    <div style="font-size:9px;color:${r.color};margin-bottom:4px;">${stars} ${r.name}</div>
-                    <div style="font-size:10px;color:${cls.color};margin-bottom:12px;">
-                        ${cls.emoji} ${cls.name}
-                    </div>
-                    <div style="text-align:left;margin-bottom:12px;">
-                        ${statBars.map(s => `
-                            <div style="display:flex;align-items:center;gap:6px;margin:4px 0;">
-                                <span style="font-size:9px;color:${s.color};width:30px;">${s.label}</span>
-                                <div style="flex:1;height:10px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);">
-                                    <div style="width:${Math.min(100, (s.val / s.max) * 100)}%;height:100%;background:${s.color};"></div>
-                                </div>
-                                <span style="font-size:9px;color:${s.color};width:28px;text-align:right;">${s.val}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div style="font-size:10px;color:#88ccff;margin-bottom:4px;">
-                        \u26a1 Power: ${getCardPower(card)}
-                    </div>
-                    <div style="font-size:9px;color:#bbddbb;margin-bottom:12px;">
-                        \u2728 ${skillDesc}
-                    </div>
-                    ${card.level > 1 && card.expToNext ? `
-                        <div style="margin-bottom:12px;">
-                            <div style="font-size:8px;color:var(--text-dim);margin-bottom:4px;">EXP ${card.exp}/${card.expToNext}</div>
-                            <div style="height:6px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);">
-                                <div style="width:${Math.min(100, (card.exp / card.expToNext) * 100)}%;height:100%;background:#88ccff;"></div>
-                            </div>
-                        </div>
-                    ` : ''}
-                    <button class="btn btn-gold" onclick="UI._selectBattleHero(${card.id})"
-                        style="min-height:44px;width:100%;margin-top:8px;">\u2694\ufe0f Select for Battle</button>
+        overlay.innerHTML = `
+            <div style="
+                background:linear-gradient(135deg,#0a0a2e,#141432);
+                border:2px solid ${r.color || '#888'};
+                border-radius:12px;padding:20px 24px;text-align:center;
+                max-width:320px;width:90%;box-shadow:0 0 30px ${r.color || '#888'}44;
+                max-height:90vh;overflow-y:auto;
+            ">
+                <div id="${spriteContainerId}" style="width:80px;height:80px;margin:0 auto 8px;"></div>
+                <div style="font-family:'Press Start 2P';font-size:10px;color:${r.color};margin-bottom:4px;">
+                    ${card.name}${card.level > 1 ? ` Lv.${card.level}` : ''}
                 </div>
-            `;
+                <div style="font-size:7px;color:${r.color};margin-bottom:4px;">${stars} ${r.name}</div>
+                <div style="font-size:8px;color:${cls.color};margin-bottom:12px;">
+                    ${cls.emoji} ${cls.name}
+                </div>
+                <div style="text-align:left;margin-bottom:12px;">
+                    ${statBars.map(s => `
+                        <div style="display:flex;align-items:center;gap:6px;margin:3px 0;">
+                            <span style="font-size:7px;color:${s.color};width:28px;">${s.label}</span>
+                            <div style="flex:1;height:8px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);">
+                                <div style="width:${Math.min(100, (s.val / s.max) * 100)}%;height:100%;background:${s.color};"></div>
+                            </div>
+                            <span style="font-size:7px;color:${s.color};width:24px;text-align:right;">${s.val}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div style="font-size:8px;color:#88ccff;margin-bottom:4px;">
+                    ⚡ Power: ${getCardPower(card)}
+                </div>
+                <div style="font-size:7px;color:#bbddbb;margin-bottom:12px;">
+                    ✨ ${skillDesc}
+                </div>
+                ${card.level > 1 && card.expToNext ? `
+                    <div style="margin-bottom:12px;">
+                        <div style="font-size:6px;color:var(--text-dim);margin-bottom:2px;">EXP ${card.exp}/${card.expToNext}</div>
+                        <div style="height:4px;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);">
+                            <div style="width:${Math.min(100, (card.exp / card.expToNext) * 100)}%;height:100%;background:#88ccff;"></div>
+                        </div>
+                    </div>
+                ` : ''}
+                <button class="btn btn-gold" onclick="document.getElementById('hero-detail-modal').remove()"
+                    style="min-height:44px;min-width:100px;">✕ Close</button>
+            </div>
+        `;
 
-            // Draw sprite
-            setTimeout(() => {
-                const container = document.getElementById(spriteContainerId);
-                if (!container) return;
-                const template = getTemplateByName(card.templateId || card.name);
-                if (template && template.image) {
-                    const img = new Image();
-                    img.width = 80; img.height = 80;
-                    img.style.imageRendering = 'pixelated';
-                    img.onload = () => {
-                        container.innerHTML = '';
-                        container.appendChild(img);
-                    };
-                    img.onerror = () => {
-                        const cvs = document.createElement('canvas');
-                        cvs.width = 80; cvs.height = 80;
-                        CardRenderer.drawCardSprite(cvs, card, 80);
-                        container.innerHTML = '';
-                        container.appendChild(cvs);
-                    };
-                    img.src = template.image;
-                } else if (typeof CardRenderer !== 'undefined') {
+        document.body.appendChild(overlay);
+
+        // Draw sprite
+        setTimeout(() => {
+            const container = document.getElementById(spriteContainerId);
+            if (!container) return;
+            const template = getTemplateByName(card.templateId || card.name);
+            if (template && template.image) {
+                const img = new Image();
+                img.width = 80; img.height = 80;
+                img.style.imageRendering = 'pixelated';
+                img.onload = () => {
+                    container.innerHTML = '';
+                    container.appendChild(img);
+                };
+                img.onerror = () => {
                     const cvs = document.createElement('canvas');
                     cvs.width = 80; cvs.height = 80;
                     CardRenderer.drawCardSprite(cvs, card, 80);
                     container.innerHTML = '';
                     container.appendChild(cvs);
-                }
-            }, 50);
-        },
+                };
+                img.src = template.image;
+            } else if (typeof CardRenderer !== 'undefined') {
+                const cvs = document.createElement('canvas');
+                cvs.width = 80; cvs.height = 80;
+                CardRenderer.drawCardSprite(cvs, card, 80);
+                container.innerHTML = '';
+                container.appendChild(cvs);
+            }
+        }, 50);
+    },
 
     // ===== STRATEGY / FORMATION SCREEN =====
     renderStrategyScreen() {

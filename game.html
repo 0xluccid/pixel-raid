@@ -701,18 +701,7 @@
         .battle-canvas-wrap { position: relative; }
 
         /* Heroes Screen — RPG panels */
-        .heroes-layout { display: flex; gap: 16px; align-items: flex-start; }
-        .heroes-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; overflow: hidden; flex: 1; min-width: 0; }
-        .hero-detail-panel {
-            width: 280px; flex-shrink: 0;
-            background: linear-gradient(180deg, #1a1a2e, #0f0f23);
-            border: 2px solid var(--border-pixel);
-            border-radius: 8px;
-            padding: 16px;
-            position: sticky; top: 80px;
-            max-height: calc(100vh - 100px);
-            overflow-y: auto;
-        }
+        .heroes-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; overflow: hidden; }
         .hero-detail {
             background: linear-gradient(180deg, #1a1a2e, #0f0f23);
             border: 2px solid var(--border-pixel);
@@ -1056,8 +1045,6 @@
             .heroes-grid, #inventory-grid, #shop-content { grid-template-columns: repeat(3, 1fr); }
             .strategy-hero-grid { grid-template-columns: repeat(4, 1fr); }
             .strategy-skill-grid { grid-template-columns: repeat(3, 1fr); }
-            .heroes-layout { flex-direction: column; }
-            .hero-detail-panel { width: 100%; min-width: 0; position: static; }
         }
         @media (max-width: 768px) {
             .game-header { flex-wrap: wrap; gap: 8px; }
@@ -1290,16 +1277,8 @@
     <!-- ====== HEROES SCREEN ====== -->
     <div class="screen" id="screen-heroes">
         <h2 style="font-family:'Press Start 2P';font-size:12px;color:var(--gold);margin-bottom:12px;">🃏 YOUR COLLECTION</h2>
-        <div class="heroes-layout">
-            <div class="heroes-grid" id="hero-list"></div>
-            <div class="hero-detail-panel" id="hero-detail">
-                <div id="hero-detail-content">
-                    <div style="text-align:center;color:var(--text-dim);font-size:9px;padding:40px 20px;">
-                        Click a hero to see details
-                    </div>
-                </div>
-            </div>
-        </div>
+        <div class="heroes-grid" id="hero-list"></div>
+        <div class="hero-detail hidden" id="hero-detail"><div id="hero-detail-content"></div></div>
     </div>
 
     <!-- ====== FORMATION SCREEN ====== -->
