@@ -701,7 +701,18 @@
         .battle-canvas-wrap { position: relative; }
 
         /* Heroes Screen — RPG panels */
-        .heroes-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; overflow: hidden; }
+        .heroes-layout { display: flex; gap: 16px; align-items: flex-start; }
+        .heroes-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; overflow: hidden; flex: 1; min-width: 0; }
+        .hero-detail-panel {
+            width: 280px; flex-shrink: 0;
+            background: linear-gradient(180deg, #1a1a2e, #0f0f23);
+            border: 2px solid var(--border-pixel);
+            border-radius: 8px;
+            padding: 16px;
+            position: sticky; top: 80px;
+            max-height: calc(100vh - 100px);
+            overflow-y: auto;
+        }
         .hero-detail {
             background: linear-gradient(180deg, #1a1a2e, #0f0f23);
             border: 2px solid var(--border-pixel);
