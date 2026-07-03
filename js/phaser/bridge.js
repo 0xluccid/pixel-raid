@@ -141,10 +141,23 @@ var BattlePhaser = {
                     container.appendChild(el);
                 }
                 if (el) {
+                    // Bug #3: Position card hand at bottom with absolute positioning
+                    // so it stays visible above the Phaser canvas
                     el.style.display = '';
-                    el.style.position = 'relative';
+                    el.style.position = 'absolute';
                     el.style.zIndex = '10000';
+                    el.style.left = '0';
+                    el.style.right = '0';
                 }
+            }
+            // Card hand at very bottom, action row above it
+            if (cardHand) {
+                cardHand.style.bottom = '0';
+                cardHand.style.background = 'rgba(10,10,30,0.92)';
+                cardHand.style.borderTop = '1px solid rgba(255,215,0,0.2)';
+            }
+            if (actionRow) {
+                actionRow.style.bottom = 'auto';
             }
         }
 
@@ -200,7 +213,9 @@ var BattlePhaser = {
                 var el = document.querySelector(movedEls[i]);
                 if (el && container && el.parentElement === container && screenBattle) {
                     screenBattle.appendChild(el);
+                    // Reset all inline styles set during battle
                     el.style.cssText = '';
+                    el.style.display = 'none'; // hidden when not in battle
                 }
             }
 

@@ -37,6 +37,48 @@ const UNIT_TEMPLATES = [
     { id: 'lich_king',       name: 'Lich King',       cost: 5, atk: 6,  hp: 6,  type: 'undead',   pixelColor: '#6622cc', emoji: '👑', desc: 'Supreme undead lord' },
 ];
 
+/**
+ * Get player battle deck: uses skill cards from GameState.skillDeck (max 4),
+ * falls back to generating 4 random unit cards if no skill cards are set.
+ * Bug #7: Deck max 4 cards.
+ */
+function getPlayerBattleDeck() {
+    // Try to get skill cards from GameState
+    if (typeof GameState !== 'undefined' && GameState.skillDeck && GameState.skillDeck.length > 0) {
+        const skillCards = typeof GameState.getSkillDeckCards === 'function'
+            ? GameState.getSkillDeckCards()
+            : [];
+
+        if (skillCards.length > 0) {
+            // Convert skill cards to unit format for the battle engine
+            return skillCards.map(c => ({
+                id: c.id,
+                templateId: c.id,
+                name: c.name,
+                cost: c.manaCost || 1,
+                atk: c.effect?.value || 3,
+                hp: Math.max(2, Math.floor((c.effect?.value || 3) * 0.8)),
+                maxHp: Math.max(2, Math.floor((c.effect?.value || 3) * 0.8)),
+                type: c.type || 'special',
+                pixelColor: c.rarity === 'legendary' ? '#ffd700' : '#8888ff',
+                emoji: c.type === 'attack' ? '⚔️' : c.type === 'defense' ? '🛡️' : c.type === 'buff' ? '✨' : c.type === 'debuff' ? '💀' : '⚡',
+                desc: c.desc || '',
+            }));
+        }
+    }
+
+    // Fallback: generate 4 random unit cards (Bug #7: max 4)
+    return generateUnitDeck(4);
+}
+
+/**
+ * Get player battle deck for the card hand (called at battle start)
+ * Ensures max 4 cards.
+ */
+function getPlayerCardHand() {
+    return getPlayerBattleDeck();
+}
+
 // Get a random set of unit cards for a deck
 function generateUnitDeck(count = 10) {
     const deck = [];
@@ -73,14 +115,70 @@ function generateUnitDeck(count = 10) {
     return deck;
 }
 
-// Generate enemy deck scaled to stage
+// Generate enemy deck scaled to stage — now returns 4 cards (Bug #7: max 4)
 function generateEnemyUnitDeck(stage = 1) {
     const scale = 1 + (stage - 1) * 0.15;
-    const deck = generateUnitDeck(10);
+    const deck = generateUnitDeck(4); // Bug #7: 4 cards max, not 10
     for (const card of deck) {
         card.atk = Math.max(1, Math.floor(card.atk * scale));
         card.hp = Math.max(1, Math.floor(card.hp * scale));
         card.maxHp = card.hp;
     }
     return deck;
+}
+
+/**
+ * Generate enemy hero card that scales with stage (Bug #4)
+ * Enemy hero has name, stats, and HP
+ */
+function generateEnemyHero(stage = 1) {
+    const stageScale = 1 + (stage - 1) * 0.15;
+
+    // Pick a random hero template
+    if (typeof CARD_TEMPLATES === 'undefined' || CARD_TEMPLATES.length === 0) {
+        // Fallback enemy hero
+        return {
+            id: 'enemy_hero_' + Date.now(),
+            name: 'Dark Lord',
+            templateId: 'dark_lord',
+            rarity: stage >= 5 ? 'epic' : stage >= 3 ? 'rare' : 'common',
+            class: 'knight',
+            level: Math.min(5, Math.ceil(stage / 2)),
+            stats: {
+                hp: Math.floor(60 * stageScale),
+                atk: Math.floor(12 * stageScale),
+                def: Math.floor(8 * stageScale),
+                spd: Math.floor(10 * stageScale),
+            },
+        };
+    }
+
+    // Pick random template
+    const tmpl = CARD_TEMPLATES[Math.floor(Math.random() * CARD_TEMPLATES.length)];
+
+    // Determine rarity based on stage
+    let rarity = 'common';
+    const rarityRoll = Math.random();
+    if (stage >= 3 && rarityRoll < 0.35) rarity = 'rare';
+    if (stage >= 6 && rarityRoll < 0.15) rarity = 'epic';
+    if (stage >= 10 && rarityRoll < 0.05) rarity = 'legendary';
+
+    // Generate card stats
+    const stats = {
+        hp: Math.floor(60 * stageScale),
+        atk: Math.floor(12 * stageScale),
+        def: Math.floor(8 * stageScale),
+        spd: Math.floor(10 * stageScale),
+    };
+
+    return {
+        id: 'enemy_hero_' + Date.now(),
+        name: tmpl.name,
+        templateId: tmpl.name,
+        rarity: rarity,
+        class: tmpl.cls || 'knight',
+        level: Math.min(5, Math.ceil(stage / 2)),
+        stats: stats,
+        emoji: '⚔️',
+    };
 }

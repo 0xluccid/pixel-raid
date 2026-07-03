@@ -280,11 +280,14 @@ const PhaserBattleScene = new Phaser.Class({
         };
     },
 
-    _updateHeroPanel: function (side, battleHero) {
+    _updateHeroPanel: function (side, heroCard) {
         var panel = this.heroPanel[side];
         if (!panel) return;
 
-        if (!battleHero) {
+        // Get the combatant for HP data
+        var combatant = (side === 'player') ? this.playerData : this.enemyData;
+
+        if (!heroCard && !combatant) {
             // Show empty state
             if (this.heroNameText[side]) this.heroNameText[side].setText('No Hero');
             if (this.heroHPText[side]) this.heroHPText[side].setText('HP 0 / 0');
@@ -299,22 +302,26 @@ const PhaserBattleScene = new Phaser.Class({
             return;
         }
 
+        // Get display info from hero card, fallback to combatant
+        var displayName = heroCard ? heroCard.name : (combatant ? combatant.name : 'Hero');
+        var displayClass = heroCard ? heroCard.class : (combatant ? combatant.class : 'warrior');
+        var displayLevel = heroCard ? (heroCard.level || 1) : 1;
+
         // Update name
         if (this.heroNameText[side]) {
-            this.heroNameText[side].setText(battleHero.name || 'Hero');
+            this.heroNameText[side].setText(displayName);
         }
 
         // Update class
-        var cls = (typeof CLASSES !== 'undefined') ? CLASSES[battleHero.class] : null;
+        var cls = (typeof CLASSES !== 'undefined') ? CLASSES[displayClass] : null;
         if (this.heroClassText[side]) {
-            this.heroClassText[side].setText(cls ? cls.name : (battleHero.class || 'Hero'));
+            this.heroClassText[side].setText(cls ? cls.name : (displayClass || 'Hero'));
             this.heroClassText[side].setColor(cls ? cls.color : '#aaaaaa');
         }
 
         // Update level
         if (this.heroLevelText[side]) {
-            var lvl = battleHero.level || 1;
-            this.heroLevelText[side].setText(lvl > 1 ? 'Lv.' + lvl : '');
+            this.heroLevelText[side].setText(displayLevel > 1 ? 'Lv.' + displayLevel : '');
         }
 
         // Update sprite emoji
@@ -323,9 +330,13 @@ const PhaserBattleScene = new Phaser.Class({
             this.heroSprite[side].setText(emoji);
         }
 
-        // Update HP (BattleEngine uses heroHp/heroMaxHp lowercase)
-        var hp = battleHero.heroHp || battleHero.heroHP || 0;
-        var maxHP = battleHero.heroMaxHp || battleHero.heroMaxHP || 1;
+        // Update HP from combatant (heroHp / heroMaxHp)
+        var hp = 0;
+        var maxHP = 1;
+        if (combatant) {
+            hp = combatant.heroHp || 0;
+            maxHP = combatant.heroMaxHp || 1;
+        }
         var pct = Math.max(0, Math.min(1, hp / maxHP));
 
         if (this.heroHPText[side]) {
@@ -334,9 +345,10 @@ const PhaserBattleScene = new Phaser.Class({
 
         this._drawHPBar(side, pct);
 
-        // Update stats
-        var totalAtk = (battleHero.heroATK || 0) + (battleHero.atkBuff || 0);
-        var totalDef = (battleHero.heroDEF || 0) + (battleHero.defBuff || 0);
+        // Update stats — use hero card stats for display
+        var stats = heroCard ? heroCard.stats : {};
+        var totalAtk = (stats.atk || 0);
+        var totalDef = (stats.def || 0);
         if (this.heroStatText[side]) {
             this.heroStatText[side].atk.setText('⚔ ' + totalAtk);
             this.heroStatText[side].def.setText('🛡 ' + totalDef);
@@ -503,9 +515,9 @@ const PhaserBattleScene = new Phaser.Class({
             phase: BattleEngine.currentPhase
         };
 
-        // Update hero panels — pass player object directly (battleHero is not a sub-property)
-        this._updateHeroPanel('player', player.battleHero || player);
-        this._updateHeroPanel('enemy', enemy.battleHero || enemy);
+        // Update hero panels — use heroCard from combatant if available
+        this._updateHeroPanel('player', player.heroCard || player);
+        this._updateHeroPanel('enemy', enemy.heroCard || enemy);
 
         // Update center divider
         this.updateCenterDivider(state);

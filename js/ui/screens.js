@@ -301,12 +301,21 @@ const UI = {
     startBattle() {
         const stage = GameState.player.stage;
 
-        // Generate unit decks (10 cards each)
-        const playerDeck = typeof generateUnitDeck === 'function' ? generateUnitDeck(10) : [];
+        // Bug #1: Hero is separate from card deck — get hero from GameState
+        const deckCards = GameState.getDeckCards();
+        const playerHero = deckCards.length > 0 ? deckCards[0] : null;
+
+        // Bug #7: Deck max 4 cards — use skill cards from GameState.skillDeck
+        const playerDeck = typeof getPlayerBattleDeck === 'function' ? getPlayerBattleDeck() : [];
+
+        // Bug #4: Generate enemy hero with stats scaling by stage
+        const enemyHero = typeof generateEnemyHero === 'function' ? generateEnemyHero(stage) : null;
+
+        // Bug #7: Enemy also gets 4 cards max
         const enemyDeck = typeof generateEnemyUnitDeck === 'function' ? generateEnemyUnitDeck(stage) : [];
 
         if (playerDeck.length === 0) {
-            this.toast('Error: Unit data not loaded!', 'error');
+            this.toast('Error: No cards in deck! Go to Strategy to build your deck.', 'error');
             return;
         }
 
@@ -329,6 +338,11 @@ const UI = {
             // Wire up card click → play card to first empty board slot
             CardHand.onCardPlay = (handIndex, card) => {
                 if (BattleEngine.currentPhase !== 'play') return;
+                // Bug #2: Only 1 card per round
+                if (BattleEngine.cardsPlayedThisTurn >= 1) {
+                    this.toast('Can only play 1 card per round!', 'warning');
+                    return;
+                }
                 // Find first empty slot
                 const board = BattleEngine.player.board;
                 let emptySlot = -1;
@@ -377,9 +391,11 @@ const UI = {
         BattleEngine.onFieldUpdate = () => {
             BattlePhaser.renderField(BattleEngine.player, BattleEngine.enemy);
 
-            // Re-render card hand if in play phase
-            if (BattleEngine.currentPhase === 'play' && typeof CardHand !== 'undefined') {
-                CardHand.renderHand(BattleEngine.player.hand, BattleEngine.player.energy);
+            // Bug #3: Re-render card hand during play phase AND when drawing cards
+            if (typeof CardHand !== 'undefined' && BattleEngine.player) {
+                if (BattleEngine.currentPhase === 'play' || BattleEngine.currentPhase === 'energy') {
+                    CardHand.renderHand(BattleEngine.player.hand, BattleEngine.player.energy);
+                }
             }
 
             // Update arrange UI if in arrange phase
@@ -408,10 +424,12 @@ const UI = {
             }
         };
 
-        // Start the battle engine FIRST so player/enemy objects exist
+        // Start the battle engine with hero data
         BattleEngine.startBattle(playerDeck, enemyDeck, {
-            playerName: 'You',
-            enemyName: `Stage ${stage} Enemy`,
+            playerName: playerHero ? playerHero.name : 'You',
+            playerHero: playerHero,   // Bug #1: pass hero card for HP/stats
+            enemyName: enemyHero ? enemyHero.name : `Stage ${stage} Enemy`,
+            enemyHero: enemyHero,     // Bug #4: pass enemy hero card
         });
 
         // NOW activate Phaser bridge with player/enemy data
@@ -665,6 +683,9 @@ const UI = {
                 GameState.stats.highestStage = Math.max(GameState.stats.highestStage, GameState.player.stage);
             }
 
+            // Bug #5: Clean up battle state after win (no auto-next)
+            this._cleanupAfterBattle();
+
             // Show reward popup with new cards
             Rewards.showRewardPopup(true, rewards, stage);
         } else if (type === 'lose') {
@@ -672,20 +693,61 @@ const UI = {
             const rewards = Rewards.generateLossRewards(stage);
             Rewards.applyLossRewards(rewards);
 
+            // Bug #5: Clean up battle state after loss (no auto-next)
+            this._cleanupAfterBattle();
+
             // Show defeat popup with consolation gold
             Rewards.showRewardPopup(false, rewards, stage);
         } else {
             // Back button - just clean up
-            BattlePhaser.exit();
-            if (battleContainer) battleContainer.style.display = 'none';
-            document.getElementById('screen-battle').classList.remove('battle-active');
-            BattleEngine.stop();
-            UI.updateHeader();
-            UI.renderBattleScreen();
+            this._cleanupAfterBattle();
         }
 
         // Update header in all cases
         this.updateHeader();
+    },
+
+    /**
+     * Bug #5: Clean up all battle state after battle ends.
+     * Removes Phaser canvas, restores normal layout, stops engine.
+     */
+    _cleanupAfterBattle() {
+        // Exit Phaser bridge (restores card hand, action row to original parent)
+        if (typeof BattlePhaser !== 'undefined') {
+            BattlePhaser.exit();
+        }
+
+        // Hide battle canvas container
+        const battleContainer = document.getElementById('battle-canvas-container');
+        if (battleContainer) {
+            battleContainer.style.display = 'none';
+            battleContainer.style.cssText = '';
+        }
+
+        // Remove battle-active class (exits fullscreen mode)
+        const screenBattle = document.getElementById('screen-battle');
+        if (screenBattle) screenBattle.classList.remove('battle-active');
+
+        // Stop battle engine
+        if (typeof BattleEngine !== 'undefined') {
+            BattleEngine.stop();
+        }
+
+        // Ensure card hand area is hidden and restored
+        const cardHandArea = document.getElementById('card-hand-area');
+        if (cardHandArea) {
+            cardHandArea.style.display = 'none';
+            cardHandArea.style.cssText = '';
+        }
+
+        // Show nav/header back
+        var showEls = document.querySelectorAll('.game-nav, .game-header');
+        for (var i = 0; i < showEls.length; i++) {
+            showEls[i].style.display = '';
+        }
+
+        // Re-render battle screen to show deck preview
+        UI.renderBattleScreen();
     },
 
     showRewards(rewards) {
@@ -1232,8 +1294,8 @@ const UI = {
             `;
         }
 
-        // Battle Deck Preview below
-        html += this.renderBattleDeckPreview();
+        // Battle Deck Preview below (use HTML-returning version for strategy screen)
+        html += this._renderDeckPreviewHTML();
 
         return html;
     },
@@ -1252,9 +1314,9 @@ const UI = {
     },
 
     /**
-     * Show current deck hero + skill cards in battle preview
+     * Show current deck hero + skill cards in battle preview (returns HTML string)
      */
-    renderBattleDeckPreview() {
+    _renderDeckPreviewHTML() {
         const deckCards = GameState.getDeckCards();
         const skillCards = (GameState.skillDeck && GameState.skillDeck.length > 0)
             ? GameState.getSkillDeckCards()

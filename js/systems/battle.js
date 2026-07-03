@@ -18,16 +18,18 @@ const BattleEngine = {
 
     // Board config
     BOARD_SIZE: 5,           // 5 slots per side (0=front, 4=back)
-    MAX_HAND: 7,
+    MAX_HAND: 4,             // Max 4 cards in hand (Bug #2)
     STARTING_HAND: 4,
     STARTING_ENERGY: 3,
     MAX_ENERGY: 10,
     ENERGY_PER_TURN: 1,
     DRAWS_PER_TURN: 1,
-    HERO_HP: 20,
+
+    // Cards played this turn (Bug #2: only 1 card per round)
+    cardsPlayedThisTurn: 0,
 
     // Combatants
-    player: null,   // { name, heroHp, heroMaxHp, energy, maxEnergy, board[5], hand[], deck[], isPlayer }
+    player: null,   // { name, heroHp, heroMaxHp, energy, maxEnergy, board[5], hand[], deck[], isPlayer, heroCard }
     enemy: null,
 
     // Timers
@@ -39,32 +41,45 @@ const BattleEngine = {
         this.isRunning = true;
         this.currentPhase = 'idle';
         this.turnNumber = 0;
+        this.cardsPlayedThisTurn = 0;
         this.log = [];
+
+        // Hero card data (Bug #1: hero is separate from card deck)
+        const playerHero = options.playerHero || null;
+        const enemyHero = options.enemyHero || null;
+
+        // Hero HP based on hero card stats, fallback to 20
+        const playerHeroHP = playerHero ? (playerHero.stats.hp || 20) : 20;
+        const enemyHeroHP = enemyHero ? (enemyHero.stats.hp || 20) : 20;
 
         // Init player
         this.player = {
-            name: options.playerName || 'You',
-            heroHp: this.HERO_HP,
-            heroMaxHp: this.HERO_HP,
+            name: options.playerName || (playerHero ? playerHero.name : 'You'),
+            heroHp: playerHeroHP,
+            heroMaxHp: playerHeroHP,
             energy: this.STARTING_ENERGY,
             maxEnergy: this.STARTING_ENERGY,
             board: new Array(this.BOARD_SIZE).fill(null),
             hand: [],
             deck: [...playerDeck],
             isPlayer: true,
+            // Hero data for display (Bug #1)
+            heroCard: playerHero,
         };
 
         // Init enemy
         this.enemy = {
-            name: options.enemyName || 'Enemy',
-            heroHp: this.HERO_HP,
-            heroMaxHp: this.HERO_HP,
+            name: options.enemyName || (enemyHero ? enemyHero.name : 'Enemy'),
+            heroHp: enemyHeroHP,
+            heroMaxHp: enemyHeroHP,
             energy: this.STARTING_ENERGY,
             maxEnergy: this.STARTING_ENERGY,
             board: new Array(this.BOARD_SIZE).fill(null),
             hand: [],
             deck: [...enemyDeck],
             isPlayer: false,
+            // Enemy hero data (Bug #4)
+            heroCard: enemyHero,
         };
 
         // Shuffle decks
@@ -84,6 +99,7 @@ const BattleEngine = {
     // ===== TURN FLOW =====
     _startTurn() {
         this.turnNumber++;
+        this.cardsPlayedThisTurn = 0; // Reset card play counter each turn (Bug #2)
 
         // Increase max energy (cap at MAX_ENERGY)
         if (this.turnNumber > 1) {
@@ -129,6 +145,8 @@ const BattleEngine = {
         if (handIndex < 0 || handIndex >= this.player.hand.length) return false;
         if (slotIndex < 0 || slotIndex >= this.BOARD_SIZE) return false;
         if (this.player.board[slotIndex] !== null) return false;
+        // Bug #2: Only 1 card per round
+        if (this.cardsPlayedThisTurn >= 1) return false;
 
         const card = this.player.hand[handIndex];
         if (card.cost > this.player.energy) return false;
@@ -153,6 +171,9 @@ const BattleEngine = {
 
         // Remove from hand
         this.player.hand.splice(handIndex, 1);
+
+        // Increment card play counter (Bug #2)
+        this.cardsPlayedThisTurn++;
 
         this._log(`🃏 ${this.player.name} played ${card.name} (⚔${card.atk} ❤${card.hp}) → Slot ${slotIndex + 1}`);
         this._notifyFieldUpdate();
@@ -336,8 +357,11 @@ const BattleEngine = {
         return null;
     },
 
-    // ===== ENEMY AI — Greedy play =====
+    // ===== ENEMY AI — Greedy play (max 4 cards, 1 per round) =====
     _enemyPlayCards() {
+        // Enemy also only plays 1 card per round (same as player)
+        let enemyPlayed = 0;
+
         // Sort hand by cost descending, play what we can afford
         const sorted = this.enemy.hand
             .map((c, i) => ({ card: c, index: i }))
@@ -345,6 +369,7 @@ const BattleEngine = {
 
         let played = [];
         for (const { card, index } of sorted) {
+            if (enemyPlayed >= 1) break; // Bug #2: Enemy also only plays 1 card per round
             if (card.cost > this.enemy.energy) continue;
 
             // Find first empty slot (prefer front slots)
@@ -369,6 +394,7 @@ const BattleEngine = {
                 slot: emptySlot,
             };
             played.push({ card, slot: emptySlot, handIdx: index });
+            enemyPlayed++;
         }
 
         // Remove played cards from hand (reverse order to preserve indices)
@@ -386,7 +412,7 @@ const BattleEngine = {
     // ===== HELPERS =====
     _drawCard(combatant) {
         if (combatant.deck.length === 0) return null;
-        if (combatant.hand.length >= this.MAX_HAND) return null;
+        if (combatant.hand.length >= this.MAX_HAND) return null; // Bug #2: max 4 cards
         const card = combatant.deck.pop();
         combatant.hand.push(card);
         if (combatant.isPlayer && this.onDraw) {
@@ -436,8 +462,11 @@ const BattleEngine = {
     stop() {
         this.isRunning = false;
         this.currentPhase = 'idle';
+        this.cardsPlayedThisTurn = 0;
         if (this._phaseTimer) clearTimeout(this._phaseTimer);
         if (this._battleStepTimer) clearTimeout(this._battleStepTimer);
+        this._phaseTimer = null;
+        this._battleStepTimer = null;
         this.player = null;
         this.enemy = null;
     },
