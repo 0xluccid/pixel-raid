@@ -49,6 +49,18 @@ serve(async (req) => {
     // Parse body
     const { walletAddress, card } = await req.json()
 
+    // Rate limit: max 5 mints per wallet per hour
+    const oneHourAgo = new Date(Date.now() - 3600000).toISOString()
+    const { count } = await supabase
+      .from('mint_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('wallet_address', walletAddress?.toLowerCase())
+      .gte('created_at', oneHourAgo)
+
+    if (count && count >= 5) {
+      return new Response(JSON.stringify({ error: 'Rate limit: max 5 mints per hour' }), { status: 429 })
+    }
+
     // Validasi
     if (!walletAddress || !card) {
       return new Response(JSON.stringify({ error: 'Missing walletAddress or card' }), { status: 400 })

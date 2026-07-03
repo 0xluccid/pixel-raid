@@ -93,6 +93,22 @@ serve(async (req) => {
     // Parse body
     const battleLog = await req.json()
 
+    // Rate limit: max 30 validations per wallet per hour
+    const oneHourAgo = new Date(Date.now() - 3600000).toISOString()
+    const wallet = battleLog.walletAddress?.toLowerCase()
+    if (wallet) {
+      const { count } = await supabase
+        .from('analytics')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_type', 'battle_validate')
+        .eq('wallet_address', wallet)
+        .gte('created_at', oneHourAgo)
+
+      if (count && count >= 30) {
+        return new Response(JSON.stringify({ error: 'Rate limit: max 30 validations per hour' }), { status: 429 })
+      }
+    }
+
     // Validasi
     const validation = validateBattleResult(battleLog)
 
@@ -105,6 +121,13 @@ serve(async (req) => {
     }
 
     // Jika valid, return success (client lanjut save ke Supabase)
+    // Log analytics
+    await supabase.from('analytics').insert({
+      event_type: 'battle_validate',
+      wallet_address: wallet,
+      data: { result: battleLog.result, turns: battleLog.turns },
+    }).select().maybeSingle()
+
     return new Response(JSON.stringify({
       valid: true,
       message: 'Battle result validated',

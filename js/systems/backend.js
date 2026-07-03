@@ -308,4 +308,26 @@ const Backend = {
             wins: this.playerRow.total_wins,
         };
     },
+
+    /**
+     * Log analytics event (fire-and-forget)
+     */
+    async trackEvent(eventType, data = {}) {
+        try {
+            const wallet = this.playerRow?.wallet_address;
+            await fetch(`${this.URL}/functions/v1/analytics`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${this.ANON_KEY}`,
+                    'apikey': this.ANON_KEY,
+                },
+                body: JSON.stringify({
+                    eventType,
+                    walletAddress: wallet,
+                    data,
+                }),
+            });
+        } catch (_) { /* fire-and-forget */ }
+    },
 };
