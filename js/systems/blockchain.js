@@ -179,7 +179,7 @@ const BlockchainBridge = {
      * Mint a card as NFT
      */
     async mintCard(card) {
-        if (!this.isConnected || !this.contract) {
+        if (!this.isConnected || !this.account) {
             console.error('Not connected');
             return null;
         }
@@ -187,42 +187,40 @@ const BlockchainBridge = {
         try {
             this.updateUI('minting');
 
-            const tx = await this.contract.mintCard(
-                this.account,
-                card.name,
-                card.class,
-                card.rarity,
-                card.stats.hp,
-                card.stats.atk,
-                card.stats.def,
-                card.stats.spd,
-                card.stats.crit,
-                card.skill.name,
-                card.skill.type,
-                card.skill.val,
-                card.artSeed
-            );
-
-            console.log('📝 Mint tx:', tx.hash);
-            const receipt = await tx.wait();
+            // Server-side minting via Supabase Edge Function
+            // Client hanya kirim request, server (relayer wallet) yg submit tx
+            const { data: { session } } = await Backend.supabase.auth.getSession();
             
-            // Extract token ID from event (ethers v6 uses logs + parseLog, not receipt.events[name].args)
-            const iface = new ethers.Interface(this.ABI);
-            let tokenId = null;
-            for (const log of (receipt.logs || [])) {
-                try {
-                    const parsed = iface.parseLog(log);
-                    if (parsed && parsed.name === 'CardMinted') {
-                        tokenId = Number(parsed.args.tokenId); // v6 returns BigInt
-                        break;
-                    }
-                } catch (_) { /* skip non-matching logs */ }
+            const response = await fetch(`${Backend.URL}/functions/v1/mint-card`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token || Backend.ANON_KEY}`,
+                    'apikey': Backend.ANON_KEY,
+                },
+                body: JSON.stringify({
+                    walletAddress: this.account,
+                    card: {
+                        name: card.name,
+                        class: card.class,
+                        rarity: card.rarity,
+                        stats: card.stats,
+                        skill: card.skill,
+                        artSeed: card.artSeed,
+                    },
+                }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Mint failed');
             }
 
-            console.log('✅ Card minted! Token ID:', tokenId);
-            this.updateUI('minted', tokenId);
+            console.log('✅ Card minted! Token ID:', result.tokenId, 'Tx:', result.txHash);
+            this.updateUI('minted', result.tokenId);
 
-            return tokenId;
+            return result.tokenId;
 
         } catch (error) {
             console.error('❌ Mint failed:', error);

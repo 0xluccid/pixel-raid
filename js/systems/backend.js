@@ -10,7 +10,7 @@ const Backend = {
     connected: false,
 
     URL: 'https://hchrdclodhasoxvjfxss.supabase.co',
-    ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjaHJkY2xvZGhhc294dmpmeHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NTgyNzEsImV4cCI6MjA5ODQzNDI3MX0.KeFy4XS0rMGUEBYfAYePc2y6FtwanR-vWYM1S2Rc00Q',
+    ANON_KEY: 'eyJhbG...c00Q',
 
     init() {
         if (typeof supabase === 'undefined' || !supabase.createClient) {
@@ -88,6 +88,18 @@ const Backend = {
         if (!this.connected || !this.playerRow) return false;
 
         try {
+            // Set wallet context untuk RLS policy
+            await this._setWalletContext();
+
+            // Validasi battle result sebelum save (jika ada battle baru)
+            if (gameState.stats?.lastBattle) {
+                const isValid = await this._validateBattle(gameState.stats.lastBattle);
+                if (!isValid) {
+                    console.warn('⚠️ Battle validation failed, skipping save');
+                    return false;
+                }
+            }
+
             const update = {
                 display_name: gameState.player.name || 'Adventurer',
                 level: gameState.player.level || 1,
@@ -104,7 +116,7 @@ const Backend = {
             const { error } = await this.supabase
                 .from('players')
                 .update(update)
-                .eq('id', this.playerRow.id);
+                .eq('wallet_address', this.playerRow.wallet_address);
 
             if (error) {
                 console.error('❌ Cloud save failed:', error);
@@ -148,6 +160,51 @@ const Backend = {
         this.playerRow = null;
         this.connected = false;
         console.log('🔌 Disconnected');
+    },
+
+    /**
+     * Set wallet context untuk RLS policy
+     * Harus dipanggil sebelum update operation
+     */
+    async _setWalletContext() {
+        if (!this.playerRow?.wallet_address) return;
+        await this.supabase.rpc('app_set_config', {
+            key: 'app.wallet',
+            value: this.playerRow.wallet_address,
+        });
+    },
+
+    /**
+     * Validate battle result via Edge Function
+     */
+    async _validateBattle(battleLog) {
+        try {
+            const { data: { session } } = await this.supabase.auth.getSession();
+            
+            const response = await fetch(`${this.URL}/functions/v1/validate-battle`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token || this.ANON_KEY}`,
+                    'apikey': this.ANON_KEY,
+                },
+                body: JSON.stringify(battleLog),
+            });
+
+            const result = await response.json();
+            
+            if (!response.ok || !result.valid) {
+                console.warn('⚠️ Battle validation failed:', result.issues);
+                return false;
+            }
+
+            return true;
+        } catch (err) {
+            console.error('❌ Validation error:', err);
+            // Jika validation error, tetap allow save (fail-open)
+            // Tapi log untuk monitoring
+            return true;
+        }
     },
 
     getStats() {
