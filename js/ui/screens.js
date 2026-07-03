@@ -712,21 +712,35 @@ const UI = {
      * Removes Phaser canvas, restores normal layout, stops engine.
      */
     _cleanupAfterBattle() {
-        // Exit Phaser bridge (restores card hand, action row to original parent)
+        // Destroy Phaser bridge to fully clean up (prevents double-exit issues)
         if (typeof BattlePhaser !== 'undefined') {
-            BattlePhaser.exit();
+            if (BattlePhaser.isActive()) {
+                // If still active, try to restore elements before destroying
+                var container = document.getElementById('battle-canvas-container');
+                var screenBattle = document.getElementById('screen-battle');
+                var movedEls = ['#card-hand-area', '.battle-action-row', '.battle-info-strip', '.battle-controls'];
+                for (var i = 0; i < movedEls.length; i++) {
+                    var el = document.querySelector(movedEls[i]);
+                    if (el && container && el.parentElement === container && screenBattle) {
+                        screenBattle.appendChild(el);
+                        el.style.cssText = '';
+                        el.style.display = 'none';
+                    }
+                }
+            }
+            BattlePhaser.destroy();
         }
 
         // Hide battle canvas container
         const battleContainer = document.getElementById('battle-canvas-container');
         if (battleContainer) {
-            battleContainer.style.display = 'none';
             battleContainer.style.cssText = '';
+            battleContainer.style.display = 'none';
         }
 
         // Remove battle-active class (exits fullscreen mode)
-        const screenBattle = document.getElementById('screen-battle');
-        if (screenBattle) screenBattle.classList.remove('battle-active');
+        var screenBattleEl = document.getElementById('screen-battle');
+        if (screenBattleEl) screenBattleEl.classList.remove('battle-active');
 
         // Stop battle engine
         if (typeof BattleEngine !== 'undefined') {
@@ -736,15 +750,15 @@ const UI = {
         // Ensure card hand area is hidden and restored
         const cardHandArea = document.getElementById('card-hand-area');
         if (cardHandArea) {
-            cardHandArea.style.display = 'none';
             cardHandArea.style.cssText = '';
+            cardHandArea.style.display = 'none';
         }
 
-        // Show nav/header back
-        var showEls = document.querySelectorAll('.game-nav, .game-header');
-        for (var i = 0; i < showEls.length; i++) {
-            showEls[i].style.display = '';
-        }
+        // Robustly restore nav/header visibility
+        const navEl = document.querySelector('.game-nav');
+        const headerEl = document.querySelector('.game-header');
+        if (navEl) { navEl.style.display = ''; navEl.style.removeProperty('display'); }
+        if (headerEl) { headerEl.style.display = ''; headerEl.style.removeProperty('display'); }
 
         // Re-render battle screen to show deck preview
         UI.renderBattleScreen();

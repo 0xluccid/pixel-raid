@@ -263,27 +263,47 @@ const RewardPopup = {
         const battleContainer = document.getElementById('battle-canvas-container');
 
         if (action === 'continue') {
-            // Exit battle, go to collection
-            BattlePhaser.exit();
-            if (battleContainer) battleContainer.style.display = 'none';
-            document.getElementById('screen-battle').classList.remove('battle-active');
+            // Exit battle, go to collection — destroy if still active, otherwise just clean up
+            if (typeof BattlePhaser !== 'undefined' && BattlePhaser.isActive()) {
+                BattlePhaser.destroy();
+            }
+            if (battleContainer) { battleContainer.style.cssText = ''; battleContainer.style.display = 'none'; }
+            var sb = document.getElementById('screen-battle');
+            if (sb) sb.classList.remove('battle-active');
             BattleEngine.stop();
+            // Robustly restore nav/header
+            var navEl = document.querySelector('.game-nav');
+            var headerEl = document.querySelector('.game-header');
+            if (navEl) { navEl.style.display = ''; navEl.style.removeProperty('display'); }
+            if (headerEl) { headerEl.style.display = ''; headerEl.style.removeProperty('display'); }
             UI.updateHeader();
             UI.showScreen('battle');
         } else if (action === 'retry') {
-            // Exit battle and restart
-            BattlePhaser.exit();
-            if (battleContainer) battleContainer.style.display = 'none';
-            document.getElementById('screen-battle').classList.remove('battle-active');
+            if (typeof BattlePhaser !== 'undefined' && BattlePhaser.isActive()) {
+                BattlePhaser.destroy();
+            }
+            if (battleContainer) { battleContainer.style.cssText = ''; battleContainer.style.display = 'none'; }
+            var sb2 = document.getElementById('screen-battle');
+            if (sb2) sb2.classList.remove('battle-active');
             BattleEngine.stop();
+            var navEl2 = document.querySelector('.game-nav');
+            var headerEl2 = document.querySelector('.game-header');
+            if (navEl2) { navEl2.style.display = ''; navEl2.style.removeProperty('display'); }
+            if (headerEl2) { headerEl2.style.display = ''; headerEl2.style.removeProperty('display'); }
             UI.updateHeader();
             UI.renderBattleScreen();
         } else if (action === 'back') {
-            // Exit battle, go to battle screen
-            BattlePhaser.exit();
-            if (battleContainer) battleContainer.style.display = 'none';
-            document.getElementById('screen-battle').classList.remove('battle-active');
+            if (typeof BattlePhaser !== 'undefined' && BattlePhaser.isActive()) {
+                BattlePhaser.destroy();
+            }
+            if (battleContainer) { battleContainer.style.cssText = ''; battleContainer.style.display = 'none'; }
+            var sb3 = document.getElementById('screen-battle');
+            if (sb3) sb3.classList.remove('battle-active');
             BattleEngine.stop();
+            var navEl3 = document.querySelector('.game-nav');
+            var headerEl3 = document.querySelector('.game-header');
+            if (navEl3) { navEl3.style.display = ''; navEl3.style.removeProperty('display'); }
+            if (headerEl3) { headerEl3.style.display = ''; headerEl3.style.removeProperty('display'); }
             UI.updateHeader();
             UI.renderBattleScreen();
         }

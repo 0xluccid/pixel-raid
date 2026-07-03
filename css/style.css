@@ -1331,9 +1331,64 @@ body {
     .card-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
     .card { padding: 8px; }
     .pack-cards { gap: 8px; }
+
+    /* Arena responsive */
+    .arena-container { gap: 6px; padding: 8px 4px; min-height: 160px; }
+    .arena-side { max-width: 120px; gap: 4px; }
+    .arena-vs { font-size: 20px; }
+    .hero-card.arena-card { max-width: 110px; padding: 4px 6px; gap: 4px; }
+    .hero-card-icon { font-size: 14px; }
+    .hero-card-name { font-size: 6px; }
+    .hero-card-stats { font-size: 7px; }
+    .arena-hp-label, .arena-hp-text { font-size: 6px; }
+    .arena-hp-track { height: 6px; }
+    .arena-stage-info { font-size: 7px; padding: 4px; }
+
+    /* Card hand responsive */
+    .card-hand-container { gap: 6px; padding: 6px 2px; min-height: 110px; flex-wrap: nowrap; }
+    .battle-card { width: 100px; min-height: 140px; }
+    .tcg-art-window { height: 60px; }
+    .tcg-name { font-size: 4.5px; max-width: 55px; }
+    .tcg-header { padding: 2px 4px; min-height: 14px; }
+    .tcg-stars { font-size: 5px; }
+    .tcg-type-badge { font-size: 3.5px; padding: 1px 3px; }
+    .tcg-effect-text { font-size: 3.5px; }
+    .tcg-cooldown { font-size: 4.5px; }
+    .tcg-stat-row { font-size: 5px; }
+    .tcg-hp { font-size: 4.5px; }
+    .tcg-hp-bar { height: 4px; }
+
+    /* Battle deck preview responsive */
+    .battle-deck-preview { padding: 8px; }
+    .battle-preview-hero { gap: 8px; padding: 6px; }
+    .battle-preview-hero-sprite { width: 60px; height: 60px; }
+    .battle-preview-hero-sprite img,
+    .battle-preview-hero-sprite canvas { width: 60px; height: 60px; }
+    .battle-preview-hero-name { font-size: 8px; }
+    .battle-preview-hero-class { font-size: 7px; }
+    .battle-preview-hero-stats { gap: 6px; font-size: 6px; }
+    .battle-preview-skills { grid-template-columns: repeat(4, 1fr); gap: 4px; }
+    .battle-preview-skill-card { padding: 4px 2px; }
+    .battle-preview-skill-icon { font-size: 12px; }
+    .battle-preview-skill-name { font-size: 6px; }
+    .battle-preview-skill-mana { font-size: 6px; }
 }
 @media (max-width: 380px) {
     .card-grid { grid-template-columns: 1fr; }
+    .arena-container { gap: 4px; padding: 4px 2px; min-height: 130px; }
+    .arena-side { max-width: 100px; gap: 3px; }
+    .arena-vs { font-size: 16px; }
+    .hero-card.arena-card { max-width: 90px; padding: 3px 4px; }
+    .hero-card-name { font-size: 5px; }
+    .hero-card-stats { font-size: 6px; }
+    .battle-card { width: 85px; min-height: 120px; }
+    .tcg-art-window { height: 50px; }
+    .tcg-name { font-size: 4px; max-width: 45px; }
+    .battle-preview-hero-sprite { width: 50px; height: 50px; }
+    .battle-preview-hero-sprite img,
+    .battle-preview-hero-sprite canvas { width: 50px; height: 50px; }
+    .battle-preview-hero-name { font-size: 7px; }
+    .battle-preview-skills { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* ========== ARENA (Battle Screen) ========== */

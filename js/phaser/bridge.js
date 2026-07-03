@@ -198,6 +198,8 @@ var BattlePhaser = {
     },
 
     exit: function (onComplete) {
+        // Guard: don't start a new transition if already inactive or transitioning
+        if (!this._active && !this._transitioning) { if (onComplete) onComplete(); return; }
         if (!this._scene) { if (onComplete) onComplete(); return; }
         this._transitioning = true;
 
@@ -223,10 +225,11 @@ var BattlePhaser = {
                 container.style.cssText = '';
             }
 
-            var showEls = document.querySelectorAll('.game-nav, .game-header');
-            for (var i = 0; i < showEls.length; i++) {
-                showEls[i].style.display = '';
-            }
+            // Robustly restore nav/header visibility
+            var navEl = document.querySelector('.game-nav');
+            var headerEl = document.querySelector('.game-header');
+            if (navEl) { navEl.style.display = ''; navEl.style.removeProperty('display'); }
+            if (headerEl) { headerEl.style.display = ''; headerEl.style.removeProperty('display'); }
 
             if (this._game) {
                 this._game.scale.resize(800, 500);
@@ -354,6 +357,7 @@ var BattlePhaser = {
     // ===== DESTROY =====
     destroy: function () {
         this._active = false;
+        this._transitioning = false;
         if (typeof PhaserAnimations !== 'undefined') {
             PhaserAnimations.stop();
         }
