@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js?v=fix74"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js?v=sprint3.2"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
     <title>PIXEL RAID — Play</title>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -14,43 +14,31 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔️</text></svg>">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=sprint3.2">
+    <link rel="stylesheet" href="css/battle-deck-preview.css?v=sprint3.2">
     <style>
         /* ========== RETRO RPG UI — OVERHAUL ========== */
         :root {
-            --bg: #0d0d24;
-            --bg-card: #1a1a32;
-            --bg-panel: rgba(22,22,50,0.95);
-            --bg-dark: #0d0d20;
-            --gold: #ffd940;
-            --gold-dark: #c9a020;
-            --gold-dim: rgba(255,217,64,0.12);
+            --bg: #0f0f23;
+            --bg-card: #1a1a2e;
+            --bg-panel: rgba(26,26,46,0.95);
+            --bg-dark: #0f0f23;
+            --gold: #ffd700;
+            --gold-dark: #b8920e;
+            --gold-dim: rgba(255,215,0,0.12);
             --text: #f0f0f0;
             --text-dim: #aaaaaa;
-            --green-accent: #22ff99;
-            --green-glow: rgba(34,255,153,0.3);
-            --red: #ff4466;
-            --red-glow: rgba(255,68,102,0.35);
-            --panel: #1a1a32;
-            --bg-surface: #14142c;
-            --gold-light: #ffe566;
-            --text-main: #f0f0f0;
+            --green-accent: #00ff88;
+            --green-glow: rgba(0,255,136,0.25);
+            --red: #e94560;
+            --red-glow: rgba(233,69,96,0.3);
             --rarity-common: #aaaaaa;
-            --rarity-rare: #5599ff;
-            --rarity-epic: #b066e0;
-            --rarity-legendary: #ff8844;
-            --rarity-mythic: #ff4466;
-            --border-pixel: rgba(255,217,64,0.35);
+            --rarity-rare: #4488ff;
+            --rarity-epic: #9b59b6;
+            --rarity-legendary: #ff6b35;
+            --rarity-mythic: #e94560;
+            --border-pixel: rgba(255,215,0,0.25);
             --shadow-pixel: 3px 3px 0 rgba(0,0,0,0.6);
-            /* Element colors */
-            --elem-fire: #ff5533;
-            --elem-water: #33aaff;
-            --elem-nature: #44dd55;
-            --elem-lightning: #ffdd33;
-            --elem-shadow: #aa44dd;
-            /* Accent colors */
-            --accent-cyan: #00e5ff;
-            --accent-pink: #ff44aa;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -58,7 +46,7 @@
             font-family: 'Silkscreen', 'Inter', sans-serif;
             background: var(--bg);
             background-image:
-                radial-gradient(ellipse at 50% 0%, rgba(255,217,64,0.06) 0%, transparent 50%);
+                radial-gradient(ellipse at 50% 0%, rgba(255,215,0,0.04) 0%, transparent 50%);
             color: var(--text);
             min-height: 100vh;
             overflow-x: hidden;
@@ -246,190 +234,20 @@
 
         /* Battle Screen — Fullscreen arena when battle is running */
         #screen-battle.battle-active {
-            max-width: none !important; padding: 0 !important; margin: 0 !important;
-            position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
-            z-index: 100; background: #07071a;
-            display: flex !important; flex-direction: column;
-            overflow: hidden;
+            max-width: none; padding: 0; margin: 0;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 100; background: #0a0a1a;
+            display: flex; flex-direction: column;
         }
         #screen-battle.battle-active #battle-deck-preview,
-        #screen-battle.battle-active .battle-controls { display: none !important; }
-        /* Action row: positioned above card hand during battle (JS controls display) */
-        #screen-battle.battle-active .battle-action-row {
-            position: absolute !important;
-            bottom: 24vh !important; left: 0 !important; right: 0 !important;
-            z-index: 25 !important;
-            background: rgba(7,7,26,0.95) !important;
-            border-top: 1px solid rgba(255,215,0,0.2) !important;
-            border-bottom: 1px solid rgba(0,229,255,0.15) !important;
-            padding: 4px 0 !important;
-            justify-content: center !important;
-        }
-        #screen-battle.battle-active .battle-action-row .btn {
-            padding: 6px 18px !important; font-size: 11px !important;
-            border-radius: 4px !important;
-            background: linear-gradient(180deg, #ffd700 0%, #b8860b 100%) !important;
-            color: #07071a !important; font-weight: bold !important;
-            border: 1px solid #ffd700 !important;
-            cursor: pointer !important;
-        }
-        #screen-battle.battle-active .battle-action-row .btn:hover {
-            filter: brightness(1.2) !important;
-        }
-        /* Hero power: bottom-right corner above card hand */
-        #screen-battle.battle-active .hero-power-area {
-            position: absolute !important;
-            bottom: 25vh !important; right: 12px !important;
-            z-index: 25 !important;
-            display: flex !important;
-        }
-        .battle-active ~ .game-nav, .game-nav { /* battle hides nav via JS */ }
-        /* Arena: fills ENTIRE screen edge-to-edge, card hand overlay at bottom */
-        #screen-battle.battle-active .battle-canvas-wrap {
-            position: absolute !important; top: 0 !important; left: 0 !important;
-            width: 100vw !important; height: 100vh !important;
-            overflow: hidden;
-            border: none !important; border-radius: 0 !important; box-shadow: none !important;
-            pointer-events: none !important;
-        }
-        #screen-battle.battle-active .battle-canvas-wrap::before,
-        #screen-battle.battle-active .battle-canvas-wrap::after { display: none !important; }
-        #screen-battle.battle-active #battle-canvas-container {
-            display: block !important; overflow: hidden;
-            position: relative !important;
-        }
-        #screen-battle.battle-active #battle-canvas-container canvas { 
-            display: block !important; margin: 0 auto !important;
-        }
-        /* Card hand: overlay bottom during battle */
-        #screen-battle.battle-active #card-hand-area {
-            display: flex !important;
-            position: absolute !important;
-            bottom: 0 !important; left: 0 !important; right: 0 !important;
-            z-index: 20 !important;
-            background: rgba(7,7,26,0.92) !important;
-            border-top: 2px solid rgba(0,229,255,0.6) !important;
-            padding: 10px 16px !important;
-            height: auto !important;
-            max-height: 28vh !important;
-            min-height: 120px !important;
-            overflow: visible !important;
-            pointer-events: auto !important;
-        }
-        #screen-battle.battle-active .battle-card { 
-            flex: 1 1 0; max-width: 180px; min-width: 100px;
-            height: auto; max-height: 100%; margin: 0 4px; border-radius: 6px;
-            min-height: 0 !important;
-            overflow: hidden;
-            pointer-events: auto !important;
-            cursor: pointer !important;
-        }
-        #screen-battle.battle-active .battle-card.card-playable {
-            box-shadow: 0 0 8px rgba(0,229,255,0.5);
-            animation: card-pulse 1.5s ease-in-out infinite;
-        }
-        @keyframes card-pulse {
-            0%, 100% { box-shadow: 0 0 8px rgba(0,229,255,0.3); }
-            50% { box-shadow: 0 0 16px rgba(0,229,255,0.7); }
-        }
+        #screen-battle.battle-active .battle-controls { display: none; }
+        #screen-battle.battle-active .battle-canvas-wrap { flex: 1; }
         .battle-canvas-wrap { position: relative; overflow: hidden; }
         #battle-canvas-container {
             width: 100%; height: 100%; display: none; margin: 0;
             border: none; box-shadow: none;
         }
         .battle-controls { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
-        /* Layout handled by JS in renderBattleScreen() */
-
-        /* ===== COUNTDOWN OVERLAY ===== */
-        #battle-countdown {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            z-index: 99999; display: none; align-items: center; justify-content: center;
-            background: rgba(0,0,0,0.85); backdrop-filter: blur(4px);
-        }
-        #battle-countdown.active { display: flex; }
-        .countdown-number {
-            font-family: 'Press Start 2P', monospace; font-size: 64px;
-            color: var(--gold); text-shadow: 0 0 30px rgba(255,217,64,0.8), 0 0 60px rgba(255,217,64,0.4);
-            animation: countPulse 0.8s ease-out;
-        }
-        .countdown-fight {
-            font-family: 'Press Start 2P', monospace; font-size: 48px;
-            color: var(--red); text-shadow: 0 0 30px rgba(255,68,102,0.8), 0 4px 0 #880022;
-            animation: fightSlam 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes countPulse {
-            0% { transform: scale(2); opacity: 0; }
-            60% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(1); }
-        }
-        @keyframes fightSlam {
-            0% { transform: scale(3) rotate(-5deg); opacity: 0; }
-            50% { transform: scale(0.9) rotate(2deg); opacity: 1; }
-            70% { transform: scale(1.1) rotate(-1deg); }
-            100% { transform: scale(1) rotate(0deg); }
-        }
-
-        /* ===== START BATTLE BUTTON PULSE ===== */
-        @keyframes battleReadyPulse {
-            0%, 100% { box-shadow: 0 4px 0 #8a6a00, 0 0 0 rgba(255,215,0,0); }
-            50% { box-shadow: 0 4px 0 #8a6a00, 0 0 20px rgba(255,215,0,0.6), 0 0 40px rgba(255,215,0,0.3); }
-        }
-        #btn-start-battle.ready {
-            animation: battleReadyPulse 1.5s ease-in-out infinite;
-            border: 2px solid rgba(255,215,0,0.8);
-        }
-
-        /* ===== HERO POWER BUTTON ===== */
-        .hero-power-area { display: flex; gap: 6px; align-items: center; justify-content: center; padding: 6px; }
-        .hero-power-btn {
-            font-family: 'Press Start 2P', monospace; font-size: 7px;
-            padding: 8px 14px; border: 2px solid; border-radius: 4px;
-            cursor: pointer; transition: all 0.2s ease; position: relative;
-            display: flex; flex-direction: column; align-items: center; gap: 4px;
-            min-width: 80px;
-        }
-        .hero-power-btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.2); }
-        .hero-power-btn:active:not(:disabled) { transform: translateY(1px); }
-        .hero-power-btn:disabled { opacity: 0.35; cursor: not-allowed; filter: grayscale(0.6); }
-        .hero-power-btn .power-icon { font-size: 16px; }
-        .hero-power-btn .power-name { font-size: 6px; color: #fff; }
-        .hero-power-btn .power-cost {
-            font-size: 6px; padding: 2px 5px; border-radius: 3px;
-            background: rgba(0,0,0,0.5);
-        }
-        .hero-power-btn .power-cooldown {
-            position: absolute; top: -4px; right: -4px;
-            font-size: 6px; padding: 2px 4px; border-radius: 50%;
-            background: #ff4444; color: #fff; min-width: 14px; text-align: center;
-        }
-
-        /* ===== RESULT SCREEN OVERLAY ===== */
-        #battle-result-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.75); backdrop-filter: blur(3px); }
-        .result-panel { background: linear-gradient(135deg,#0a0a2e,#141432); border: 2px solid; border-radius: 12px; padding: 20px 24px; text-align: center; max-width: 340px; width: 92%; animation: resultSlideIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .result-title { font-family: 'Press Start 2P', monospace; font-size: 18px; margin-bottom: 10px; text-shadow: 0 0 10px currentColor; }
-        .result-rewards { margin: 12px 0; text-align: left; }
-        .result-reward-item {
-            display: flex; align-items: center; gap: 8px; padding: 6px 10px;
-            background: rgba(255,255,255,0.04); border-radius: 6px; margin-bottom: 4px;
-            font-size: 9px; color: rgba(255,255,255,0.8);
-            animation: rewardFadeIn 0.4s ease-out both;
-        }
-        .result-reward-item:nth-child(1) { animation-delay: 0.2s; }
-        .result-reward-item:nth-child(2) { animation-delay: 0.4s; }
-        .result-reward-item:nth-child(3) { animation-delay: 0.6s; }
-        .result-reward-item:nth-child(4) { animation-delay: 0.8s; }
-        .result-reward-icon { font-size: 14px; }
-        .result-reward-value { color: var(--gold); font-weight: bold; margin-left: auto; }
-        .result-mission { font-size: 8px; color: rgba(255,255,255,0.5); margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); }
-        .result-buttons { display: flex; gap: 8px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
-        @keyframes resultSlideIn {
-            0% { transform: scale(0.8) translateY(30px); opacity: 0; }
-            100% { transform: scale(1) translateY(0); opacity: 1; }
-        }
-        @keyframes rewardFadeIn {
-            0% { transform: translateX(-10px); opacity: 0; }
-            100% { transform: translateX(0); opacity: 1; }
-        }
         .speed-controls { display: flex; gap: 2px; margin-left: auto; }
         .speed-btn {
             font-family: 'Press Start 2P'; font-size: 7px; padding: 6px 10px;
@@ -459,41 +277,29 @@
         .hp-fill.hp-critical { background: var(--red); }
         .hp-text { font-size: 8px; color: var(--text-dim); font-family: 'Silkscreen', monospace; }
         .hero-stats-line { font-size: 7px; color: var(--text-dim); margin-top: 2px; }
-        .shield-badge { font-size: 8px; color: var(--elem-water); }
+        .shield-badge { font-size: 8px; color: #4488ff; }
 
         /* Pixel Raid Battle Layout */
-        .battle-info-strip { /* hidden during battle via battle-active rule */ }
+        .battle-info-strip {
             display: flex; justify-content: space-between; align-items: center;
             padding: 6px 12px;
-            background: rgba(13,13,36,0.9);
+            background: rgba(15,15,35,0.9);
             border-top: 1px solid rgba(255,215,0,0.2);
             border-bottom: 1px solid rgba(255,215,0,0.2);
             margin-top: 2px;
         }
         .info-strip-left, .info-strip-right { display: flex; gap: 12px; align-items: center; }
-        .battle-turn-text { font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--gold-light); letter-spacing: 1px; }
-        .battle-phase-text { font-size: 8px; color: var(--accent-cyan); font-weight: bold; }
+        .battle-turn-text { font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--gold); letter-spacing: 1px; }
+        .battle-phase-text { font-size: 8px; color: var(--green-accent); font-weight: bold; }
         .deck-info, .graveyard-info { font-size: 7px; color: var(--text-dim); }
 
         .card-hand-area {
             display: flex; justify-content: center; gap: 8px; padding: 8px 12px;
             min-height: 140px;
-            height: 50vh;
             overflow-x: auto;
-            overflow-y: auto;
             -webkit-overflow-scrolling: touch;
-            flex-wrap: wrap;
-            align-items: center;
-            align-content: center;
-        }
-        /* Battle cards in hand area — fill the bottom 50% */
-        .card-hand-area .battle-card {
-            flex: 1 1 0;
-            min-width: 0;
-            width: auto;
-            min-height: 160px;
-            max-width: 180px;
-            max-height: 320px;
+            flex-wrap: nowrap;
+            align-items: flex-end;
         }
         .battle-action-row {
             display: flex; justify-content: center; gap: 8px;
@@ -507,13 +313,11 @@
 
         /* Card in hand */
         .hand-card {
-            width: 140px; min-height: 200px; max-height: 320px; padding: 0; border-radius: 8px; cursor: pointer;
+            width: 120px; min-height: 170px; padding: 0; border-radius: 6px; cursor: pointer;
             background: var(--bg-card); border: 2px solid var(--border-pixel);
             transition: transform 0.3s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease;
             user-select: none; position: relative;
             display: flex; flex-direction: column; overflow: hidden;
-            flex: 1 1 0;
-            max-width: 180px;
         }
         .hand-card:hover { transform: translateY(-14px) scale(1.05); box-shadow: 0 8px 20px rgba(0,0,0,0.5), 0 0 12px rgba(255,215,0,0.2); border-color: var(--gold); }
         .hand-card.disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.6); }
@@ -558,8 +362,8 @@
             font-size: 8px;
             font-family: 'Press Start 2P', monospace;
         }
-        .hand-card .card-stats-bar .stat-atk { color: var(--elem-fire); }
-        .hand-card .card-stats-bar .stat-def { color: var(--elem-water); }
+        .hand-card .card-stats-bar .stat-atk { color: #ff6644; }
+        .hand-card .card-stats-bar .stat-def { color: #4488ff; }
         .hand-card .card-effect-text {
             font-size: 8px;
             color: #bbddbb;
@@ -685,10 +489,10 @@
         @keyframes overlayIn { from{opacity:0} to{opacity:1} }
         .log-win { color: #44cc44; }
         .log-lose { color: #ff4444; }
-        .log-damage { color: var(--elem-fire); }
+        .log-damage { color: #ff6b35; }
         .log-heal { color: #44cc44; }
-        .log-skill { color: var(--elem-shadow); }
-        .log-drop { color: var(--gold-light); }
+        .log-skill { color: #9b59b6; }
+        .log-drop { color: var(--gold); }
 
         /* Turn order bar */
         .turn-order-bar {
@@ -722,13 +526,13 @@
         }
         .enemy-info-header { font-family: 'Press Start 2P'; font-size: 12px; color: var(--gold); margin-bottom: 10px; text-align: center; }
         .enemy-info-stats { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
-        .enemy-info-skill { color: var(--elem-shadow); font-size: 9px; text-align: center; padding: 4px; background: rgba(170,68,221,0.12); border-radius: 4px; }
+        .enemy-info-skill { color: #9b59b6; font-size: 9px; text-align: center; padding: 4px; background: rgba(155,89,182,0.1); border-radius: 4px; }
         .enemy-info-close { position: absolute; top: 8px; right: 10px; cursor: pointer; color: var(--text-dim); font-size: 14px; }
         .enemy-info-close:hover { color: var(--text); }
 
         .enemy-info-panel {
             position: fixed; z-index: 999;
-            background: rgba(20,16,30,0.95); border: 1px solid var(--gold-light);
+            background: rgba(20,16,30,0.95); border: 1px solid var(--gold);
             border-radius: 8px; padding: 10px 12px; min-width: 160px;
             pointer-events: none; box-shadow: 0 4px 20px rgba(0,0,0,0.6);
             font-family: 'Press Start 2P'; animation: fadeIn 0.2s ease;
@@ -807,8 +611,8 @@
         .battle-overlay-text {
             font-family: 'Press Start 2P';
             font-size: 28px;
-            color: var(--gold);
-            text-shadow: 0 0 20px rgba(255,217,64,0.8), 2px 2px 0 #000;
+            color: #ffd700;
+            text-shadow: 0 0 20px rgba(255,215,0,0.8), 2px 2px 0 #000;
             animation: overlayPulse 1.5s ease-in-out forwards;
         }
         @keyframes overlayPulse {
@@ -818,9 +622,9 @@
             80% { opacity: 1; }
             100% { opacity: 0; transform: scale(1.1); }
         }
-        .battle-overlay-wave { color: var(--elem-water); text-shadow: 0 0 15px rgba(51,170,255,0.8), 2px 2px 0 #000; }
-        .battle-overlay-clear { color: var(--gold-light); font-size: 32px; text-shadow: 0 0 30px rgba(255,229,102,1), 2px 2px 0 #000; }
-        .battle-overlay-defeat { color: var(--red); text-shadow: 0 0 20px rgba(255,68,102,0.8), 2px 2px 0 #000; }
+        .battle-overlay-wave { color: #88ccff; text-shadow: 0 0 15px rgba(136,204,255,0.8), 2px 2px 0 #000; }
+        .battle-overlay-clear { color: #ffd700; font-size: 32px; text-shadow: 0 0 30px rgba(255,215,0,1), 2px 2px 0 #000; }
+        .battle-overlay-defeat { color: #ff4444; text-shadow: 0 0 20px rgba(255,68,68,0.8), 2px 2px 0 #000; }
 
         /* Stage clear / Defeat modals */
         .battle-result-modal {
@@ -832,11 +636,11 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .battle-result-content {
             background: linear-gradient(180deg, #1a1a2e, #0f0f23);
-            border: 3px solid var(--gold-light);
+            border: 3px solid var(--gold);
             padding: 32px;
             text-align: center;
             max-width: 360px;
-            box-shadow: var(--shadow-pixel), 0 0 40px rgba(255,217,64,0.15);
+            box-shadow: var(--shadow-pixel), 0 0 40px rgba(255,215,0,0.15);
             animation: resultPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         @keyframes resultPop {
@@ -860,8 +664,8 @@
             position: absolute;
             font-family: 'Press Start 2P';
             font-size: 10px;
-            color: var(--gold);
-            text-shadow: 1px 1px 0 #000, 0 0 8px rgba(255,217,64,0.6);
+            color: #ffd700;
+            text-shadow: 1px 1px 0 #000, 0 0 8px rgba(255,215,0,0.6);
             pointer-events: none;
             z-index: 55;
             animation: skillPop 2s ease-out forwards;
@@ -903,11 +707,11 @@
         }
         .hero-detail.show { display: block; }
         .hero-detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-        .hero-detail-name { font-family: 'Press Start 2P'; font-size: 11px; color: var(--gold-light); }
+        .hero-detail-name { font-family: 'Press Start 2P'; font-size: 11px; color: var(--gold); }
         .hero-detail-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; font-size: 10px; margin-bottom: 12px; }
         .stat-row { display: flex; justify-content: space-between; padding: 4px 8px; background: rgba(255,215,0,0.04); border: 1px solid rgba(255,215,0,0.08); }
         .stat-label { color: var(--text-dim); }
-        .stat-value { color: var(--gold-light); font-weight: 700; }
+        .stat-value { color: var(--gold); font-weight: 700; }
         .hero-detail-skill { background: rgba(155,89,182,0.08); border: 1px solid rgba(155,89,182,0.2); padding: 8px 12px; margin-bottom: 12px; }
         .hero-detail-actions { display: flex; gap: 8px; }
 
@@ -941,8 +745,8 @@
         .fg-sprite { image-rendering: pixelated; }
         .fg-hero-name { font-family: 'Press Start 2P'; font-size: 8px; margin-top: 2px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 72px; }
         .fg-hero-stats { font-size: 9px; color: var(--text-dim); display: flex; gap: 6px; }
-        .fg-stat-hp { color: var(--green-accent); }
-        .fg-stat-atk { color: var(--elem-fire); }
+        .fg-stat-hp { color: #44cc44; }
+        .fg-stat-atk { color: #ff6644; }
         .fg-remove-btn {
             position: absolute; top: 1px; right: 1px;
             font-size: 7px; color: #ff4444; cursor: pointer;
@@ -1242,33 +1046,13 @@
             .card { padding: 8px; }
             .card-name { font-size: 7px; }
             #battle-canvas-container { width: 100%; height: 100%; }
-            #screen-battle.battle-active .battle-canvas-wrap {
-                bottom: auto !important;
-                height: calc(100vw * 9 / 16) !important;
-                max-height: calc(100vh - 18vh) !important;
-                top: 50% !important;
-                transform: translateY(-55%) !important;
-            }
             .btn { font-size: 7px; padding: 10px 16px; min-height: 44px; }
-            .card-hand-area { gap: 4px; padding: 6px 8px; flex-wrap: wrap; align-items: center; align-content: center; }
-            #screen-battle.battle-active #card-hand-area { flex-wrap: nowrap; gap: 0; padding: 3px 3px; }
-            .hand-card { flex: 1 1 0; min-width: 0; width: auto; min-height: 140px; max-width: 120px; max-height: 260px; }
-            .card-hand-area .battle-card { flex: 1 1 0; min-width: 0; width: auto; min-height: 0; max-width: 120px; max-height: 260px; }
-            .battle-canvas-wrap { border-width: 3px; }
-            .game-nav { gap: 1px; padding: 4px 6px; }
-            .game-nav .nav-btn { flex: 1; min-width: 0; white-space: nowrap; }
+            .hand-card { width: 100px; min-height: 140px; }
         }
         @media (max-width: 380px) {
             .heroes-grid { grid-template-columns: 1fr; }
             #inventory-grid { grid-template-columns: 1fr; }
             #shop-content { grid-template-columns: 1fr; }
-            .card-hand-area { gap: 3px; padding: 4px 4px; flex-wrap: wrap; }
-            #screen-battle.battle-active #card-hand-area { flex-wrap: nowrap; gap: 0; padding: 2px 2px; }
-            .hand-card { flex: 1 1 0; min-width: 0; width: auto; min-height: 120px; max-width: 100px; max-height: 220px; }
-            .card-hand-area .battle-card { flex: 1 1 0; min-width: 0; width: auto; min-height: 0; max-width: 100px; max-height: 220px; }
-            .hand-card .card-name { font-size: 5px; padding: 2px 3px; }
-            .hand-card .card-mana { width: 16px; height: 16px; font-size: 7px; top: -4px; right: -4px; }
-            .hand-card .card-art-window { min-height: 50px; }
         }
 
         /* Screen transitions */
@@ -1293,7 +1077,7 @@
             box-shadow: 0 0 12px rgba(68,255,136,0.3) !important;
         }
     </style>
-    <link rel="stylesheet" href="css/retro-ui.css?v=fix74">
+    <link rel="stylesheet" href="css/retro-ui.css?v=sprint3.2">
 </head>
 <body>
     <!-- Loading Screen -->
@@ -1343,7 +1127,6 @@
         <button class="nav-btn" data-screen="inventory" title="Card packs, items & rewards">🎒 Inventory</button>
         <button class="nav-btn" data-screen="shop" title="Buy packs, gold & special offers">🏪 Shop</button>
         <button class="nav-btn" data-screen="market" title="Live Renaiss marketplace data">📈 Market</button>
-        <button class="nav-btn" id="demo-mode-btn" title="Run a guided demo for judges" onclick="DemoMode.start()" style="margin-left:auto;color:#ffd700;background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.25);">🎮 DEMO MODE</button>
     </div>
 
     <!-- Wallet Connect -->
@@ -1372,9 +1155,6 @@
         <!-- Card Hand Area — scrollable on mobile -->
         <div id="card-hand-area" class="card-hand-area"></div>
 
-        <!-- Hero Power Area -->
-        <div id="hero-power-area" class="hero-power-area"></div>
-
         <!-- Battle Controls — Start battle only -->
         <div class="battle-controls">
             <button class="btn btn-gold" id="btn-start-battle">⚔️ Start Battle</button>
@@ -1382,36 +1162,9 @@
 
     </div>
 
-    <!-- Countdown Overlay -->
-    <div id="battle-countdown"></div>
-
     <!-- ====== HEROES SCREEN ====== -->
     <div class="screen" id="screen-heroes">
-        <h2 style="font-family:'Press Start 2P';font-size:12px;color:var(--gold);margin-bottom:8px;">🃏 YOUR COLLECTION</h2>
-        <!-- Collection Progress Bar -->
-        <div id="collection-progress-bar" style="margin-bottom:10px;"></div>
-        <!-- Toolbar: Search + Sort + Filters -->
-        <div id="collection-toolbar" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
-            <!-- Row 1: Search + Sort -->
-            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-                <input id="collection-search" type="text" placeholder="🔍 Search cards..." style="flex:1;min-width:120px;max-width:220px;padding:6px 8px;font-family:'Press Start 2P',monospace;font-size:7px;background:var(--bg-card);color:var(--text);border:1px solid var(--border-pixel);border-radius:4px;outline:none;">
-                <select id="collection-sort" style="padding:6px 8px;font-family:'Press Start 2P',monospace;font-size:7px;background:var(--bg-card);color:var(--text);border:1px solid var(--border-pixel);border-radius:4px;cursor:pointer;">
-                    <option value="name">Sort: Name</option>
-                    <option value="rarity">Sort: Rarity</option>
-                    <option value="class">Sort: Class</option>
-                    <option value="power">Sort: Power ↓</option>
-                </select>
-                <div id="collection-count" style="font-family:'Press Start 2P',monospace;font-size:7px;color:var(--text-dim);white-space:nowrap;"></div>
-            </div>
-            <!-- Row 2: Rarity Filters -->
-            <div id="rarity-filters" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
-                <span style="font-size:7px;color:var(--text-dim);font-family:'Press Start 2P',monospace;">R:</span>
-            </div>
-            <!-- Row 3: Class Filters -->
-            <div id="class-filters" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
-                <span style="font-size:7px;color:var(--text-dim);font-family:'Press Start 2P',monospace;">C:</span>
-            </div>
-        </div>
+        <h2 style="font-family:'Press Start 2P';font-size:12px;color:var(--gold);margin-bottom:12px;">🃏 YOUR COLLECTION</h2>
         <div class="heroes-grid" id="hero-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;"></div>
         <div class="hero-detail hidden" id="hero-detail"><div id="hero-detail-content"></div></div>
     </div>
@@ -1421,7 +1174,6 @@
         <h2 style="font-family:'Press Start 2P';font-size:12px;color:var(--gold);margin-bottom:12px;">📐 STRATEGY</h2>
         <p style="font-size:8px;color:var(--text-dim);margin-bottom:12px;">Select your battle hero and build a 4-card skill deck.</p>
         <div id="strategy-content"></div>
-        <div id="ai-deck-builder-panel"></div>
     </div>
 
     <!-- ====== INVENTORY SCREEN ====== -->
@@ -1512,39 +1264,33 @@
     </div>
 
     <!-- ====== SCRIPTS (load order matters!) ====== -->
-    <script src="js/core/sound.js?v=fix74"></script>
-    <script src="js/core/heroes.js?v=fix74"></script>
+    <script src="js/core/sound.js?v=sprint3.2"></script>
+    <script src="js/core/heroes.js?v=sprint3.2"></script>
     <!-- cards.js MERGED into heroes.js (Sprint 1 cleanup) -->
-    <script src="js/core/deck.js?v=fix74"></script>
-    <script src="js/core/items.js?v=fix74"></script>
-    <script src="js/core/game.js?v=fix74"></script>
-    <script src="js/data/pixel-art.js?v=fix74"></script>
-    <script src="js/core/units.js?v=fix74"></script>
-    <script src="js/systems/position-bonuses.js?v=fix74"></script>
-    <script src="js/systems/battle.js?v=fix74"></script>
-    <script src="js/systems/hero-powers.js?v=fix74"></script>
-    <script src="js/systems/economy.js?v=fix74"></script>
-    <script src="js/systems/rewards.js?v=fix74"></script>
-    <script src="js/systems/ai-deck-builder.js?v=fix74"></script>
-    <script src="js/systems/ai-coach.js?v=fix74"></script>
-    <script src="js/systems/demo-mode.js?v=fix74"></script>
-    <script src="js/systems/formation.js?v=fix74"></script>
-    <script src="js/ui/animations.js?v=fix74"></script>
-    <script src="js/ui/renderer.js?v=fix74"></script>
+    <script src="js/core/deck.js?v=sprint3.2"></script>
+    <script src="js/core/items.js?v=sprint3.2"></script>
+    <script src="js/core/game.js?v=sprint3.2"></script>
+    <script src="js/core/units.js?v=sprint3.2"></script>
+    <script src="js/systems/battle.js?v=sprint3.2"></script>
+    <script src="js/systems/economy.js?v=sprint3.2"></script>
+    <script src="js/systems/rewards.js?v=sprint3.2"></script>
+    <script src="js/systems/formation.js?v=sprint3.2"></script>
+    <script src="js/ui/animations.js?v=sprint3.2"></script>
+    <script src="js/ui/renderer.js?v=sprint3.2"></script>
     <!-- battle-arena-scene.js REMOVED — using Phaser only -->
-    <script src="js/phaser/battle-scene.js?v=fix74"></script>
-    <script src="js/phaser/card-sprite.js?v=fix74"></script>
-    <script src="js/phaser/animations.js?v=fix74"></script>
-    <script src="js/phaser/bridge.js?v=fix74"></script>
-    <script src="js/ui/cardhand.js?v=fix74"></script>
-    <script src="js/ui/tutorial.js?v=fix74"></script>
-    <script src="js/ui/screens.js?v=fix74"></script>
-    <script src="js/systems/blockchain.js?v=fix74"></script>
-    <script src="js/systems/backend.js?v=fix74"></script>
+    <script src="js/phaser/battle-scene.js?v=sprint3.2"></script>
+    <script src="js/phaser/card-sprite.js?v=sprint3.2"></script>
+    <script src="js/phaser/animations.js?v=sprint3.2"></script>
+    <script src="js/phaser/bridge.js?v=sprint3.2"></script>
+    <script src="js/ui/cardhand.js?v=sprint3.2"></script>
+    <script src="js/ui/tutorial.js?v=sprint3.2"></script>
+    <script src="js/ui/screens.js?v=sprint3.2"></script>
+    <script src="js/systems/blockchain.js?v=sprint3.2"></script>
+    <script src="js/systems/backend.js?v=sprint3.2"></script>
     <script>Backend.init();</script>
-    <script src="js/systems/renaiss.js?v=fix74"></script>
-    <script src="js/ui/market.js?v=fix74"></script>
-    <script src="js/main.js?v=fix74"></script>
+    <script src="js/systems/renaiss.js?v=sprint3.2"></script>
+    <script src="js/ui/market.js?v=sprint3.2"></script>
+    <script src="js/main.js?v=sprint3.2"></script>
 </body>
 </html>
 <!-- cache bust 1782907647 -->
