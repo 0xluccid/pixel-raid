@@ -1376,8 +1376,8 @@ body {
     .arena-stage-info { font-size: 7px; padding: 4px; }
 
     /* Card hand responsive */
-    .card-hand-container { gap: 6px; padding: 6px 2px; min-height: 110px; flex-wrap: nowrap; }
-    .battle-card { width: 100px; min-height: 140px; }
+    .card-hand-container { gap: 4px; padding: 6px 4px; min-height: 110px; flex-wrap: nowrap; }
+    .battle-card { flex: 1 1 0; min-width: 0; width: auto; min-height: 140px; max-width: 105px; }
     .tcg-art-window { height: 60px; }
     .tcg-name { font-size: 4.5px; max-width: 55px; }
     .tcg-header { padding: 2px 4px; min-height: 14px; }
@@ -1415,7 +1415,7 @@ body {
     .hero-card.arena-card { max-width: 90px; padding: 3px 4px; }
     .hero-card-name { font-size: 5px; }
     .hero-card-stats { font-size: 6px; }
-    .battle-card { width: 85px; min-height: 120px; }
+    .battle-card { flex: 1 1 0; min-width: 0; width: auto; min-height: 120px; max-width: 88px; }
     .tcg-art-window { height: 50px; }
     .tcg-name { font-size: 4px; max-width: 45px; }
     .battle-preview-hero-sprite { width: 50px; height: 50px; }
