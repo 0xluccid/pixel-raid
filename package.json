@@ -1,0 +1,17 @@
+{
+  "name": "pixel-raid",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Auto-battle RPG + NFT collector with procedurally-generated pixel art",
+  "scripts": {
+    "start": "npx serve .",
+    "lint": "npx eslint js/",
+    "test": "node --test js/tests/*.test.js"
+  },
+  "devDependencies": {
+    "eslint": "^8.50.0"
+  },
+  "keywords": ["game", "nft", "blockchain", "pixel-art", "rpg"],
+  "author": "Luccid",
+  "license": "MIT"
+}
