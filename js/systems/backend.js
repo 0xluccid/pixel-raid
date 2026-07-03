@@ -111,6 +111,7 @@ const Backend = {
                 total_battles: (gameState.stats.battlesWon || 0) + (gameState.stats.battlesLost || 0),
                 total_wins: gameState.stats.battlesWon || 0,
                 win_streak: gameState.player.winStreak || 0,
+                data_checksum: this._generateChecksum(gameState),
             };
 
             const { error } = await this.supabase
@@ -132,7 +133,7 @@ const Backend = {
     },
 
     /**
-     * Pull Supabase → local GameState
+     * Pull Supabase → local GameState (with integrity check)
      */
     async loadFromCloud() {
         if (!this.connected || !this.playerRow) return null;
@@ -141,10 +142,20 @@ const Backend = {
             const { data, error } = await this.supabase
                 .from('players')
                 .select('*')
-                .eq('id', this.playerRow.id)
+                .eq('wallet_address', this.playerRow.wallet_address)
                 .single();
 
             if (error || !data) return null;
+
+            // Verify checksum — kalau mismatch, data mungkin di-inject
+            if (data.data_checksum) {
+                const expected = this._generateChecksumFromRow(data);
+                if (data.data_checksum !== expected) {
+                    console.warn('⚠️ Cloud data checksum mismatch! Possible tampering.');
+                    // Tetap load tapi flag sebagai suspicious
+                    data._suspicious = true;
+                }
+            }
 
             this.playerRow = data;
             console.log('☁️ Loaded from cloud');
@@ -172,6 +183,83 @@ const Backend = {
             key: 'app.wallet',
             value: this.playerRow.wallet_address,
         });
+    },
+
+    /**
+     * Generate checksum dari game state (simple hash)
+     */
+    _generateChecksum(gameState) {
+        const payload = [
+            gameState.player.name,
+            gameState.player.level,
+            gameState.player.exp,
+            gameState.player.gold,
+            gameState.player.gems,
+            gameState.player.stage,
+            gameState.stats.highestStage,
+            gameState.stats.battlesWon,
+            gameState.stats.battlesLost,
+        ].join('|');
+        return this._simpleHash(payload);
+    },
+
+    /**
+     * Generate checksum dari row database
+     */
+    _generateChecksumFromRow(row) {
+        const payload = [
+            row.display_name,
+            row.level,
+            row.exp,
+            row.gold,
+            row.gem,
+            row.current_stage,
+            row.highest_stage,
+            row.total_wins,
+            row.total_battles - row.total_wins, // battlesLost
+        ].join('|');
+        return this._simpleHash(payload);
+    },
+
+    /**
+     * Simple string hash (djb2)
+     */
+    _simpleHash(str) {
+        let hash = 5381;
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) + hash) + str.charCodeAt(i);
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+        return hash.toString(36);
+    },
+
+    /**
+     * Fetch leaderboard dari Edge Function (cached server-side)
+     */
+    async fetchLeaderboard(sort = 'highest_stage', limit = 50) {
+        try {
+            const response = await fetch(
+                `${this.URL}/functions/v1/leaderboard?sort=${sort}&limit=${limit}`,
+                {
+                    headers: {
+                        'apikey': this.ANON_KEY,
+                    },
+                }
+            );
+
+            if (!response.ok) throw new Error('Leaderboard fetch failed');
+            const result = await response.json();
+            return result.data;
+        } catch (err) {
+            console.error('❌ Leaderboard error:', err);
+            // Fallback: direct query
+            const { data } = await this.supabase
+                .from('players')
+                .select('wallet_address, display_name, level, highest_stage, total_wins, total_battles, win_streak')
+                .order(sort, { ascending: false })
+                .limit(limit);
+            return data || [];
+        }
     },
 
     /**
