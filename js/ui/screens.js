@@ -92,6 +92,109 @@ const UI = {
                 cardHandArea.style.display = 'none';
             }
         }
+
+        // Show arena preview when battle is not active
+        this.renderArenaPreview();
+    },
+
+    renderArenaPreview() {
+        const preview = document.getElementById('battle-deck-preview');
+        if (!preview) return;
+
+        // Only show arena when battle is NOT running
+        if (typeof BattleEngine !== 'undefined' && BattleEngine.isRunning) {
+            preview.style.display = 'none';
+            return;
+        }
+
+        preview.style.display = '';
+        const deck = GameState.deck || [];
+        const stage = GameState.player.stage || 1;
+
+        // Generate enemy preview based on stage
+        const enemyTypes = [
+            { name: 'Goblin', icon: '👹', class: 'warrior' },
+            { name: 'Skeleton', icon: '💀', class: 'warrior' },
+            { name: 'Dark Mage', icon: '🧙', class: 'mage' },
+            { name: 'Wolf', icon: '🐺', class: 'assassin' },
+            { name: 'Bandit', icon: '🥷', class: 'assassin' },
+        ];
+        const enemyCount = Math.min(3, 1 + Math.floor(stage / 3));
+        const enemies = [];
+        for (let i = 0; i < enemyCount; i++) {
+            const base = enemyTypes[(stage + i) % enemyTypes.length];
+            enemies.push({
+                ...base,
+                hp: 50 + stage * 10,
+                atk: 5 + stage * 2,
+            });
+        }
+
+        preview.innerHTML = `
+            <div class="arena-container">
+                <div class="arena-bg">
+                    <div class="arena-grid"></div>
+                </div>
+                
+                <!-- Player Side (Left) -->
+                <div class="arena-side arena-player">
+                    <div class="arena-hp-bar">
+                        <div class="arena-hp-label">YOUR HP</div>
+                        <div class="arena-hp-track">
+                            <div class="arena-hp-fill" style="width:100%"></div>
+                        </div>
+                        <div class="arena-hp-text">20/20</div>
+                    </div>
+                    <div class="arena-cards">
+                        ${deck.slice(0, 3).map((card, i) => `
+                            <div class="hero-card arena-card" style="animation-delay:${i * 0.15}s">
+                                <span class="hero-card-icon">${this._getHeroIcon(card.class)}</span>
+                                <span class="hero-card-name">${card.name || 'Hero'}</span>
+                                <span class="hero-card-stats">⚔️${card.stats?.atk || 10} 🛡${card.stats?.def || 5}</span>
+                            </div>
+                        `).join('')}
+                        ${deck.length === 0 ? `
+                            <div class="hero-card arena-card empty">
+                                <span class="hero-card-icon">❓</span>
+                                <span class="hero-card-name">No Cards</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <!-- VS Badge -->
+                <div class="arena-vs">⚔️</div>
+
+                <!-- Enemy Side (Right) -->
+                <div class="arena-side arena-enemy">
+                    <div class="arena-hp-bar">
+                        <div class="arena-hp-label">ENEMY HP</div>
+                        <div class="arena-hp-track">
+                            <div class="arena-hp-fill enemy" style="width:100%"></div>
+                        </div>
+                        <div class="arena-hp-text">${enemies.reduce((s,e) => s + e.hp, 0)}/${enemies.reduce((s,e) => s + e.hp, 0)}</div>
+                    </div>
+                    <div class="arena-cards">
+                        ${enemies.map((enemy, i) => `
+                            <div class="hero-card arena-card enemy" style="animation-delay:${i * 0.15}s">
+                                <span class="hero-card-icon">${enemy.icon}</span>
+                                <span class="hero-card-name">${enemy.name}</span>
+                                <span class="hero-card-stats">⚔️${enemy.atk}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+
+            <div class="arena-stage-info">
+                Stage ${stage} — Wave ${GameState.player.wave || 1}
+            </div>
+        `;
+    },
+
+    _getHeroIcon(cls) {
+        const icons = { warrior: '⚔️', mage: '🔮', archer: '🏹', healer: '💚', assassin: '🗡️' };
+        return icons[cls] || '⚔️';
     },
 
     renderBattleDeckPreview() {
