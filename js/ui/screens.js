@@ -1123,6 +1123,9 @@ const UI = {
         // Section C: Active Deck Summary
         html += this._renderDeckSummary();
 
+        // Section D: AI Deck Builder Recommendation
+        html += '<div id="ai-recommendation-panel"></div>';
+
         container.innerHTML = html;
 
         // Draw sprites after DOM update
@@ -1134,6 +1137,13 @@ const UI = {
                     CardRenderer.drawCardSprite(canvas, hero, 48);
                 }
             });
+
+            // Render AI recommendation
+            const deckCards = GameState.getDeckCards();
+            const panel = document.getElementById('ai-recommendation-panel');
+            if (deckCards.length > 0 && panel && typeof AIDeckBuilder !== 'undefined') {
+                AIDeckBuilder.renderRecommendation(deckCards[0], panel);
+            }
         }, 50);
     },
 
