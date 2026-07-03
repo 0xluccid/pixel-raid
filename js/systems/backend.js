@@ -1,6 +1,6 @@
 /* ========================================
  * PIXEL RAID — Supabase Backend Bridge
- * Cloud save/load + wallet auth
+ * Cloud save/load + wallet auth (signature-based)
  * ======================================== */
 
 const Backend = {
@@ -43,36 +43,53 @@ const Backend = {
                 return { success: true, player: existing, isNew: false };
             }
 
-            // Create new player
-            const newPlayer = {
-                wallet_address: walletAddress.toLowerCase(),
-                display_name: 'Adventurer',
-                level: 1,
-                exp: 0,
-                gold: 100,
-                gem: 5,
-                current_stage: 1,
-                highest_stage: 1,
-                total_battles: 0,
-                total_wins: 0,
-                win_streak: 0,
-                playtime_seconds: 0,
-            };
+            // Create new player via Edge Function (service role)
+            const timestamp = Date.now();
+            const signature = await this._signMessage(
+                `PixelRaid save\nwallet:${walletAddress.toLowerCase()}\nts:${timestamp}`
+            );
 
-            const { data: created, error: createError } = await this.supabase
-                .from('players')
-                .insert(newPlayer)
-                .select()
-                .single();
+            const response = await fetch(`${this.URL}/functions/v1/save-progress`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': this.ANON_KEY,
+                },
+                body: JSON.stringify({
+                    walletAddress: walletAddress.toLowerCase(),
+                    timestamp,
+                    signature,
+                    update: {
+                        display_name: 'Adventurer',
+                        level: 1,
+                        exp: 0,
+                        gold: 100,
+                        gem: 5,
+                        current_stage: 1,
+                        highest_stage: 1,
+                        total_battles: 0,
+                        total_wins: 0,
+                        win_streak: 0,
+                    },
+                }),
+            });
 
-            if (createError) {
-                console.error('❌ Create player failed:', createError);
-                return { error: createError.message };
+            const result = await response.json();
+            if (!response.ok) {
+                console.error('❌ Create player failed:', result.error);
+                return { error: result.error };
             }
+
+            // Reload player
+            const { data: created } = await this.supabase
+                .from('players')
+                .select('*')
+                .eq('wallet_address', walletAddress.toLowerCase())
+                .single();
 
             this.playerRow = created;
             this.connected = true;
-            console.log('✅ New player created:', created.display_name);
+            console.log('✅ New player created:', created?.display_name);
             return { success: true, player: created, isNew: true };
 
         } catch (err) {
@@ -82,15 +99,12 @@ const Backend = {
     },
 
     /**
-     * Push local GameState → Supabase
+     * Push local GameState → Supabase (via Edge Function)
      */
     async saveToCloud(gameState) {
         if (!this.connected || !this.playerRow) return false;
 
         try {
-            // Set wallet context untuk RLS policy
-            await this._setWalletContext();
-
             // Validasi battle result sebelum save (jika ada battle baru)
             if (gameState.stats?.lastBattle) {
                 const isValid = await this._validateBattle(gameState.stats.lastBattle);
@@ -99,6 +113,11 @@ const Backend = {
                     return false;
                 }
             }
+
+            const timestamp = Date.now();
+            const signature = await this._signMessage(
+                `PixelRaid save\nwallet:${this.playerRow.wallet_address}\nts:${timestamp}`
+            );
 
             const update = {
                 display_name: gameState.player.name || 'Adventurer',
@@ -114,13 +133,23 @@ const Backend = {
                 data_checksum: this._generateChecksum(gameState),
             };
 
-            const { error } = await this.supabase
-                .from('players')
-                .update(update)
-                .eq('wallet_address', this.playerRow.wallet_address);
+            const response = await fetch(`${this.URL}/functions/v1/save-progress`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': this.ANON_KEY,
+                },
+                body: JSON.stringify({
+                    walletAddress: this.playerRow.wallet_address,
+                    timestamp,
+                    signature,
+                    update,
+                }),
+            });
 
-            if (error) {
-                console.error('❌ Cloud save failed:', error);
+            const result = await response.json();
+            if (!response.ok) {
+                console.error('❌ Cloud save failed:', result.error);
                 return false;
             }
 
@@ -174,15 +203,13 @@ const Backend = {
     },
 
     /**
-     * Set wallet context untuk RLS policy
-     * Harus dipanggil sebelum update operation
+     * Sign message with wallet (MetaMask)
      */
-    async _setWalletContext() {
-        if (!this.playerRow?.wallet_address) return;
-        await this.supabase.rpc('app_set_config', {
-            key: 'app.wallet',
-            value: this.playerRow.wallet_address,
-        });
+    async _signMessage(message) {
+        if (!window.ethereum) throw new Error('MetaMask not found');
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+        return await signer.signMessage(message);
     },
 
     /**
@@ -267,16 +294,23 @@ const Backend = {
      */
     async _validateBattle(battleLog) {
         try {
-            const { data: { session } } = await this.supabase.auth.getSession();
-            
+            const timestamp = Date.now();
+            const signature = await this._signMessage(
+                `PixelRaid save\nwallet:${this.playerRow.wallet_address}\nts:${timestamp}`
+            );
+
             const response = await fetch(`${this.URL}/functions/v1/validate-battle`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.access_token || this.ANON_KEY}`,
                     'apikey': this.ANON_KEY,
                 },
-                body: JSON.stringify(battleLog),
+                body: JSON.stringify({
+                    ...battleLog,
+                    walletAddress: this.playerRow.wallet_address,
+                    timestamp,
+                    signature,
+                }),
             });
 
             const result = await response.json();

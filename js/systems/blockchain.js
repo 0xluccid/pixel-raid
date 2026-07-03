@@ -176,7 +176,7 @@ const BlockchainBridge = {
     },
 
     /**
-     * Mint a card as NFT
+     * Mint a card as NFT (via Edge Function with signature)
      */
     async mintCard(card) {
         if (!this.isConnected || !this.account) {
@@ -187,15 +187,17 @@ const BlockchainBridge = {
         try {
             this.updateUI('minting');
 
+            // Sign message for authentication
+            const timestamp = Date.now();
+            const message = `PixelRaid mint\nwallet:${this.account.toLowerCase()}\nts:${timestamp}`;
+            const signature = await this.signer.signMessage(message);
+
             // Server-side minting via Supabase Edge Function
             // Client hanya kirim request, server (relayer wallet) yg submit tx
-            const { data: { session } } = await Backend.supabase.auth.getSession();
-            
             const response = await fetch(`${Backend.URL}/functions/v1/mint-card`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.access_token || Backend.ANON_KEY}`,
                     'apikey': Backend.ANON_KEY,
                 },
                 body: JSON.stringify({
@@ -208,6 +210,8 @@ const BlockchainBridge = {
                         skill: card.skill,
                         artSeed: card.artSeed,
                     },
+                    timestamp,
+                    signature,
                 }),
             });
 

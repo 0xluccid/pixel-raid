@@ -81,18 +81,35 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_KEY!)
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: cors })
+
+    // NOTE: the client never actually runs Supabase Auth sign-in, so
+    // supabase.auth.getUser(token) here always failed (401) before this
+    // fix — minting was silently broken. We verify wallet ownership via
+    // signature instead, same pattern as save-progress.
+    const { walletAddress, card, timestamp, signature } = await req.json()
+
+    if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      return new Response(JSON.stringify({ error: 'Invalid wallet address' }), { status: 400, headers: cors })
+    }
+    if (!timestamp || !signature) {
+      return new Response(JSON.stringify({ error: 'Missing timestamp or signature' }), { status: 400, headers: cors })
     }
 
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Invalid token' }), { status: 401, headers: cors })
+    const drift = Math.abs(Date.now() - Number(timestamp))
+    if (isNaN(drift) || drift > 5 * 60 * 1000) {
+      return new Response(JSON.stringify({ error: 'Signature expired, try again' }), { status: 401, headers: cors })
     }
 
-    const { walletAddress, card } = await req.json()
+    const message = `PixelRaid mint\nwallet:${walletAddress.toLowerCase()}\nts:${timestamp}`
+    let recovered: string
+    try {
+      recovered = ethers.verifyMessage(message, signature)
+    } catch {
+      return new Response(JSON.stringify({ error: 'Bad signature' }), { status: 401, headers: cors })
+    }
+    if (recovered.toLowerCase() !== walletAddress.toLowerCase()) {
+      return new Response(JSON.stringify({ error: 'Signature does not match wallet' }), { status: 401, headers: cors })
+    }
 
     // Rate limit: max 5 mints/wallet/hour
     const oneHourAgo = new Date(Date.now() - 3600000).toISOString()
