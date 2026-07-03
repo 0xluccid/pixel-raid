@@ -4,6 +4,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { ethers } from "https://esm.sh/ethers@6"
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -76,22 +77,36 @@ serve(async (req) => {
   }
 
   try {
-    // Auth
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'No auth' }), { status: 401 })
-    }
-
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Invalid auth' }), { status: 401 })
-    }
 
     // Parse body
     const battleLog = await req.json()
+    const { walletAddress, timestamp, signature } = battleLog
+
+    // NOTE: old code used supabase.auth.getUser(token), but client never
+    // runs real Supabase Auth sign-in, so it always 401'd — every battle
+    // save was silently skipped. Fixed with signature verification,
+    // same pattern as save-progress and mint-card.
+    if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      return new Response(JSON.stringify({ error: 'Invalid wallet address' }), { status: 400 })
+    }
+    if (!timestamp || !signature) {
+      return new Response(JSON.stringify({ error: 'Missing timestamp or signature' }), { status: 400 })
+    }
+    const drift = Math.abs(Date.now() - Number(timestamp))
+    if (isNaN(drift) || drift > 5 * 60 * 1000) {
+      return new Response(JSON.stringify({ error: 'Signature expired, try again' }), { status: 401 })
+    }
+    const message = `PixelRaid save\nwallet:${walletAddress.toLowerCase()}\nts:${timestamp}`
+    let recovered: string
+    try {
+      recovered = ethers.verifyMessage(message, signature)
+    } catch {
+      return new Response(JSON.stringify({ error: 'Bad signature' }), { status: 401 })
+    }
+    if (recovered.toLowerCase() !== walletAddress.toLowerCase()) {
+      return new Response(JSON.stringify({ error: 'Signature does not match wallet' }), { status: 401 })
+    }
 
     // Rate limit: max 30 validations per wallet per hour
     const oneHourAgo = new Date(Date.now() - 3600000).toISOString()
@@ -113,7 +128,7 @@ serve(async (req) => {
     const validation = validateBattleResult(battleLog)
 
     if (!validation.valid) {
-      console.warn(`Suspicious battle from ${user.id}:`, validation.issues)
+      console.warn(`Suspicious battle from ${walletAddress}:`, validation.issues)
       return new Response(JSON.stringify({ 
         error: 'Invalid battle result',
         issues: validation.issues,
