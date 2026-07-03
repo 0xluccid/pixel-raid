@@ -224,6 +224,11 @@ const Rewards = {
             `;
         }
 
+        // AI Coach container
+        contentHTML += `
+            <div id="ai-coach-panel" style="margin-top:8px;"></div>
+        `;
+
         // Buttons
         contentHTML += `
                 <div style="display:flex;gap:8px;justify-content:center;margin-top:12px;">
@@ -240,6 +245,19 @@ const Rewards = {
 
         overlay.innerHTML = contentHTML;
         document.body.appendChild(overlay);
+
+        // Render AI Coach panel
+        setTimeout(() => {
+            const coachPanel = document.getElementById('ai-coach-panel');
+            if (coachPanel && typeof AICoach !== 'undefined') {
+                const battleData = {
+                    turnNumber: BattleEngine.turnNumber,
+                    player: { ...BattleEngine.player },
+                    enemy: { ...BattleEngine.enemy }
+                };
+                AICoach.renderCoach(isWin, battleData, coachPanel);
+            }
+        }, 100);
     },
 };
 
