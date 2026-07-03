@@ -43,53 +43,36 @@ const Backend = {
                 return { success: true, player: existing, isNew: false };
             }
 
-            // Create new player via Edge Function (service role)
-            const timestamp = Date.now();
-            const signature = await this._signMessage(
-                `PixelRaid save\nwallet:${walletAddress.toLowerCase()}\nts:${timestamp}`
-            );
+            // Create new player — direct INSERT (RLS allows anon insert)
+            const newPlayer = {
+                wallet_address: walletAddress.toLowerCase(),
+                display_name: 'Adventurer',
+                level: 1,
+                exp: 0,
+                gold: 100,
+                gem: 5,
+                current_stage: 1,
+                highest_stage: 1,
+                total_battles: 0,
+                total_wins: 0,
+                win_streak: 0,
+                playtime_seconds: 0,
+            };
 
-            const response = await fetch(`${this.URL}/functions/v1/save-progress`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'apikey': this.ANON_KEY,
-                },
-                body: JSON.stringify({
-                    walletAddress: walletAddress.toLowerCase(),
-                    timestamp,
-                    signature,
-                    update: {
-                        display_name: 'Adventurer',
-                        level: 1,
-                        exp: 0,
-                        gold: 100,
-                        gem: 5,
-                        current_stage: 1,
-                        highest_stage: 1,
-                        total_battles: 0,
-                        total_wins: 0,
-                        win_streak: 0,
-                    },
-                }),
-            });
-
-            const result = await response.json();
-            if (!response.ok) {
-                console.error('❌ Create player failed:', result.error);
-                return { error: result.error };
-            }
-
-            // Reload player
-            const { data: created } = await this.supabase
+            const { data: created, error: createError } = await this.supabase
                 .from('players')
-                .select('*')
-                .eq('wallet_address', walletAddress.toLowerCase())
+                .insert(newPlayer)
+                .select()
                 .single();
+
+            if (createError) {
+                console.error('❌ Create player failed:', createError);
+                return { error: createError.message };
+            }
 
             this.playerRow = created;
             this.connected = true;
-            console.log('✅ New player created:', created?.display_name);
+            console.log('✅ New player created:', created.display_name);
             return { success: true, player: created, isNew: true };
 
         } catch (err) {
