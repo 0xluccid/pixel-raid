@@ -146,13 +146,20 @@ const PhaserBattleScene = new Phaser.Class({
 
         var container = this.add.container(panelX, panelY);
 
-        // Panel background
+        // Panel background with glow
         var bg = this.add.graphics();
-        bg.fillStyle(0x0a0a1e, 0.9);
+        bg.fillStyle(0x0a0a1e, 0.92);
         bg.fillRect(0, 0, panelW, panelH);
         bg.lineStyle(2, side === 'player' ? 0xffd700 : 0x4488ff, 0.8);
         bg.strokeRect(0, 0, panelW, panelH);
         container.add(bg);
+
+        // Outer glow (subtle pulsing)
+        var glow = this.add.graphics();
+        glow.lineStyle(4, side === 'player' ? 0xffd700 : 0x4488ff, 0.15);
+        glow.strokeRect(-3, -3, panelW + 6, panelH + 6);
+        container.add(glow);
+        container.setData('glow', glow);
 
         // Class color strip at top
         var strip = this.add.graphics();
@@ -204,17 +211,17 @@ const PhaserBattleScene = new Phaser.Class({
         container.add(levelText);
         this.heroLevelText[side] = levelText;
 
-        // HP bar background
+        // HP bar background — thicker, more prominent
         var hpBarX = 8;
         var hpBarY = 96;
         var hpBarW = panelW - 16;
-        var hpBarH = 14;
+        var hpBarH = 18;
 
         var hpBg = this.add.graphics();
-        hpBg.fillStyle(0x000000, 0.8);
-        hpBg.fillRect(hpBarX, hpBarY, hpBarW, hpBarH);
-        hpBg.lineStyle(1, 0xffffff, 0.15);
-        hpBg.strokeRect(hpBarX, hpBarY, hpBarW, hpBarH);
+        hpBg.fillStyle(0x000000, 0.9);
+        hpBg.fillRoundedRect(hpBarX, hpBarY, hpBarW, hpBarH, 3);
+        hpBg.lineStyle(1, 0xffffff, 0.2);
+        hpBg.strokeRoundedRect(hpBarX, hpBarY, hpBarW, hpBarH, 3);
         container.add(hpBg);
 
         // HP bar fill
@@ -402,12 +409,14 @@ const PhaserBattleScene = new Phaser.Class({
 
         this.vsText = this.add.text(W / 2, centerH / 2 + 1, 'VS', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '20px',
+            fontSize: '22px',
             color: '#ffd700',
-            fontStyle: 'bold'
+            fontStyle: 'bold',
+            stroke: '#000000',
+            strokeThickness: 2,
         });
         this.vsText.setOrigin(0.5, 0.5);
-        this.vsText.setShadow(0, 0, '#ffd700', 12);
+        this.vsText.setShadow(0, 0, '#ffd700', 16, true, true);
         container.add(this.vsText);
 
         this.turnText = this.add.text(W / 2 - 50, centerH / 2 + 1, 'Turn 0', {
@@ -1135,6 +1144,16 @@ const PhaserBattleScene = new Phaser.Class({
 
     // ===== UPDATE LOOP =====
     update: function (time, delta) {
-        // Phaser handles the render loop
+        // Glow pulse on hero panels
+        var pulseAlpha = 0.1 + Math.sin(time * 0.003) * 0.08;
+        ['player', 'enemy'].forEach(function(side) {
+            var panel = this.heroPanel[side];
+            if (panel && panel.container) {
+                var glow = panel.container.getData('glow');
+                if (glow) {
+                    glow.setAlpha(pulseAlpha);
+                }
+            }
+        }.bind(this));
     }
 });
