@@ -10,7 +10,7 @@ const Backend = {
     connected: false,
 
     URL: 'https://hchrdclodhasoxvjfxss.supabase.co',
-    ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjaHJkY2xvZGhhc294dmpmeHNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4NTgyNzEsImV4cCI6MjA5ODQzNDI3MX0.KeFy4XS0rMGUEBYfAYePc2y6FtwanR-vWYM1S2Rc00Q',
+    ANON_KEY: 'eyJhbG...c00Q',
 
     init() {
         if (typeof supabase === 'undefined' || !supabase.createClient) {
