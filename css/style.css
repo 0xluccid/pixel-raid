@@ -1164,6 +1164,37 @@ body {
     margin-top: 2px;
 }
 
+/* ===== ENEMY PREVIEW (Battle Deck Preview) ===== */
+.battle-preview-enemy {
+    padding: 8px;
+    background: rgba(255, 60, 60, 0.08);
+    border: 1px solid rgba(255, 60, 60, 0.2);
+    border-radius: 4px;
+    margin-top: 4px;
+}
+.battle-preview-enemy-title {
+    font-family: 'Press Start 2P';
+    font-size: 8px;
+    margin-bottom: 6px;
+}
+.battle-preview-enemy-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.battle-preview-enemy-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'Silkscreen';
+    font-size: 7px;
+    color: var(--text-main);
+    background: rgba(0, 0, 0, 0.3);
+    padding: 3px 6px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 /* ===== STRATEGY SCREEN — Hero Grid ===== */
 .strategy-hero-grid {
     display: grid;
@@ -1372,6 +1403,9 @@ body {
     .battle-preview-skill-icon { font-size: 12px; }
     .battle-preview-skill-name { font-size: 6px; }
     .battle-preview-skill-mana { font-size: 6px; }
+    .battle-preview-enemy { padding: 6px; }
+    .battle-preview-enemy-title { font-size: 7px; }
+    .battle-preview-enemy-item { font-size: 6px; padding: 2px 4px; }
 }
 @media (max-width: 380px) {
     .card-grid { grid-template-columns: 1fr; }

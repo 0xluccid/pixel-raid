@@ -93,8 +93,7 @@ const UI = {
             }
         }
 
-        // Show arena preview when battle is not active
-        this.renderArenaPreview();
+        // NOTE: renderArenaPreview() removed — renderBattleDeckPreview() handles pre-battle display
     },
 
     renderArenaPreview() {
@@ -229,6 +228,23 @@ const UI = {
         const rarity = RARITIES[hero.rarity] || {};
         const typeIcons = { attack: '⚔️', defense: '🛡️', buff: '✨', debuff: '💀', special: '⚡' };
 
+        // Generate enemy preview based on stage
+        const enemyTypes = [
+            { name: 'Goblin', icon: '👹', class: 'warrior' },
+            { name: 'Skeleton', icon: '💀', class: 'warrior' },
+            { name: 'Dark Mage', icon: '🧙', class: 'mage' },
+            { name: 'Wolf', icon: '🐺', class: 'assassin' },
+            { name: 'Bandit', icon: '🥷', class: 'assassin' },
+        ];
+        const stage = GameState.player.stage || 1;
+        const enemyCount = Math.min(3, 1 + Math.floor(stage / 3));
+        const enemies = [];
+        for (let i = 0; i < enemyCount; i++) {
+            const base = enemyTypes[(stage + i) % enemyTypes.length];
+            enemies.push({ ...base, hp: 50 + stage * 10, atk: 5 + stage * 2 });
+        }
+        const totalEnemyHP = enemies.reduce((s, e) => s + e.hp, 0);
+
         let heroHTML = `
             <div class="battle-preview-hero">
                 <div class="battle-preview-hero-sprite" id="battle-preview-sprite"></div>
@@ -241,6 +257,23 @@ const UI = {
                         <span style="color:#4488ff">DEF:${hero.stats.def}</span>
                         <span style="color:#ffaa00">SPD:${hero.stats.spd}</span>
                     </div>
+                </div>
+            </div>
+        `;
+
+        // Enemy preview HTML
+        let enemyHTML = `
+            <div class="battle-preview-enemy">
+                <div class="battle-preview-enemy-title" style="color:#ff6644">⚔ Enemies (${enemyCount})</div>
+                <div class="battle-preview-enemy-list">
+                    ${enemies.map(e => `
+                        <div class="battle-preview-enemy-item">
+                            <span>${e.icon}</span>
+                            <span>${e.name}</span>
+                            <span style="color:#ff6644">ATK:${e.atk}</span>
+                            <span style="color:#44cc44">HP:${e.hp}</span>
+                        </div>
+                    `).join('')}
                 </div>
             </div>
         `;
@@ -259,7 +292,14 @@ const UI = {
         });
         skillsHTML += '</div>';
 
-        preview.innerHTML = heroHTML + skillsHTML;
+        // Stage info
+        const stageHTML = `
+            <div class="arena-stage-info">
+                Stage ${stage} — Wave ${GameState.player.wave || 1}
+            </div>
+        `;
+
+        preview.innerHTML = heroHTML + enemyHTML + skillsHTML + stageHTML;
 
         // Draw hero sprite
         const spriteContainer = document.getElementById('battle-preview-sprite');
