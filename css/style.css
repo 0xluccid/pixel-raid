@@ -1257,3 +1257,159 @@ body {
 @media (max-width: 380px) {
     .card-grid { grid-template-columns: 1fr; }
 }
+
+/* ========== ARENA (Battle Screen) ========== */
+
+.arena-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 16px 8px;
+    position: relative;
+    min-height: 220px;
+}
+
+.arena-bg {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #0a0a1a 100%);
+    border: 1px solid rgba(255,215,0,0.15);
+    border-radius: 8px;
+    overflow: hidden;
+    z-index: 0;
+}
+
+.arena-grid {
+    position: absolute;
+    inset: 0;
+    background: 
+        linear-gradient(rgba(255,215,0,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,215,0,0.03) 1px, transparent 1px);
+    background-size: 24px 24px;
+}
+
+.arena-side {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 1;
+    max-width: 160px;
+}
+
+.arena-vs {
+    font-size: 28px;
+    z-index: 1;
+    animation: vs-pulse 1.5s ease-in-out infinite;
+    text-shadow: 0 0 16px rgba(255,100,100,0.6);
+}
+
+@keyframes vs-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+.arena-hp-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.arena-hp-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: var(--text-dim);
+    text-align: center;
+}
+
+.arena-hp-track {
+    height: 8px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.arena-hp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #22c55e, #4ade80);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+
+.arena-hp-fill.enemy {
+    background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.arena-hp-text {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: var(--gold);
+    text-align: center;
+}
+
+.arena-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+}
+
+.hero-card.arena-card {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: linear-gradient(135deg, rgba(30,20,60,0.9), rgba(20,10,40,0.9));
+    border: 1px solid rgba(255,215,0,0.25);
+    border-radius: 6px;
+    width: 100%;
+    max-width: 140px;
+    animation: card-slide-in 0.3s ease-out both;
+}
+
+.hero-card.arena-card.enemy {
+    border-color: rgba(239,68,68,0.4);
+    background: linear-gradient(135deg, rgba(40,10,10,0.9), rgba(20,5,5,0.9));
+}
+
+.hero-card.arena-card.empty {
+    opacity: 0.4;
+    border-style: dashed;
+}
+
+@keyframes card-slide-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-card-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.hero-card-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hero-card-stats {
+    font-size: 8px;
+    color: var(--text-dim);
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.arena-stage-info {
+    text-align: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: var(--gold);
+    padding: 6px;
+    opacity: 0.7;
+}
