@@ -13,10 +13,12 @@ const AIDeckBuilder = {
         if (!heroCard) return null;
 
         const heroClass = heroCard.class || 'warrior';
-        const collection = GameState.collection.filter(c => c.id !== heroCard.id);
         
-        // Score each card based on class synergy
-        const scoredCards = collection.map(card => ({
+        // Use skill card templates, not hero collection
+        if (typeof SKILL_CARD_TEMPLATES === 'undefined') return null;
+        
+        // Score each skill card based on class synergy
+        const scoredCards = SKILL_CARD_TEMPLATES.map(card => ({
             card,
             score: this._scoreCard(card, heroClass)
         }));
@@ -239,8 +241,12 @@ const AIDeckBuilder = {
         const recommendation = this.recommendDeck(heroCard);
         if (!recommendation || recommendation.cards.length === 0) return false;
 
+        // Use skill card IDs (strings), not hero card IDs (numbers)
         const cardIds = recommendation.cards.map(c => c.id);
         DeckManager.buildDeck(heroCard, cardIds);
+        
+        // Also update GameState skillDeck
+        GameState.skillDeck = cardIds;
         GameState.save();
 
         return true;
