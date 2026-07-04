@@ -501,15 +501,109 @@ const PhaserBattleScene = new Phaser.Class({
         icon.setOrigin(0.5, 0.5);
         container.add(icon);
 
-        this.skillSlots.push({
+        // Position bonus label — show for player slots
+        var bonusLabel = null;
+        var bonusIcon = null;
+        if (side === 'player' && typeof POSITION_BONUSES !== 'undefined') {
+            var cfg = POSITION_BONUSES[index];
+            if (cfg) {
+                bonusIcon = this.add.text(w / 2, 8, cfg.icon, {
+                    fontSize: '14px',
+                });
+                bonusIcon.setOrigin(0.5, 0);
+                container.add(bonusIcon);
+
+                bonusLabel = this.add.text(w / 2, h - 6, cfg.description, {
+                    fontFamily: '"Press Start 2P", monospace',
+                    fontSize: '6px',
+                    color: cfg.color,
+                    align: 'center',
+                });
+                bonusLabel.setOrigin(0.5, 1);
+                container.add(bonusLabel);
+            }
+        }
+
+        var slotData = {
             container: container,
+            bg: bg,
             x: x,
             y: y,
             w: w,
             h: h,
             side: side,
-            index: index
-        });
+            index: index,
+            bonusLabel: bonusLabel,
+            bonusIcon: bonusIcon,
+        };
+
+        // Interactive hover — player slots only during play/arrange
+        if (side === 'player') {
+            var hitArea = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0xffffff, 0);
+            hitArea.setInteractive({ useHandCursor: true });
+            hitArea.setDepth(5);
+
+            var self = this;
+
+            // Hover highlight graphic
+            var highlight = this.add.graphics();
+            highlight.setDepth(4);
+            highlight.setVisible(false);
+            slotData.highlight = highlight;
+
+            // Tooltip text (hidden by default)
+            var tooltip = this.add.text(x + w / 2, y - 8, '', {
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: '7px',
+                color: '#ffffff',
+                backgroundColor: 'rgba(0,0,0,0.85)',
+                padding: { x: 6, y: 4 },
+                align: 'center',
+                wordWrap: { width: 180 },
+            });
+            tooltip.setOrigin(0.5, 1);
+            tooltip.setDepth(10);
+            tooltip.setVisible(false);
+            slotData.tooltip = tooltip;
+
+            hitArea.on('pointerover', function () {
+                var cfg = typeof POSITION_BONUSES !== 'undefined' ? POSITION_BONUSES[index] : null;
+                if (!cfg) return;
+
+                // Only show during play/arrange when slot is empty
+                var isPlayPhase = BattleEngine.currentPhase === 'play' || BattleEngine.currentPhase === 'arrange';
+                var board = BattleEngine.player ? BattleEngine.player.board : [];
+                var isEmpty = !board[index];
+
+                if (isPlayPhase && isEmpty) {
+                    // Glow highlight
+                    highlight.clear();
+                    var color = Phaser.Display.Color.HexStringToColor(cfg.color).color;
+                    highlight.lineStyle(2, color, 0.6);
+                    highlight.strokeRect(1, 1, w - 2, h - 2);
+                    highlight.fillStyle(color, 0.08);
+                    highlight.fillRect(0, 0, w, h);
+                    highlight.setVisible(true);
+
+                    // Tooltip
+                    tooltip.setText(cfg.name + '\n' + cfg.tooltip);
+                    tooltip.setVisible(true);
+                } else if (isPlayPhase && !isEmpty) {
+                    // Unit already here — dim tooltip
+                    tooltip.setText(cfg.name + ': OCCUPIED');
+                    tooltip.setVisible(true);
+                }
+            });
+
+            hitArea.on('pointerout', function () {
+                highlight.setVisible(false);
+                tooltip.setVisible(false);
+            });
+
+            slotData.hitArea = hitArea;
+        }
+
+        this.skillSlots.push(slotData);
     },
 
     // ===== RENDER FIELD STATE =====

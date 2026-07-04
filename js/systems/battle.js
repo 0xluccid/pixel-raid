@@ -169,13 +169,19 @@ const BattleEngine = {
         };
         this.player.board[slotIndex] = unit;
 
+        // Position bonus — apply slot-specific stat boost
+        if (typeof applyPositionBonus === 'function') {
+            var bonusText = applyPositionBonus(unit, slotIndex);
+            if (bonusText) this._log('📍 ' + bonusText);
+        }
+
         // Remove from hand
         this.player.hand.splice(handIndex, 1);
 
         // Increment card play counter (Bug #2)
         this.cardsPlayedThisTurn++;
 
-        this._log(`🃏 ${this.player.name} played ${card.name} (⚔${card.atk} ❤${card.hp}) → Slot ${slotIndex + 1}`);
+        this._log(`🃏 ${this.player.name} played ${card.name} (⚔${unit.atk} ❤${unit.hp}) → Slot ${slotIndex + 1}`);
         this._notifyFieldUpdate();
         return true;
     },
@@ -393,6 +399,10 @@ const BattleEngine = {
                 emoji: card.emoji,
                 slot: emptySlot,
             };
+            // Position bonus for enemy too
+            if (typeof applyPositionBonus === 'function') {
+                applyPositionBonus(this.enemy.board[emptySlot], emptySlot);
+            }
             played.push({ card, slot: emptySlot, handIdx: index });
             enemyPlayed++;
         }
