@@ -501,20 +501,19 @@ const PhaserBattleScene = new Phaser.Class({
         icon.setOrigin(0.5, 0.5);
         container.add(icon);
 
-        // Position bonus label — show for player slots
+        // Position bonus label — standalone scene objects (not in container)
         var bonusLabel = null;
         var bonusIcon = null;
         if (side === 'player' && typeof POSITION_BONUSES !== 'undefined') {
             var cfg = POSITION_BONUSES[index];
             if (cfg) {
-                bonusIcon = this.add.text(w / 2, 10, cfg.icon, {
+                bonusIcon = this.add.text(x + w / 2, y + 10, cfg.icon, {
                     fontSize: '18px',
                 });
                 bonusIcon.setOrigin(0.5, 0);
                 bonusIcon.setDepth(6);
-                container.add(bonusIcon);
 
-                bonusLabel = this.add.text(w / 2, h - 4, cfg.description, {
+                bonusLabel = this.add.text(x + w / 2, y + h - 4, cfg.description, {
                     fontFamily: '"Press Start 2P", monospace',
                     fontSize: '7px',
                     color: cfg.color,
@@ -524,11 +523,9 @@ const PhaserBattleScene = new Phaser.Class({
                 });
                 bonusLabel.setOrigin(0.5, 1);
                 bonusLabel.setDepth(6);
-                container.add(bonusLabel);
             }
         }
 
-        // Set container depth above hitArea
         container.setDepth(3);
 
         var slotData = {
