@@ -139,10 +139,13 @@ const CardHand = {
                     <span class="tcg-stars">${'★'.repeat(stars)}</span>
                 </div>
                 <div class="tcg-art-window" style="background:linear-gradient(180deg, ${elColor}33, #0f3460, ${elColor}22)">
-                    ${template && template.image
-                        ? `<img src="${template.image}" class="tcg-art-img" onerror="this.parentElement.innerHTML='<div class=\\\\\\'card-art-icon\\\\\\'>${elIcon}</div>'">`
-                        : `<div class="card-art-icon">${elIcon}</div>`
-                    }
+                    ${(() => {
+                        const unitId = card.templateId || card.id;
+                        const pixelUrl = (typeof PIXEL_ART !== 'undefined' && PIXEL_ART[unitId]) ? PIXEL_ART[unitId] : null;
+                        if (pixelUrl) return `<img src="${pixelUrl}" class="tcg-art-img" style="image-rendering:pixelated" onerror="this.parentElement.innerHTML='<div class=\\\\\\'card-art-icon\\\\\\'>${elIcon}</div>'">`;
+                        if (template && template.image) return `<img src="${template.image}" class="tcg-art-img" onerror="this.parentElement.innerHTML='<div class=\\\\\\'card-art-icon\\\\\\'>${elIcon}</div>'">`;
+                        return `<div class="card-art-icon">${elIcon}</div>`;
+                    })()}
                 </div>
                 <div class="tcg-el-badge" style="background:${elColor}44;border-color:${elColor}">
                     <span>${elIcon} ${elName}</span>
@@ -206,7 +209,12 @@ const CardHand = {
                     <span class="tcg-stars">${'★'.repeat(stars)}</span>
                 </div>
                 <div class="tcg-art-window" style="background:linear-gradient(180deg, ${elColor}33, #0f3460, ${elColor}22)">
-                    <div class="card-art-icon">${card.emoji || elIcon}</div>
+                    ${(() => {
+                        const unitId = card.templateId || card.id;
+                        const pixelUrl = (typeof PIXEL_ART !== 'undefined' && PIXEL_ART[unitId]) ? PIXEL_ART[unitId] : null;
+                        if (pixelUrl) return `<img src="${pixelUrl}" class="tcg-art-img" style="image-rendering:pixelated" onerror="this.parentElement.innerHTML='<div class=\\\\\\'card-art-icon\\\\\\'>${elIcon}</div>'">`;
+                        return `<div class="card-art-icon">${card.emoji || elIcon}</div>`;
+                    })()}
                 </div>
                 <div class="tcg-el-badge" style="background:${elColor}44;border-color:${elColor}">
                     <span>${elIcon} ${elName}</span>
