@@ -331,11 +331,71 @@ const UI = {
     bindBattleControls() {
         document.getElementById('btn-start-battle').addEventListener('click', () => {
             if (typeof Sound !== 'undefined') Sound.click();
-            this.startBattle();
+            this.startBattleWithCountdown();
         });
 
         // Default battle speed = 2x (fast)
         GameState.battleSpeed = 2;
+
+        // Check deck state and enable/disable start button
+        this._updateStartButton();
+
+        // Hero power click handler
+        document.getElementById('hero-power-area').addEventListener('click', (e) => {
+            const btn = e.target.closest('#hero-power-use');
+            if (!btn || btn.disabled) return;
+            if (typeof Sound !== 'undefined') Sound.click();
+            this._useHeroPower();
+        });
+    },
+
+    _updateStartButton() {
+        const btn = document.getElementById('btn-start-battle');
+        if (!btn) return;
+        const deckCards = GameState.getDeckCards();
+        const hasHero = deckCards.length > 0;
+        btn.disabled = !hasHero;
+        if (hasHero) {
+            btn.classList.add('ready');
+            btn.innerHTML = '⚔️ START BATTLE';
+        } else {
+            btn.classList.remove('ready');
+            btn.innerHTML = '⚔️ Build Deck First';
+        }
+    },
+
+    // ===== COUNTDOWN SYSTEM =====
+    startBattleWithCountdown() {
+        const deckCards = GameState.getDeckCards();
+        if (deckCards.length === 0) {
+            this.toast('No cards in deck! Go to Strategy.', 'error');
+            return;
+        }
+
+        const countdownEl = document.getElementById('battle-countdown');
+        if (!countdownEl) return this.startBattle();
+
+        // Hide battle controls during countdown
+        const controls = document.querySelector('.battle-controls');
+        if (controls) controls.style.display = 'none';
+
+        countdownEl.classList.add('active');
+        const steps = ['3', '2', '1', '⚔️ FIGHT!'];
+        let i = 0;
+
+        const showNext = () => {
+            if (i >= steps.length) {
+                countdownEl.classList.remove('active');
+                countdownEl.innerHTML = '';
+                this.startBattle();
+                return;
+            }
+            const isFight = i === steps.length - 1;
+            countdownEl.innerHTML = `<div class="${isFight ? 'countdown-fight' : 'countdown-number'}">${steps[i]}</div>`;
+            i++;
+            setTimeout(showNext, isFight ? 600 : 800);
+        };
+        showNext();
     },
 
     startBattle() {
@@ -455,6 +515,17 @@ const UI = {
                 }
             }
 
+            // Render hero power button
+            if (BattleEngine.player && BattleEngine.player.heroCard && BattleEngine.currentPhase === 'play') {
+                const heroClass = BattleEngine.player.heroCard.class || 'warrior';
+                if (typeof HeroPowers !== 'undefined') {
+                    HeroPowers.renderButton(heroClass, BattleEngine.player.energy, 'hero-power-area');
+                }
+            } else {
+                const pa = document.getElementById('hero-power-area');
+                if (pa) pa.innerHTML = '';
+            }
+
             // Update arrange UI if in arrange phase
             if (BattleEngine.currentPhase === 'arrange') {
                 this._renderArrangeOverlay();
@@ -486,6 +557,9 @@ const UI = {
                 CardHand.renderHand(BattleEngine.player.hand, BattleEngine.player.energy);
             }
         };
+
+        // Reset hero power cooldowns
+        if (typeof HeroPowers !== 'undefined') HeroPowers.resetCooldowns();
 
         // Start the battle engine with hero data
         BattleEngine.startBattle(playerDeck, enemyDeck, {
@@ -674,54 +748,98 @@ const UI = {
             BattlePhaser.playDefeat();
         }
 
-        // Create result overlay
+        // Create result overlay using CSS classes
         let overlay = document.getElementById('battle-result-overlay');
         if (!overlay) {
             overlay = document.createElement('div');
             overlay.id = 'battle-result-overlay';
-            overlay.style.cssText = `
-                position:fixed;top:0;left:0;right:0;bottom:0;
-                z-index:99999;display:flex;align-items:center;justify-content:center;
-                background:rgba(0,0,0,0.7);animation:fadeIn 0.3s ease;
-            `;
             document.body.appendChild(overlay);
         }
-
         overlay.style.display = 'flex';
+        overlay.style.background = isWin ? 'rgba(0,0,0,0.7)' : 'rgba(40,0,0,0.75)';
 
-        const stage = GameState.player.stage;
-        let rewardHTML = '';
-        if (isWin) {
-            const goldReward = 20 + (stage * 10);
-            rewardHTML = `
-                <div style="margin:12px 0;font-size:10px;color:#ffd700;">
-                    💰 +${goldReward} Gold
-                </div>
-            `;
+        const stage = GameState.player.stage || 1;
+        const goldReward = isWin ? (20 + stage * 10) : Math.floor((10 + stage * 5) / 2);
+        const xpReward = isWin ? (15 + stage * 5) : Math.floor((8 + stage * 3) / 2);
+
+        // Check for new card reward
+        let cardReward = '';
+        if (isWin && Math.random() < 0.3) {
+            const pool = ['Fire Bolt', 'Ice Shard', 'Heal Wave', 'Shadow Strike'];
+            const card = pool[Math.floor(Math.random() * pool.length)];
+            cardReward = `
+                <div class="result-reward-item">
+                    <span class="result-reward-icon">🃏</span>
+                    <span>New Card</span>
+                    <span class="result-reward-value">${card}</span>
+                </div>`;
         }
 
+        // Mission progress
+        const missionsDone = GameState.player.missionsCompleted || 0;
+        const nextMission = GameState.player.nextMission || 'Win 5 battles';
+
+        const borderColor = isWin ? '#ffd700' : '#ff4444';
+        const titleColor = isWin ? '#ffd700' : '#ff4444';
+        const titleText = isWin ? '🏆 VICTORY!' : '💀 DEFEAT';
+        const titleIcon = isWin ? '' : '';
+
         overlay.innerHTML = `
-            <div style="
-                background:linear-gradient(135deg,#0a0a2e,#141432);
-                border:2px solid ${isWin ? '#ffd700' : '#ff4444'};
-                border-radius:12px;padding:24px 32px;text-align:center;
-                max-width:320px;width:90%;box-shadow:0 0 30px ${isWin ? 'rgba(255,215,0,0.3)' : 'rgba(255,68,68,0.3)'};
-            ">
-                <div style="font-family:'Press Start 2P',monospace;font-size:18px;color:${isWin ? '#ffd700' : '#ff4444'};margin-bottom:12px;text-shadow:0 0 10px ${isWin ? 'rgba(255,215,0,0.5)' : 'rgba(255,68,68,0.5)'};">
-                    ${isWin ? '🎉 Victory!' : '💀 Defeat!'}
+            <div class="result-panel" style="border-color:${borderColor};box-shadow:0 0 30px ${isWin ? 'rgba(255,215,0,0.3)' : 'rgba(255,68,68,0.3)'};">
+                <div class="result-title" style="color:${titleColor}">${titleText}</div>
+                <div style="font-size:8px;color:rgba(255,255,255,0.4);margin-bottom:8px;">Stage ${stage} · Turn ${BattleEngine.turnNumber}</div>
+
+                <div class="result-rewards">
+                    <div class="result-reward-item">
+                        <span class="result-reward-icon">💰</span>
+                        <span>Gold Earned</span>
+                        <span class="result-reward-value">+${goldReward}</span>
+                    </div>
+                    <div class="result-reward-item">
+                        <span class="result-reward-icon">⚡</span>
+                        <span>Experience</span>
+                        <span class="result-reward-value">+${xpReward} XP</span>
+                    </div>
+                    ${cardReward}
+                    <div class="result-reward-item">
+                        <span class="result-reward-icon">📋</span>
+                        <span>Mission: ${nextMission}</span>
+                        <span class="result-reward-value">${missionsDone}/${isWin ? missionsDone + 1 : missionsDone}</span>
+                    </div>
                 </div>
-                <div style="font-size:9px;color:rgba(255,255,255,0.6);margin-bottom:8px;">
-                    Turn ${BattleEngine.turnNumber}
-                </div>
-                ${rewardHTML}
-                <div style="display:flex;gap:8px;justify-content:center;margin-top:16px;">
+
+                <div class="result-buttons">
                     <button class="btn btn-gold" onclick="UI._handleBattleResult('${isWin ? 'win' : 'lose'}')">
                         ${isWin ? '▶ Continue' : '🔄 Retry'}
                     </button>
-                    ${isWin ? '' : '<button class="btn btn-secondary" onclick="UI._handleBattleResult(\'back\')">Back</button>'}
+                    <button class="btn btn-secondary" onclick="UI._handleBattleResult('back')">
+                        ← Back
+                    </button>
                 </div>
             </div>
         `;
+    },
+
+    // ===== HERO POWER =====
+    _useHeroPower() {
+        if (!BattleEngine.player || !BattleEngine.player.heroCard) return;
+        if (BattleEngine.currentPhase !== 'play') return;
+        const heroClass = BattleEngine.player.heroCard.class || 'warrior';
+        if (typeof HeroPowers === 'undefined') return;
+
+        const result = HeroPowers.usePower(
+            heroClass,
+            BattleEngine.player.heroCard,
+            BattleEngine.enemy.board,
+            BattleEngine.player
+        );
+        if (!result) return;
+
+        // Log the power usage
+        BattleEngine._log(`${result.powerIcon} ${result.powerName}: ${result.text}`);
+
+        // Update field
+        BattleEngine._notifyFieldUpdate();
     },
 
     // ===== DEATH ANIMATION DETECTION =====
@@ -878,8 +996,15 @@ const UI = {
         const battleControls = document.querySelector('.battle-controls');
         if (battleControls) { battleControls.style.cssText = ''; battleControls.style.removeProperty('display'); }
 
+        // Clear hero power area
+        const heroPowerArea = document.getElementById('hero-power-area');
+        if (heroPowerArea) heroPowerArea.innerHTML = '';
+
         // Re-render battle screen to show deck preview
         UI.renderBattleScreen();
+
+        // Reset start button state
+        this._updateStartButton();
     },
 
     showRewards(rewards) {
