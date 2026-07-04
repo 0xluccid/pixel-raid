@@ -240,7 +240,9 @@
         }
         #screen-battle.battle-active #battle-deck-preview,
         #screen-battle.battle-active .battle-controls { display: none; }
-        #screen-battle.battle-active .battle-canvas-wrap { flex: 1; }
+        #screen-battle.battle-active .battle-canvas-wrap { flex: 1 1 50%; min-height: 0; max-height: 50vh; overflow: hidden; }
+        #screen-battle.battle-active #battle-canvas-container { width: 100%; height: 100%; display: block; overflow: hidden; }
+        #screen-battle.battle-active #card-hand-area { flex: 1 1 50%; min-height: 0; max-height: 50vh; }
         .battle-canvas-wrap { position: relative; overflow: hidden; }
         #battle-canvas-container {
             width: 100%; height: 100%; display: none; margin: 0;
@@ -1080,13 +1082,6 @@
         }
 
         /* Screen transitions */
-        #screen-battle.battle-active .card-hand-area {
-            height: 50vh;
-            min-height: 0;
-            flex-wrap: wrap;
-            align-items: center;
-            align-content: center;
-        }
         .screen { animation: screenFadeIn 0.3s ease-out; }
         @keyframes screenFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 

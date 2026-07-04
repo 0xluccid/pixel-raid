@@ -109,61 +109,38 @@ var BattlePhaser = {
         // Make container take top 50% of viewport (arena), cards go below
         var container = document.getElementById(this._containerId);
         if (container) {
-            container.style.cssText = [
-                'position: fixed',
-                'top: 0',
-                'left: 0',
-                'right: 0',
-                'width: 100vw',
-                'height: 50vh',
-                'max-width: none',
-                'min-height: 0',
-                'z-index: 9999',
-                'background: #0a0a1a',
-                'display: block',
-                'margin: 0',
-                'padding: 0',
-                'border: none',
-                'border-radius: 0',
-                'overflow: hidden'
-            ].join('; ') + ';';
+            // Show the container (it was display:none in CSS)
+            container.style.display = 'block';
+            container.style.margin = '0';
+            container.style.border = 'none';
+            container.style.boxShadow = 'none';
+            container.style.maxWidth = 'none';
 
-            // Position card hand and action buttons OUTSIDE the container (fixed in viewport)
+            // Position card hand in normal flow (NOT fixed — avoids stacking context issues on mobile)
             var cardHand = document.getElementById('card-hand-area');
             var actionRow = document.querySelector('.battle-action-row');
             var infoStrip = document.querySelector('.battle-info-strip');
-            var controls = document.querySelector('.battle-controls');
-            var els = [cardHand, actionRow, infoStrip, controls];
+            var els = [cardHand, actionRow, infoStrip];
             for (var i = 0; i < els.length; i++) {
                 var el = els[i];
                 if (el) {
-                    // Keep in original DOM position (don't move into container)
                     el.style.display = '';
-                    el.style.position = 'fixed';
-                    el.style.zIndex = '10001';
-                    el.style.left = '0';
-                    el.style.right = '0';
+                    // Reset any position:fixed from previous battle
+                    el.style.position = '';
+                    el.style.top = '';
+                    el.style.bottom = '';
+                    el.style.left = '';
+                    el.style.right = '';
+                    el.style.zIndex = '';
+                    el.style.height = '';
                 }
             }
-            // Card hand takes the bottom 50% of viewport
             if (cardHand) {
-                cardHand.style.top = '50vh';
-                cardHand.style.bottom = '0';
-                cardHand.style.height = '50vh';
                 cardHand.style.background = 'rgba(10,10,30,0.92)';
                 cardHand.style.borderTop = '1px solid rgba(255,215,0,0.2)';
                 cardHand.style.overflowY = 'auto';
-            }
-            // Action row sits just above the card hand
-            if (actionRow) {
-                actionRow.style.top = 'calc(50vh - 40px)';
-                actionRow.style.bottom = 'auto';
-                actionRow.style.height = '40px';
-            }
-            if (infoStrip) {
-                infoStrip.style.top = 'calc(50vh - 80px)';
-                infoStrip.style.bottom = 'auto';
-                infoStrip.style.height = '40px';
+                cardHand.style.flex = '1 1 0';
+                cardHand.style.minHeight = '0';
             }
         }
 
@@ -214,20 +191,17 @@ var BattlePhaser = {
             this._active = false;
             this._transitioning = false;
 
-            var container = document.getElementById(this._containerId);
-            var screenBattle = document.getElementById('screen-battle');
-
+            // Reset inline styles on battle elements (they stay in screen-battle DOM, not moved)
             var movedEls = ['#card-hand-area', '.battle-action-row', '.battle-info-strip', '.battle-controls'];
             for (var i = 0; i < movedEls.length; i++) {
                 var el = document.querySelector(movedEls[i]);
-                if (el && container && el.parentElement === container && screenBattle) {
-                    screenBattle.appendChild(el);
-                    // Reset all inline styles set during battle
+                if (el) {
                     el.style.cssText = '';
                     el.style.display = 'none'; // hidden when not in battle
                 }
             }
 
+            var container = document.getElementById(this._containerId);
             if (container) {
                 container.style.cssText = '';
             }

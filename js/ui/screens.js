@@ -755,14 +755,11 @@ const UI = {
         // Destroy Phaser bridge to fully clean up (prevents double-exit issues)
         if (typeof BattlePhaser !== 'undefined') {
             if (BattlePhaser.isActive()) {
-                // If still active, try to restore elements before destroying
-                var container = document.getElementById('battle-canvas-container');
-                var screenBattle = document.getElementById('screen-battle');
+                // Reset inline styles on battle elements
                 var movedEls = ['#card-hand-area', '.battle-action-row', '.battle-info-strip', '.battle-controls'];
                 for (var i = 0; i < movedEls.length; i++) {
                     var el = document.querySelector(movedEls[i]);
-                    if (el && container && el.parentElement === container && screenBattle) {
-                        screenBattle.appendChild(el);
+                    if (el) {
                         el.style.cssText = '';
                         el.style.display = 'none';
                     }
