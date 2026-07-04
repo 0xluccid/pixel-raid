@@ -2623,4 +2623,16 @@ const UI = {
         container.appendChild(toast);
         setTimeout(() => toast.remove(), 4000);
     },
+
+    // ===== DEMO MODE =====
+    openDemo() {
+        if (typeof DemoMode !== 'undefined') {
+            DemoMode.start();
+        }
+    },
+    closeDemo() {
+        if (typeof DemoMode !== 'undefined') {
+            DemoMode.stop();
+        }
+    },
 };
