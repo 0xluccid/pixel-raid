@@ -294,6 +294,9 @@ const RewardPopup = {
             var headerEl = document.querySelector('.game-header');
             if (navEl) { navEl.style.display = ''; navEl.style.removeProperty('display'); }
             if (headerEl) { headerEl.style.display = ''; headerEl.style.removeProperty('display'); }
+            // Restore battle controls
+            var bc1 = document.querySelector('.battle-controls');
+            if (bc1) { bc1.style.cssText = ''; bc1.style.removeProperty('display'); }
             UI.updateHeader();
             UI.showScreen('battle');
         } else if (action === 'retry') {
@@ -308,6 +311,8 @@ const RewardPopup = {
             var headerEl2 = document.querySelector('.game-header');
             if (navEl2) { navEl2.style.display = ''; navEl2.style.removeProperty('display'); }
             if (headerEl2) { headerEl2.style.display = ''; headerEl2.style.removeProperty('display'); }
+            var bc2 = document.querySelector('.battle-controls');
+            if (bc2) { bc2.style.cssText = ''; bc2.style.removeProperty('display'); }
             UI.updateHeader();
             UI.renderBattleScreen();
         } else if (action === 'back') {
@@ -322,6 +327,8 @@ const RewardPopup = {
             var headerEl3 = document.querySelector('.game-header');
             if (navEl3) { navEl3.style.display = ''; navEl3.style.removeProperty('display'); }
             if (headerEl3) { headerEl3.style.display = ''; headerEl3.style.removeProperty('display'); }
+            var bc3 = document.querySelector('.battle-controls');
+            if (bc3) { bc3.style.cssText = ''; bc3.style.removeProperty('display'); }
             UI.updateHeader();
             UI.renderBattleScreen();
         }

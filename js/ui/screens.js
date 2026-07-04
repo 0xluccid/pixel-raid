@@ -804,6 +804,10 @@ const UI = {
         if (navEl) { navEl.style.display = ''; navEl.style.removeProperty('display'); }
         if (headerEl) { headerEl.style.display = ''; headerEl.style.removeProperty('display'); }
 
+        // Restore battle controls (Start Battle button) — was hidden by inline style during cleanup
+        const battleControls = document.querySelector('.battle-controls');
+        if (battleControls) { battleControls.style.cssText = ''; battleControls.style.removeProperty('display'); }
+
         // Re-render battle screen to show deck preview
         UI.renderBattleScreen();
     },

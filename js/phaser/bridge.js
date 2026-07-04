@@ -212,6 +212,10 @@ var BattlePhaser = {
             if (navEl) { navEl.style.display = ''; navEl.style.removeProperty('display'); }
             if (headerEl) { headerEl.style.display = ''; headerEl.style.removeProperty('display'); }
 
+            // Restore battle controls (Start Battle button)
+            var battleCtrl = document.querySelector('.battle-controls');
+            if (battleCtrl) { battleCtrl.style.cssText = ''; battleCtrl.style.removeProperty('display'); }
+
             if (this._game) {
                 this._game.scale.resize(800, 500);
             }
