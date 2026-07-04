@@ -558,10 +558,17 @@ const UI = {
         if (!row) {
             row = document.createElement('div');
             row.className = 'battle-action-row';
-            row.style.cssText = 'display:flex;justify-content:center;gap:8px;padding:4px 0;background:rgba(10,10,26,0.9);';
-            const container = document.getElementById('battle-canvas-container');
-            if (container && container.parentElement) {
-                container.parentElement.appendChild(row);
+            row.style.cssText = 'display:flex;justify-content:center;align-items:center;gap:8px;padding:6px 0;background:rgba(10,10,26,0.95);border-top:1px solid rgba(255,215,0,0.15);flex-shrink:0;';
+            // Insert into #screen-battle (NOT inside battle-canvas-wrap which has overflow:hidden)
+            const screenBattle = document.getElementById('screen-battle');
+            if (screenBattle) {
+                // Insert after battle-canvas-wrap, before card-hand-area
+                const cardHand = document.getElementById('card-hand-area');
+                if (cardHand) {
+                    screenBattle.insertBefore(row, cardHand);
+                } else {
+                    screenBattle.appendChild(row);
+                }
             }
         }
         this._updateActionButtons('draw');
