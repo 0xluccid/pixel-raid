@@ -501,31 +501,6 @@ const PhaserBattleScene = new Phaser.Class({
         icon.setOrigin(0.5, 0.5);
         container.add(icon);
 
-        // Position bonus label — standalone scene objects (not in container)
-        var bonusLabel = null;
-        var bonusIcon = null;
-        if (side === 'player' && typeof POSITION_BONUSES !== 'undefined') {
-            var cfg = POSITION_BONUSES[index];
-            if (cfg) {
-                bonusIcon = this.add.text(x + w / 2, y + 10, cfg.icon, {
-                    fontSize: '18px',
-                });
-                bonusIcon.setOrigin(0.5, 0);
-                bonusIcon.setDepth(6);
-
-                bonusLabel = this.add.text(x + w / 2, y + h - 4, cfg.description, {
-                    fontFamily: '"Press Start 2P", monospace',
-                    fontSize: '7px',
-                    color: cfg.color,
-                    align: 'center',
-                    stroke: '#000000',
-                    strokeThickness: 2,
-                });
-                bonusLabel.setOrigin(0.5, 1);
-                bonusLabel.setDepth(6);
-            }
-        }
-
         container.setDepth(3);
 
         var slotData = {
@@ -537,8 +512,6 @@ const PhaserBattleScene = new Phaser.Class({
             h: h,
             side: side,
             index: index,
-            bonusLabel: bonusLabel,
-            bonusIcon: bonusIcon,
         };
 
         // Interactive hover — player slots only during play/arrange
@@ -555,59 +528,63 @@ const PhaserBattleScene = new Phaser.Class({
             highlight.setVisible(false);
             slotData.highlight = highlight;
 
-            // Tooltip text (hidden by default)
-            var tooltip = this.add.text(x + w / 2, y - 8, '', {
-                fontFamily: '"Press Start 2P", monospace',
-                fontSize: '7px',
-                color: '#ffffff',
-                backgroundColor: 'rgba(0,0,0,0.85)',
-                padding: { x: 6, y: 4 },
-                align: 'center',
-                wordWrap: { width: 180 },
-            });
-            tooltip.setOrigin(0.5, 1);
-            tooltip.setDepth(10);
-            tooltip.setVisible(false);
-            slotData.tooltip = tooltip;
-
             hitArea.on('pointerover', function () {
                 var cfg = typeof POSITION_BONUSES !== 'undefined' ? POSITION_BONUSES[index] : null;
                 if (!cfg) return;
 
-                // Only show during play/arrange when slot is empty
                 var isPlayPhase = BattleEngine.currentPhase === 'play' || BattleEngine.currentPhase === 'arrange';
                 var board = BattleEngine.player ? BattleEngine.player.board : [];
                 var isEmpty = !board[index];
 
                 if (isPlayPhase && isEmpty) {
-                    // Glow highlight
                     highlight.clear();
                     var color = Phaser.Display.Color.HexStringToColor(cfg.color).color;
                     highlight.lineStyle(2, color, 0.6);
-                    highlight.strokeRect(1, 1, w - 2, h - 2);
+                    highlight.strokeRect(x + 1, y + 1, w - 2, h - 2);
                     highlight.fillStyle(color, 0.08);
-                    highlight.fillRect(0, 0, w, h);
+                    highlight.fillRect(x, y, w, h);
                     highlight.setVisible(true);
 
-                    // Tooltip
-                    tooltip.setText(cfg.name + '\n' + cfg.tooltip);
-                    tooltip.setVisible(true);
+                    self._showSlotTooltip(x + w / 2, y - 8, cfg.name + '\n' + cfg.tooltip);
                 } else if (isPlayPhase && !isEmpty) {
-                    // Unit already here — dim tooltip
-                    tooltip.setText(cfg.name + ': OCCUPIED');
-                    tooltip.setVisible(true);
+                    self._showSlotTooltip(x + w / 2, y - 8, cfg.name + ': OCCUPIED');
                 }
             });
 
             hitArea.on('pointerout', function () {
                 highlight.setVisible(false);
-                tooltip.setVisible(false);
+                self._hideSlotTooltip();
             });
 
             slotData.hitArea = hitArea;
         }
 
         this.skillSlots.push(slotData);
+    },
+
+    // ===== HTML TOOLTIP OVERLAY =====
+    _tooltipEl: null,
+    _showSlotTooltip: function (x, y, text) {
+        var canvas = document.getElementById('battle-canvas-container');
+        if (!canvas) return;
+        var rect = canvas.getBoundingClientRect();
+        var scaleX = rect.width / 800;
+        var scaleY = rect.height / 500;
+
+        if (!this._tooltipEl) {
+            this._tooltipEl = document.createElement('div');
+            this._tooltipEl.style.cssText = 'position:absolute;pointer-events:none;z-index:200;font-family:"Press Start 2P",monospace;font-size:8px;color:#fff;background:rgba(0,0,0,0.9);border:1px solid rgba(255,215,0,0.4);border-radius:4px;padding:6px 10px;text-align:center;white-space:pre-line;transition:opacity 0.15s;max-width:200px;';
+            canvas.parentElement.style.position = 'relative';
+            canvas.parentElement.appendChild(this._tooltipEl);
+        }
+        this._tooltipEl.textContent = text;
+        this._tooltipEl.style.left = (rect.left - canvas.parentElement.getBoundingClientRect().left + x * scaleX) + 'px';
+        this._tooltipEl.style.top = (rect.top - canvas.parentElement.getBoundingClientRect().top + y * scaleY) + 'px';
+        this._tooltipEl.style.transform = 'translate(-50%, -100%)';
+        this._tooltipEl.style.opacity = '1';
+    },
+    _hideSlotTooltip: function () {
+        if (this._tooltipEl) this._tooltipEl.style.opacity = '0';
     },
 
     // ===== RENDER FIELD STATE =====

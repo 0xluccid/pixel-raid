@@ -171,6 +171,9 @@ var BattlePhaser = {
         setTimeout(styleCanvas, 200);
         setTimeout(styleCanvas, 500);
 
+        // Position bonus overlay labels (HTML, not Phaser — more reliable)
+        this._createBonusOverlays();
+
         // Show enter transition
         this._scene.showTransition('enter', function () {
             this._transitioning = false;
@@ -179,6 +182,64 @@ var BattlePhaser = {
 
         // Initial render
         this.renderField(player, enemy);
+    },
+
+    // ===== POSITION BONUS OVERLAYS (HTML) =====
+    _bonusOverlayEls: [],
+    _createBonusOverlays: function () {
+        // Remove old overlays
+        this._removeBonusOverlays();
+
+        if (typeof POSITION_BONUSES === 'undefined') return;
+
+        var canvas = document.querySelector('#battle-canvas-container canvas');
+        if (!canvas) return;
+
+        var wrap = canvas.parentElement;
+        if (!wrap) return;
+        wrap.style.position = 'relative';
+
+        var W = 800, H = 500;
+        var slotW = 110, slotH = 85, slotGap = 8;
+        var totalW = slotW * 5 + slotGap * 4;
+        var startX = (W - totalW) / 2;
+        var centerY = H / 2;
+        var playerY = centerY + 18;
+
+        for (var i = 0; i < 5; i++) {
+            var cfg = POSITION_BONUSES[i];
+            if (!cfg) continue;
+
+            var slotCenterX = startX + i * (slotW + slotGap) + slotW / 2;
+
+            // Icon overlay
+            var iconEl = document.createElement('div');
+            iconEl.textContent = cfg.icon;
+            iconEl.style.cssText = 'position:absolute;pointer-events:none;font-size:16px;text-align:center;transition:opacity 0.2s;opacity:0.7;';
+            iconEl.style.left = 'calc(' + (slotCenterX / W * 100) + '% - 10px)';
+            iconEl.style.top = 'calc(' + ((playerY + 6) / H * 100) + '%)';
+            wrap.appendChild(iconEl);
+
+            // Description label
+            var labelEl = document.createElement('div');
+            labelEl.textContent = cfg.description;
+            labelEl.style.cssText = 'position:absolute;pointer-events:none;font-family:"Press Start 2P",monospace;font-size:7px;text-align:center;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;transition:opacity 0.2s;opacity:0.8;white-space:nowrap;';
+            labelEl.style.color = cfg.color;
+            labelEl.style.left = 'calc(' + (slotCenterX / W * 100) + '%)';
+            labelEl.style.top = 'calc(' + ((playerY + slotH - 10) / H * 100) + '%)';
+            labelEl.style.transform = 'translateX(-50%)';
+            wrap.appendChild(labelEl);
+
+            this._bonusOverlayEls.push(iconEl, labelEl);
+        }
+    },
+    _removeBonusOverlays: function () {
+        for (var i = 0; i < this._bonusOverlayEls.length; i++) {
+            if (this._bonusOverlayEls[i] && this._bonusOverlayEls[i].parentNode) {
+                this._bonusOverlayEls[i].parentNode.removeChild(this._bonusOverlayEls[i]);
+            }
+        }
+        this._bonusOverlayEls = [];
     },
 
     exit: function (onComplete) {
@@ -190,6 +251,9 @@ var BattlePhaser = {
         this._scene.showTransition('exit', function () {
             this._active = false;
             this._transitioning = false;
+
+            // Clean up bonus overlays
+            this._removeBonusOverlays();
 
             // Reset inline styles on battle elements (they stay in screen-battle DOM, not moved)
             var movedEls = ['#card-hand-area', '.battle-action-row', '.battle-info-strip', '.battle-controls'];
@@ -353,6 +417,7 @@ var BattlePhaser = {
     destroy: function () {
         this._active = false;
         this._transitioning = false;
+        this._removeBonusOverlays();
         if (typeof PhaserAnimations !== 'undefined') {
             PhaserAnimations.stop();
         }
