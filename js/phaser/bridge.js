@@ -106,7 +106,7 @@ var BattlePhaser = {
         this._active = true;
         this._transitioning = true;
 
-        // Make container fullscreen overlay
+        // Make container take top 50% of viewport (arena), cards go below
         var container = document.getElementById(this._containerId);
         if (container) {
             container.style.cssText = [
@@ -114,9 +114,8 @@ var BattlePhaser = {
                 'top: 0',
                 'left: 0',
                 'right: 0',
-                'bottom: 0',
                 'width: 100vw',
-                'height: 100vh',
+                'height: 50vh',
                 'max-width: none',
                 'min-height: 0',
                 'z-index: 9999',
@@ -129,7 +128,7 @@ var BattlePhaser = {
                 'overflow: hidden'
             ].join('; ') + ';';
 
-            // Move card hand and action buttons inside container
+            // Position card hand and action buttons OUTSIDE the container (fixed in viewport)
             var cardHand = document.getElementById('card-hand-area');
             var actionRow = document.querySelector('.battle-action-row');
             var infoStrip = document.querySelector('.battle-info-strip');
@@ -137,15 +136,11 @@ var BattlePhaser = {
             var els = [cardHand, actionRow, infoStrip, controls];
             for (var i = 0; i < els.length; i++) {
                 var el = els[i];
-                if (el && el.parentElement !== container) {
-                    container.appendChild(el);
-                }
                 if (el) {
-                    // Bug #3: Position card hand at bottom with absolute positioning
-                    // so it stays visible above the Phaser canvas
+                    // Keep in original DOM position (don't move into container)
                     el.style.display = '';
-                    el.style.position = 'absolute';
-                    el.style.zIndex = '10000';
+                    el.style.position = 'fixed';
+                    el.style.zIndex = '10001';
                     el.style.left = '0';
                     el.style.right = '0';
                 }
@@ -153,20 +148,22 @@ var BattlePhaser = {
             // Card hand takes the bottom 50% of viewport
             if (cardHand) {
                 cardHand.style.top = '50vh';
-                cardHand.style.bottom = 'auto';
+                cardHand.style.bottom = '0';
                 cardHand.style.height = '50vh';
                 cardHand.style.background = 'rgba(10,10,30,0.92)';
                 cardHand.style.borderTop = '1px solid rgba(255,215,0,0.2)';
                 cardHand.style.overflowY = 'auto';
             }
-            // Action row and info strip sit just above the card hand
+            // Action row sits just above the card hand
             if (actionRow) {
                 actionRow.style.top = 'calc(50vh - 40px)';
                 actionRow.style.bottom = 'auto';
+                actionRow.style.height = '40px';
             }
             if (infoStrip) {
                 infoStrip.style.top = 'calc(50vh - 80px)';
                 infoStrip.style.bottom = 'auto';
+                infoStrip.style.height = '40px';
             }
         }
 
@@ -187,11 +184,10 @@ var BattlePhaser = {
             var c = document.querySelector('#battle-canvas-container canvas') || (self._game && self._game.canvas);
             if (c) {
                 c.style.width = '100%';
-                c.style.height = '50vh';
+                c.style.height = '100%';
                 c.style.display = 'block';
                 c.style.objectFit = 'contain';
                 c.style.margin = '0 auto';
-                c.style.maxHeight = '50vh';
             }
         };
         setTimeout(styleCanvas, 50);
@@ -257,11 +253,10 @@ var BattlePhaser = {
         var canvas = document.querySelector('#battle-canvas-container canvas') || this._game.canvas;
         if (canvas) {
             canvas.style.width = '100%';
-            canvas.style.height = '50vh';
+            canvas.style.height = '100%';
             canvas.style.objectFit = 'contain';
             canvas.style.display = 'block';
             canvas.style.margin = '0 auto';
-            canvas.style.maxHeight = '50vh';
         }
     },
 
