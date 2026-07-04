@@ -139,10 +139,10 @@ const PhaserBattleScene = new Phaser.Class({
     _createHeroPanel: function (side, isTop) {
         var W = this.W;
         var H = this.H;
-        var panelW = 200;
-        var panelH = 160;
-        var panelX = side === 'player' ? 30 : W - panelW - 30;
-        var panelY = isTop ? 20 : H - panelH - 20;
+        var panelW = 160;
+        var panelH = 120;
+        var panelX = side === 'player' ? 20 : W - panelW - 20;
+        var panelY = isTop ? 10 : H - panelH - 10;
 
         var container = this.add.container(panelX, panelY);
 
@@ -170,13 +170,13 @@ const PhaserBattleScene = new Phaser.Class({
         // Hero art area (placeholder)
         var artBg = this.add.graphics();
         artBg.fillStyle(0x0f3460, 1);
-        artBg.fillRect(8, 10, panelW - 16, 60);
+        artBg.fillRect(8, 10, panelW - 16, 40);
         artBg.lineStyle(1, 0xc8a832, 0.5);
-        artBg.strokeRect(8, 10, panelW - 16, 60);
+        artBg.strokeRect(8, 10, panelW - 16, 40);
         container.add(artBg);
 
-        var spriteText = this.add.text(panelW / 2, 40, '⚔', {
-            fontSize: '28px',
+        var spriteText = this.add.text(panelW / 2, 30, '⚔', {
+            fontSize: '20px',
             color: side === 'player' ? 'rgba(255,215,0,0.3)' : 'rgba(68,136,255,0.3)'
         });
         spriteText.setOrigin(0.5, 0.5);
@@ -184,7 +184,7 @@ const PhaserBattleScene = new Phaser.Class({
         this.heroSprite[side] = spriteText;
 
         // Name text
-        var nameText = this.add.text(8, 74, 'Hero', {
+        var nameText = this.add.text(8, 56, 'Hero', {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '8px',
             color: '#ffffff',
@@ -194,7 +194,7 @@ const PhaserBattleScene = new Phaser.Class({
         this.heroNameText[side] = nameText;
 
         // Class + Level
-        var classText = this.add.text(8, 86, '', {
+        var classText = this.add.text(8, 66, '', {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '6px',
             color: '#aaaaaa'
@@ -202,7 +202,7 @@ const PhaserBattleScene = new Phaser.Class({
         container.add(classText);
         this.heroClassText[side] = classText;
 
-        var levelText = this.add.text(panelW - 8, 74, '', {
+        var levelText = this.add.text(panelW - 8, 66, '', {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '6px',
             color: '#ffd700'
@@ -213,7 +213,7 @@ const PhaserBattleScene = new Phaser.Class({
 
         // HP bar background — thicker, more prominent
         var hpBarX = 8;
-        var hpBarY = 96;
+        var hpBarY = 80;
         var hpBarW = panelW - 16;
         var hpBarH = 18;
 

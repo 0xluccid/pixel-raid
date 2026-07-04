@@ -150,14 +150,23 @@ var BattlePhaser = {
                     el.style.right = '0';
                 }
             }
-            // Card hand at very bottom, action row above it
+            // Card hand takes the bottom 50% of viewport
             if (cardHand) {
-                cardHand.style.bottom = '0';
+                cardHand.style.top = '50vh';
+                cardHand.style.bottom = 'auto';
+                cardHand.style.height = '50vh';
                 cardHand.style.background = 'rgba(10,10,30,0.92)';
                 cardHand.style.borderTop = '1px solid rgba(255,215,0,0.2)';
+                cardHand.style.overflowY = 'auto';
             }
+            // Action row and info strip sit just above the card hand
             if (actionRow) {
+                actionRow.style.top = 'calc(50vh - 40px)';
                 actionRow.style.bottom = 'auto';
+            }
+            if (infoStrip) {
+                infoStrip.style.top = 'calc(50vh - 80px)';
+                infoStrip.style.bottom = 'auto';
             }
         }
 
@@ -177,10 +186,11 @@ var BattlePhaser = {
             if (self._game && self._game.canvas) {
                 var c = self._game.canvas;
                 c.style.width = '100%';
-                c.style.height = '100%';
+                c.style.height = '50vh';
                 c.style.display = 'block';
                 c.style.objectFit = 'contain';
                 c.style.margin = '0 auto';
+                c.style.maxHeight = '50vh';
             }
         };
         setTimeout(styleCanvas, 50);
@@ -245,11 +255,11 @@ var BattlePhaser = {
         var canvas = this._game.canvas;
         if (canvas) {
             canvas.style.width = '100%';
-            canvas.style.height = 'calc(100vh - 180px)';
+            canvas.style.height = '50vh';
             canvas.style.objectFit = 'contain';
             canvas.style.display = 'block';
             canvas.style.margin = '0 auto';
-            canvas.style.maxHeight = 'calc(100vh - 180px)';
+            canvas.style.maxHeight = '50vh';
         }
     },
 
