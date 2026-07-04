@@ -122,6 +122,13 @@ const CardHand = {
             el.style.setProperty('--el-glow', elColor);
             el.style.borderColor = elColor;
 
+            // Skill info from template
+            const skill = card.skill || (template && template.skill) || null;
+            const skillName = skill ? skill.name : 'None';
+            const skillDesc = skill ? this._formatSkillDesc(skill) : 'No ability';
+            const skillIcon = skill ? this._getSkillIcon(skill.type) : '✨';
+            const lore = card.lore || (template && template.lore) || '';
+
             el.innerHTML = `
                 <div class="tcg-header" style="background:linear-gradient(135deg, ${elColor}cc, ${clsColor}88)">
                     <span class="tcg-el-icon">${elIcon}</span>
@@ -133,13 +140,20 @@ const CardHand = {
                 </div>
                 <div class="tcg-art-window" style="background:linear-gradient(180deg, ${elColor}33, #0f3460, ${elColor}22)">
                     ${template && template.image
-                        ? `<img src="${template.image}" class="tcg-art-img" onerror="this.parentElement.innerHTML='<div class=\\\\'card-art-icon\\\\'>${elIcon}</div>'">`
+                        ? `<img src="${template.image}" class="tcg-art-img" onerror="this.parentElement.innerHTML='<div class=\\\\\\'card-art-icon\\\\\\'>${elIcon}</div>'">`
                         : `<div class="card-art-icon">${elIcon}</div>`
                     }
                 </div>
                 <div class="tcg-el-badge" style="background:${elColor}44;border-color:${elColor}">
                     <span>${elIcon} ${elName}</span>
-                    <span style="color:${rarityColor}">${RARITIES[card.rarity] ? RARITIES[card.rarity].name : ''}</span>
+                    <span style="color:${rarityColor}">${clsEmoji} ${clsName}</span>
+                </div>
+                <div class="tcg-skill-box">
+                    <div class="tcg-skill-header">
+                        <span class="tcg-skill-icon">${skillIcon}</span>
+                        <span class="tcg-skill-name">${skillName}</span>
+                    </div>
+                    <div class="tcg-skill-desc">${skillDesc}</div>
                 </div>
                 <div class="tcg-stats-box">
                     <div class="tcg-hp-bar">
@@ -148,6 +162,8 @@ const CardHand = {
                     <div class="tcg-stat-row">
                         <span class="card-atk">⚔${card.stats.atk}</span>
                         <span class="card-def">🛡${card.stats.def}</span>
+                        <span class="card-spd">💨${card.stats.spd}</span>
+                        <span class="card-crit">💥${card.stats.crit || 0}</span>
                     </div>
                 </div>
             `;
@@ -275,6 +291,42 @@ const CardHand = {
         if (this.container) this.container.innerHTML = '';
         this.selectedCard = null;
         this.enabled = false;
+    },
+
+    /**
+     * Format skill description for card display
+     */
+    _formatSkillDesc(skill) {
+        if (!skill) return '';
+        const val = skill.val;
+        const chance = Math.round((skill.chance || 0) * 100);
+        const typeDescriptions = {
+            'buff_def': `DEF +${Math.round(val*100)}%, ${chance}% chance`,
+            'buff_atk': `ATK +${Math.round(val*100)}%, ${chance}% chance`,
+            'lifesteal': `Steals ${Math.round(val*100)}% HP, ${chance}% chance`,
+            'shield': `Blocks ${val} DMG, ${chance}% chance`,
+            'aoe': `Deals ${Math.round(val*100)}% ATK to all, ${chance}% chance`,
+            'true_dmg': `Deals ${val} true DMG, ${chance}% chance`,
+            'crit_boost': `Crit DMG x${val}, ${chance}% chance`,
+            'ignore_def': `Ignores ${Math.round(val*100)}% DEF, ${chance}% chance`,
+            'debuff_spd': `Slows SPD -${Math.round(val*100)}%, ${chance}% chance`,
+            'stun': `Stuns for ${val} turn, ${chance}% chance`,
+            'heal': `Heals ${Math.round(val*100)}% HP, ${chance}% chance`
+        };
+        return typeDescriptions[skill.type] || `${skill.name} (${chance}%)`;
+    },
+
+    /**
+     * Get skill type icon
+     */
+    _getSkillIcon(type) {
+        const icons = {
+            'buff_def': '🛡️', 'buff_atk': '⚔️', 'lifesteal': '🩸',
+            'shield': '🔰', 'aoe': '💥', 'true_dmg': '⚡',
+            'crit_boost': '🎯', 'ignore_def': '🗡️', 'debuff_spd': '❄️',
+            'stun': '💫', 'heal': '💚'
+        };
+        return icons[type] || '✨';
     },
 
     /**
@@ -447,6 +499,42 @@ const CardHand = {
                 border-radius: 2px;
                 margin: 0 4px;
                 text-shadow: 0 0 4px var(--el-glow, #aa44cc);
+            }
+
+            /* ===== SKILL BOX — TCG ability text ===== */
+            .tcg-skill-box {
+                margin: 2px 4px;
+                padding: 2px 4px;
+                background: rgba(0,0,0,0.4);
+                border: 1px solid rgba(255,255,255,0.08);
+                border-radius: 2px;
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+            .tcg-skill-header {
+                display: flex;
+                align-items: center;
+                gap: 3px;
+                margin-bottom: 1px;
+            }
+            .tcg-skill-icon {
+                font-size: 6px;
+                flex-shrink: 0;
+            }
+            .tcg-skill-name {
+                font-size: 5px;
+                color: #ffd700;
+                font-weight: bold;
+                text-shadow: 0 0 4px rgba(255,215,0,0.5);
+            }
+            .tcg-skill-desc {
+                font-size: 4px;
+                color: #bbb;
+                line-height: 1.3;
+                font-style: italic;
+                text-shadow: 0 0 2px rgba(255,255,255,0.1);
             }
 
             /* ===== DIVIDER ===== */
