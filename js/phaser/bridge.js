@@ -212,25 +212,25 @@ var BattlePhaser = {
 
             var slotCenterX = startX + i * (slotW + slotGap) + slotW / 2;
 
-            // Icon overlay
+            // Subtle icon overlay — hidden by default, shown only on canvas hover via battle-scene tooltip
             var iconEl = document.createElement('div');
             iconEl.textContent = cfg.icon;
-            iconEl.style.cssText = 'position:absolute;pointer-events:none;font-size:16px;text-align:center;transition:opacity 0.2s;opacity:0.7;';
-            iconEl.style.left = 'calc(' + (slotCenterX / W * 100) + '% - 10px)';
-            iconEl.style.top = 'calc(' + ((playerY + 6) / H * 100) + '%)';
+            iconEl.style.cssText = 'position:absolute;pointer-events:none;font-size:12px;text-align:center;transition:opacity 0.3s;opacity:0;pointer-events:auto;cursor:help;';
+            iconEl.style.left = 'calc(' + (slotCenterX / W * 100) + '% - 8px)';
+            iconEl.style.top = 'calc(' + ((playerY + 4) / H * 100) + '%)';
+
+            // Show icon on hover, hide on leave
+            (function(icon, slotIdx) {
+                icon.addEventListener('mouseenter', function() {
+                    icon.style.opacity = '0.9';
+                });
+                icon.addEventListener('mouseleave', function() {
+                    icon.style.opacity = '0';
+                });
+            })(iconEl, i);
+
             wrap.appendChild(iconEl);
-
-            // Description label
-            var labelEl = document.createElement('div');
-            labelEl.textContent = cfg.description;
-            labelEl.style.cssText = 'position:absolute;pointer-events:none;font-family:"Press Start 2P",monospace;font-size:7px;text-align:center;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;transition:opacity 0.2s;opacity:0.8;white-space:nowrap;';
-            labelEl.style.color = cfg.color;
-            labelEl.style.left = 'calc(' + (slotCenterX / W * 100) + '%)';
-            labelEl.style.top = 'calc(' + ((playerY + slotH - 10) / H * 100) + '%)';
-            labelEl.style.transform = 'translateX(-50%)';
-            wrap.appendChild(labelEl);
-
-            this._bonusOverlayEls.push(iconEl, labelEl);
+            this._bonusOverlayEls.push(iconEl);
         }
     },
     _removeBonusOverlays: function () {
