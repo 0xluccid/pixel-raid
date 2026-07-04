@@ -303,6 +303,15 @@
             align-items: center;
             align-content: center;
         }
+        /* Battle cards in hand area — fill the bottom 50% */
+        .card-hand-area .battle-card {
+            flex: 1 1 0;
+            min-width: 0;
+            width: auto;
+            min-height: 160px;
+            max-width: 180px;
+            max-height: 320px;
+        }
         .battle-action-row {
             display: flex; justify-content: center; gap: 8px;
             padding: 4px 0;
@@ -1053,6 +1062,7 @@
             .btn { font-size: 7px; padding: 10px 16px; min-height: 44px; }
             .card-hand-area { gap: 4px; padding: 6px 8px; flex-wrap: wrap; align-items: center; align-content: center; }
             .hand-card { flex: 1 1 0; min-width: 0; width: auto; min-height: 160px; max-width: 130px; max-height: 280px; }
+            .card-hand-area .battle-card { flex: 1 1 0; min-width: 0; width: auto; min-height: 150px; max-width: 140px; max-height: 280px; }
             .battle-canvas-wrap { border-width: 3px; }
             .game-nav { gap: 1px; padding: 4px 6px; }
             .game-nav .nav-btn { flex: 1; min-width: 0; white-space: nowrap; }
@@ -1063,6 +1073,7 @@
             #shop-content { grid-template-columns: 1fr; }
             .card-hand-area { gap: 3px; padding: 4px 4px; flex-wrap: wrap; }
             .hand-card { flex: 1 1 0; min-width: 0; width: auto; min-height: 140px; max-width: 110px; max-height: 240px; }
+            .card-hand-area .battle-card { flex: 1 1 0; min-width: 0; width: auto; min-height: 130px; max-width: 110px; max-height: 240px; }
             .hand-card .card-name { font-size: 5px; padding: 2px 3px; }
             .hand-card .card-mana { width: 16px; height: 16px; font-size: 7px; top: -4px; right: -4px; }
             .hand-card .card-art-window { min-height: 50px; }

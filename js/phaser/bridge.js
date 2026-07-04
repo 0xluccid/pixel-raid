@@ -183,8 +183,9 @@ var BattlePhaser = {
         });
 
         var styleCanvas = function () {
-            if (self._game && self._game.canvas) {
-                var c = self._game.canvas;
+            // Target the canvas inside battle-canvas-container specifically
+            var c = document.querySelector('#battle-canvas-container canvas') || (self._game && self._game.canvas);
+            if (c) {
                 c.style.width = '100%';
                 c.style.height = '50vh';
                 c.style.display = 'block';
@@ -252,7 +253,8 @@ var BattlePhaser = {
     // ===== RESIZE =====
     _resizeToViewport: function () {
         if (!this._game) return;
-        var canvas = this._game.canvas;
+        // Target the canvas inside battle-canvas-container specifically
+        var canvas = document.querySelector('#battle-canvas-container canvas') || this._game.canvas;
         if (canvas) {
             canvas.style.width = '100%';
             canvas.style.height = '50vh';
