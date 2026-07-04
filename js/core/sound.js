@@ -136,4 +136,84 @@ const Sound = {
         this._playTone(800, 0.05, 'sine', this.volume * 0.3);
         setTimeout(() => this._playTone(1200, 0.1, 'sine', this.volume * 0.4), 50);
     },
+
+    // ===== New Polish Sounds =====
+
+    // Battle start fanfare — 3 ascending notes + hit
+    battleStart() {
+        const notes = [330, 440, 550]; // E4, A4, C#5
+        notes.forEach((freq, i) => {
+            setTimeout(() => this._playTone(freq, 0.12, 'square', this.volume * 0.35), i * 80);
+        });
+        setTimeout(() => {
+            this._playTone(660, 0.2, 'sawtooth', this.volume * 0.3);
+            this._playNoise(0.08, this.volume * 0.2);
+        }, 260);
+    },
+
+    // New turn — subtle chime
+    turnStart() {
+        this._playTone(600, 0.06, 'sine', this.volume * 0.2);
+        setTimeout(() => this._playTone(800, 0.08, 'sine', this.volume * 0.15), 60);
+    },
+
+    // Card drawn from deck — quick swipe
+    drawCard() {
+        this._playNoise(0.03, this.volume * 0.15);
+        this._playTone(1200, 0.03, 'square', this.volume * 0.1);
+    },
+
+    // Card placed on board — satisfying thunk
+    cardPlay() {
+        this._playNoise(0.05, this.volume * 0.3);
+        this._playTone(150, 0.08, 'square', this.volume * 0.35);
+        setTimeout(() => this._playTone(300, 0.05, 'sine', this.volume * 0.15), 40);
+    },
+
+    // Energy gained — bright ping
+    energyGain() {
+        this._playTone(1000, 0.05, 'sine', this.volume * 0.2);
+        setTimeout(() => this._playTone(1400, 0.08, 'sine', this.volume * 0.15), 50);
+    },
+
+    // Hero takes direct damage — deep impact
+    heroHit() {
+        this._playNoise(0.1, this.volume * 0.4);
+        this._playTone(80, 0.15, 'sawtooth', this.volume * 0.35);
+        setTimeout(() => this._playTone(60, 0.2, 'sawtooth', this.volume * 0.2), 80);
+    },
+
+    // Unit destroyed — crumbling sound
+    unitDestroy() {
+        this._playNoise(0.12, this.volume * 0.35);
+        this._playTone(200, 0.1, 'sawtooth', this.volume * 0.3);
+        setTimeout(() => this._playTone(120, 0.15, 'sawtooth', this.volume * 0.25), 60);
+        setTimeout(() => this._playTone(60, 0.2, 'sawtooth', this.volume * 0.15), 150);
+    },
+
+    // Victory — triumphant fanfare (enhanced)
+    victoryFanfare() {
+        const notes = [523, 659, 784, 1047, 1047]; // C5 E5 G5 C6 C6
+        notes.forEach((freq, i) => {
+            setTimeout(() => this._playTone(freq, i < 4 ? 0.15 : 0.35, 'square', this.volume * 0.4), i * 100);
+        });
+        setTimeout(() => this._playNoise(0.1, this.volume * 0.15), 400);
+    },
+
+    // Defeat — dramatic descending + rumble
+    defeatDramatic() {
+        const notes = [440, 370, 311, 220]; // A4 F#4 Eb4 A3
+        notes.forEach((freq, i) => {
+            setTimeout(() => this._playTone(freq, 0.2, 'sawtooth', this.volume * 0.3), i * 180);
+        });
+        setTimeout(() => this._playNoise(0.3, this.volume * 0.25), 500);
+    },
+
+    // Reward popup open — pack burst
+    rewardBurst() {
+        this._playNoise(0.08, this.volume * 0.3);
+        this._playTone(400, 0.05, 'square', this.volume * 0.3);
+        setTimeout(() => this._playTone(600, 0.08, 'square', this.volume * 0.35), 60);
+        setTimeout(() => this._playTone(800, 0.12, 'square', this.volume * 0.3), 130);
+    },
 };

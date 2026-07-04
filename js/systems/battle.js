@@ -93,6 +93,7 @@ const BattleEngine = {
         }
 
         this._log('⚔️ Battle Start!');
+        if (typeof Sound !== 'undefined') Sound.battleStart();
         this._startTurn();
     },
 
@@ -115,6 +116,7 @@ const BattleEngine = {
 
         this._log(`\n— Turn ${this.turnNumber} —`);
         this._setPhase('draw');
+        if (typeof Sound !== 'undefined') Sound.turnStart();
 
         // Auto advance to energy phase after brief delay
         this._phaseTimer = setTimeout(() => {
@@ -131,6 +133,7 @@ const BattleEngine = {
 
         this._log(`⚡ +${gained} Energy (${this.player.energy}/${this.player.maxEnergy})`);
         this._setPhase('energy');
+        if (typeof Sound !== 'undefined') Sound.energyGain();
 
         // Auto advance to play phase after brief delay
         this._phaseTimer = setTimeout(() => {
@@ -168,6 +171,7 @@ const BattleEngine = {
             slot: slotIndex,
         };
         this.player.board[slotIndex] = unit;
+        if (typeof Sound !== 'undefined') Sound.cardPlay();
 
         // Position bonus — apply slot-specific stat boost
         if (typeof applyPositionBonus === 'function') {
@@ -267,6 +271,10 @@ const BattleEngine = {
                     // Win or lose → show result
                     this._setPhase('result');
                     this._log(result === 'player' ? '🎉 Victory!' : '💀 Defeat!');
+                    if (typeof Sound !== 'undefined') {
+                        if (result === 'player') Sound.victoryFanfare();
+                        else Sound.defeatDramatic();
+                    }
                     if (this.onComplete) this.onComplete(result);
                     return;
                 }
@@ -301,6 +309,7 @@ const BattleEngine = {
             const dmg = attacker.atk;
             enemyCombatant.heroHp = Math.max(0, enemyCombatant.heroHp - dmg);
             this._log(`💥 ${attacker.name} attacks ${enemyCombatant.name}'s Hero for ${dmg} dmg! (HP: ${enemyCombatant.heroHp}/${enemyCombatant.heroMaxHp})`);
+            if (typeof Sound !== 'undefined') Sound.heroHit();
 
             if (this.onAttack) {
                 this.onAttack({
@@ -317,6 +326,7 @@ const BattleEngine = {
             const dmg = attacker.atk;
             target.hp -= dmg;
             this._log(`💥 ${attacker.name} attacks ${target.name} for ${dmg} dmg! (HP: ${Math.max(0, target.hp)}/${target.maxHp})`);
+            if (typeof Sound !== 'undefined') Sound.attack();
 
             if (this.onAttack) {
                 this.onAttack({
@@ -344,10 +354,12 @@ const BattleEngine = {
             if (this.player.board[i] && this.player.board[i].hp <= 0) {
                 this._log(`💀 ${this.player.board[i].name} destroyed!`);
                 this.player.board[i] = null;
+                if (typeof Sound !== 'undefined') Sound.unitDestroy();
             }
             if (this.enemy.board[i] && this.enemy.board[i].hp <= 0) {
                 this._log(`💀 ${this.enemy.board[i].name} destroyed!`);
                 this.enemy.board[i] = null;
+                if (typeof Sound !== 'undefined') Sound.unitDestroy();
             }
         }
     },

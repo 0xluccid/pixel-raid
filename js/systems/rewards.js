@@ -139,6 +139,7 @@ const Rewards = {
 
         const overlay = document.createElement('div');
         overlay.id = 'sprint3-reward-overlay';
+        if (typeof Sound !== 'undefined') Sound.rewardBurst();
         overlay.style.cssText = `
             position:fixed;top:0;left:0;right:0;bottom:0;
             z-index:99999;display:flex;align-items:center;justify-content:center;
