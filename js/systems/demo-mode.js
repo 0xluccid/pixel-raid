@@ -524,257 +524,76 @@ const DemoMode = {
 
     /**
      * Step 5: Battle (30s) — MOST IMPORTANT
-     * Switch to battle, show countdown, simulate battle with HP bar animation
+     * Uses the REAL battle system: startBattle → auto-play card → advancePhase
      */
     async _step5_battle() {
-        // Switch to battle screen
-        UI.showScreen('battle');
         this._showNarration('Watch your deck in action', 'Step 5 · Battle');
 
+        // Check if player has cards in deck
+        const deckCards = GameState.getDeckCards();
+        if (deckCards.length === 0) {
+            // Fallback: go to step 6 if no deck
+            this._runStep(5);
+            return;
+        }
+
+        await this._delay(800);
+        if (!this._active) return;
+
+        // Start the REAL battle (renders Phaser canvas + card hand)
+        UI.startBattle();
+
+        // Wait for battle to initialize and reach play phase
+        await this._delay(2000);
+        if (!this._active) return;
+
+        // Auto-play first card from hand to first empty board slot
+        if (typeof BattleEngine !== 'undefined' && BattleEngine.isRunning) {
+            const hand = BattleEngine.player.hand;
+            const board = BattleEngine.player.board;
+            if (hand.length > 0 && BattleEngine.currentPhase === 'play') {
+                // Find first empty slot
+                let emptySlot = -1;
+                for (let i = 0; i < board.length; i++) {
+                    if (board[i] === null) { emptySlot = i; break; }
+                }
+                if (emptySlot >= 0) {
+                    BattleEngine.playCard(0, emptySlot);
+                    // Re-render hand
+                    if (typeof CardHand !== 'undefined') {
+                        CardHand.renderHand(BattleEngine.player.hand, BattleEngine.player.energy);
+                    }
+                }
+            }
+        }
+
         await this._delay(1500);
         if (!this._active) return;
 
-        // Show countdown overlay
-        this._showCountdown();
+        // Advance through arrange → battle
+        if (typeof BattleEngine !== 'undefined' && BattleEngine.isRunning) {
+            BattleEngine.advancePhase(); // play → arrange
+            await this._delay(800);
+            if (!this._active) return;
+            BattleEngine.advancePhase(); // arrange → battle
+        }
 
-        // Wait for countdown (3..2..1..FIGHT!)
-        await this._delay(5000);
+        // Wait for battle to resolve (auto-battle runs internally)
+        // Poll until battle ends or timeout at 20s
+        let waited = 0;
+        while (waited < 20000) {
+            if (!this._active) return;
+            if (typeof BattleEngine !== 'undefined' && !BattleEngine.isRunning) break;
+            await this._delay(500);
+            waited += 500;
+        }
+
+        // Extra delay for result screen to appear
+        await this._delay(2000);
         if (!this._active) return;
 
-        // Now simulate a battle visually
-        this._simulateBattle();
-
-        // Wait for battle simulation (~25s)
-        await this._delay(25000);
-        if (!this._active) return;
-
-        // Move to step 6
+        // Move to step 6 (Victory)
         this._runStep(5);
-    },
-
-    /**
-     * Show a countdown: 3... 2... 1... FIGHT!
-     */
-    _showCountdown() {
-        const countdown = document.createElement('div');
-        countdown.className = 'demo-battle-sim';
-        countdown.style.cssText = `
-            position:fixed;top:0;left:0;right:0;bottom:0;z-index:999997;
-            display:flex;align-items:center;justify-content:center;
-            background:rgba(0,0,0,0.6);pointer-events:none;
-            font-family:'Press Start 2P','Silkscreen',monospace;
-        `;
-        document.body.appendChild(countdown);
-
-        const steps = ['3', '2', '1', 'FIGHT!'];
-        let idx = 0;
-
-        const showNext = () => {
-            if (!this._active || idx >= steps.length) {
-                countdown.style.transition = 'opacity 0.3s ease';
-                countdown.style.opacity = '0';
-                setTimeout(() => countdown.remove(), 300);
-                return;
-            }
-            const text = steps[idx];
-            const color = text === 'FIGHT!' ? '#ff4444' : '#ffd700';
-            const size = text === 'FIGHT!' ? '48px' : '64px';
-            countdown.innerHTML = `
-                <div style="
-                    font-size:${size};color:${color};
-                    text-shadow:0 0 30px ${color}88;
-                    animation:demoPulseIn 0.8s ease;
-                ">${text}</div>
-            `;
-            idx++;
-            setTimeout(showNext, 1000);
-        };
-
-        showNext();
-    },
-
-    /**
-     * Simulate a battle by showing an animated overlay with HP bars,
-     * damage numbers, and attack animations
-     */
-    _simulateBattle() {
-        // Remove any existing battle sim
-        document.querySelectorAll('.demo-battle-sim').forEach(el => el.remove());
-
-        // Create battle simulation overlay
-        const sim = document.createElement('div');
-        sim.className = 'demo-battle-sim';
-        sim.style.cssText = `
-            position:fixed;top:0;left:0;right:0;bottom:0;z-index:999997;
-            pointer-events:none;
-            font-family:'Press Start 2P','Silkscreen',monospace;
-        `;
-
-        // Player info (top-left)
-        const playerInfo = document.createElement('div');
-        playerInfo.style.cssText = `
-            position:absolute;top:60px;left:16px;
-            background:rgba(10,10,30,0.9);border:2px solid #44ff88;
-            border-radius:4px;padding:12px 16px;min-width:180px;
-        `;
-        playerInfo.innerHTML = `
-            <div style="font-size:8px;color:#44ff88;margin-bottom:6px;">⚔️ YOUR HERO</div>
-            <div style="font-size:7px;color:var(--text);margin-bottom:4px;">Paladin Knight</div>
-            <div style="width:100%;height:8px;background:rgba(0,0,0,0.5);border-radius:4px;overflow:hidden;">
-                <div id="demo-player-hp-bar" style="width:100%;height:100%;background:#44ff88;border-radius:4px;transition:width 0.5s ease;"></div>
-            </div>
-            <div style="font-size:6px;color:rgba(255,255,255,0.5);margin-top:3px;">
-                HP: <span id="demo-player-hp-text">20/20</span>
-            </div>
-        `;
-
-        // Enemy info (top-right)
-        const enemyInfo = document.createElement('div');
-        enemyInfo.style.cssText = `
-            position:absolute;top:60px;right:16px;
-            background:rgba(30,10,10,0.9);border:2px solid #ff4444;
-            border-radius:4px;padding:12px 16px;min-width:180px;
-            text-align:right;
-        `;
-        enemyInfo.innerHTML = `
-            <div style="font-size:8px;color:#ff4444;margin-bottom:6px;">💀 ENEMY</div>
-            <div style="font-size:7px;color:var(--text);margin-bottom:4px;">Shadow Dragon</div>
-            <div style="width:100%;height:8px;background:rgba(0,0,0,0.5);border-radius:4px;overflow:hidden;">
-                <div id="demo-enemy-hp-bar" style="width:100%;height:100%;background:#ff4444;border-radius:4px;transition:width 0.5s ease;"></div>
-            </div>
-            <div style="font-size:6px;color:rgba(255,255,255,0.5);margin-top:3px;">
-                HP: <span id="demo-enemy-hp-text">30/30</span>
-            </div>
-        `;
-
-        // Battle log area (center)
-        const battleLog = document.createElement('div');
-        battleLog.id = 'demo-battle-log';
-        battleLog.style.cssText = `
-            position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-            text-align:center;
-        `;
-
-        sim.appendChild(playerInfo);
-        sim.appendChild(enemyInfo);
-        sim.appendChild(battleLog);
-        document.body.appendChild(sim);
-
-        // Simulate turns
-        this._runBattleSimulation();
-    },
-
-    /**
-     * Run the visual battle simulation with damage numbers
-     */
-    async _runBattleSimulation() {
-        let playerHP = 20;
-        let enemyHP = 30;
-        const maxPlayerHP = 20;
-        const maxEnemyHP = 30;
-
-        const attacks = [
-            { attacker: 'player', damage: 7, text: '⚔️ Slash!', crit: false },
-            { attacker: 'enemy', damage: 4, text: '🔥 Fire Breath!', crit: false },
-            { attacker: 'player', damage: 10, text: '⚡ Thunder Strike!', crit: true },
-            { attacker: 'enemy', damage: 5, text: '💀 Shadow Claw!', crit: false },
-            { attacker: 'player', damage: 6, text: '🗡️ Shield Bash!', crit: false },
-            { attacker: 'enemy', damage: 3, text: '🦇 Dark Wing!', crit: false },
-            { attacker: 'player', damage: 8, text: '✨ Holy Smite!', crit: false },
-            { attacker: 'enemy', damage: 6, text: '🔥 Inferno!', crit: false },
-            { attacker: 'player', damage: 12, text: '💥 ULTIMATE STRIKE!', crit: true },
-        ];
-
-        const log = document.getElementById('demo-battle-log');
-        const playerHPBar = document.getElementById('demo-player-hp-bar');
-        const playerHPText = document.getElementById('demo-player-hp-text');
-        const enemyHPBar = document.getElementById('demo-enemy-hp-bar');
-        const enemyHPText = document.getElementById('demo-enemy-hp-text');
-
-        for (let i = 0; i < attacks.length; i++) {
-            if (!this._active) return;
-            const atk = attacks[i];
-            await this._delay(2500);
-            if (!this._active) return;
-
-            // Apply damage
-            if (atk.attacker === 'player') {
-                enemyHP = Math.max(0, enemyHP - atk.damage);
-                if (enemyHPBar) enemyHPBar.style.width = (enemyHP / maxEnemyHP * 100) + '%';
-                if (enemyHPText) enemyHPText.textContent = `${enemyHP}/${maxEnemyHP}`;
-                // Shake enemy
-                if (enemyHPBar && enemyHPBar.parentNode) {
-                    enemyHPBar.parentElement.parentElement.style.animation = 'none';
-                    enemyHPBar.parentElement.parentElement.style.animation = 'demoShake 0.3s ease';
-                }
-            } else {
-                playerHP = Math.max(0, playerHP - atk.damage);
-                if (playerHPBar) playerHPBar.style.width = (playerHP / maxPlayerHP * 100) + '%';
-                if (playerHPText) playerHPText.textContent = `${playerHP}/${maxPlayerHP}`;
-                // Change color to red if low
-                if (playerHPBar && playerHP <= 8) {
-                    playerHPBar.style.background = '#ff8844';
-                }
-                if (playerHPBar && playerHP <= 4) {
-                    playerHPBar.style.background = '#ff4444';
-                }
-            }
-
-            // Show damage number
-            this._showDamageNumber(atk.damage, atk.crit, atk.attacker);
-
-            // Show attack text in log
-            if (log) {
-                const color = atk.attacker === 'player' ? '#44ff88' : '#ff4444';
-                log.innerHTML = `
-                    <div style="
-                        font-size:${atk.crit ? '14px' : '12px'};
-                        color:${color};
-                        text-shadow:0 0 10px ${color}88;
-                        animation:demoPulseIn 0.5s ease;
-                        ${atk.crit ? 'font-size:16px;' : ''}
-                    ">${atk.text}</div>
-                    <div style="font-size:8px;color:rgba(255,255,255,0.5);margin-top:8px;">
-                        Turn ${i + 1}
-                    </div>
-                `;
-            }
-        }
-
-        // Battle ends — enemy defeated
-        await this._delay(1500);
-        if (log) {
-            log.innerHTML = `
-                <div style="
-                    font-size:24px;color:#ffd700;
-                    text-shadow:0 0 30px rgba(255,215,0,0.5);
-                    animation:demoPulseIn 0.8s ease;
-                ">🏆 VICTORY!</div>
-            `;
-        }
-    },
-
-    /**
-     * Show a floating damage number at a random position
-     */
-    _showDamageNumber(damage, crit, attacker) {
-        const el = document.createElement('div');
-        const color = attacker === 'player' ? '#44ff88' : '#ff4444';
-        const size = crit ? '28px' : '22px';
-        const x = 30 + Math.random() * 40; // % from left
-        const y = 30 + Math.random() * 40; // % from top
-
-        el.style.cssText = `
-            position:fixed;left:${x}%;top:${y}%;z-index:999998;
-            font-family:'Press Start 2P','Silkscreen',monospace;
-            font-size:${size};color:${color};
-            text-shadow:0 0 10px ${color},2px 2px 0 rgba(0,0,0,0.5);
-            pointer-events:none;
-            animation:demoDamageFloat 1.2s ease forwards;
-        `;
-        el.textContent = crit ? `CRIT! -${damage}` : `-${damage}`;
-        document.body.appendChild(el);
-        setTimeout(() => el.remove(), 1200);
     },
 
     /**
