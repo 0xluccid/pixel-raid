@@ -616,8 +616,13 @@ const PhaserBattleScene = new Phaser.Class({
     _arrangeHighlights: [],
     _selectedArrangeSlot: null,
 
+    // Track previously rendered units for summon detection
+    _prevBoardState: { player: [], enemy: [] },
+
     _renderBoardUnits: function (board, side) {
         var scene = this;
+        var prevState = scene._prevBoardState[side] || [];
+
         // Clean up old unit texts for this side
         if (scene._boardUnitTexts[side]) {
             scene._boardUnitTexts[side].forEach(function (t) { if (t && t.destroy) t.destroy(); });
@@ -648,6 +653,9 @@ const PhaserBattleScene = new Phaser.Class({
             var cx = slot.x + slot.w / 2;
             var cy = slot.y + slot.h / 2;
 
+            // Detect newly summoned unit (was null before, now has unit)
+            var isNewSummon = !prevState[i] && unit;
+
             // Unit emoji sprite
             var emoji = unit.emoji || '⚔️';
             var unitText = scene.add.text(cx, cy - 8, emoji, {
@@ -655,6 +663,66 @@ const PhaserBattleScene = new Phaser.Class({
             });
             unitText.setOrigin(0.5, 0.5);
             scene._boardUnitTexts[side].push(unitText);
+
+            // Summon animation for new units
+            if (isNewSummon && typeof PhaserAnimations !== 'undefined') {
+                unitText.setScale(0);
+                unitText.setAlpha(0);
+                (function (ut, sx, sy) {
+                    // Expanding rings
+                    for (var r = 0; r < 3; r++) {
+                        (function (delay) {
+                            scene.time.delayedCall(delay, function () {
+                                var ring = scene.add.graphics();
+                                ring.lineStyle(2, 0xffd700, 0.7);
+                                ring.strokeCircle(0, 0, 8);
+                                ring.setPosition(sx, sy);
+                                ring.setDepth(29);
+                                scene.tweens.add({
+                                    targets: ring,
+                                    scaleX: 4,
+                                    scaleY: 4,
+                                    alpha: 0,
+                                    duration: 450,
+                                    ease: 'Power2',
+                                    onComplete: function () { ring.destroy(); }
+                                });
+                            });
+                        })(r * 100);
+                    }
+                    // Flash
+                    var fl = scene.add.graphics();
+                    fl.fillStyle(0xffd700, 0.6);
+                    fl.fillCircle(0, 0, 18);
+                    fl.setPosition(sx, sy);
+                    fl.setDepth(28);
+                    scene.tweens.add({
+                        targets: fl,
+                        alpha: 0,
+                        scaleX: 3,
+                        scaleY: 3,
+                        duration: 350,
+                        onComplete: function () { fl.destroy(); }
+                    });
+                    // Scale-in emoji
+                    scene.tweens.add({
+                        targets: ut,
+                        scaleX: 1.2,
+                        scaleY: 1.2,
+                        alpha: 1,
+                        duration: 180,
+                        ease: 'Back.easeOut',
+                        onComplete: function () {
+                            scene.tweens.add({
+                                targets: ut,
+                                scaleX: 1,
+                                scaleY: 1,
+                                duration: 100
+                            });
+                        }
+                    });
+                })(unitText, cx, cy);
+            }
 
             // Unit name (truncated)
             var nameStr = (unit.name || '?').substring(0, 10);
@@ -754,6 +822,9 @@ const PhaserBattleScene = new Phaser.Class({
             instrText.setDepth(90);
             scene._boardUnitTexts[side].push(instrText);
         }
+
+        // Save current state for next summon detection
+        scene._prevBoardState[side] = board.map(function (u) { return !!u; });
     },
 
     // ===== PHASE BANNER =====
@@ -869,7 +940,7 @@ const PhaserBattleScene = new Phaser.Class({
         });
     },
 
-    // ===== ATTACK ANIMATION (Hero → Hero) =====
+    // ===== ATTACK ANIMATION (Enhanced: Anticipation → Dash → Projectile → Impact) =====
     playAttack: function (attackIdx, targetIdx, isPlayerAttacking, damage, isCrit) {
         var scene = this;
 
@@ -884,26 +955,109 @@ const PhaserBattleScene = new Phaser.Class({
         var tgtX = tgtPanel.x + tgtPanel.w / 2;
         var tgtY = tgtPanel.y + tgtPanel.h / 2;
 
-        // Attack flash projectile
-        var flash = this.add.graphics();
-        flash.fillStyle(isCrit ? 0xff4444 : 0xffffff, 1);
-        flash.fillCircle(0, 0, isCrit ? 10 : 7);
-        flash.setPosition(srcX, srcY);
-        flash.setDepth(50);
+        // PHASE 1: ANTICIPATION — pulse glow on attacker slot (0-120ms)
+        var anticipGlow = scene.add.graphics();
+        anticipGlow.fillStyle(isPlayerAttacking ? 0x44aaff : 0xff4444, 0.3);
+        anticipGlow.fillRect(srcPanel.x, srcPanel.y, srcPanel.w, srcPanel.h);
+        anticipGlow.setDepth(40);
+        anticipGlow.setAlpha(0);
 
-        var trail = this.add.graphics();
-        trail.setDepth(49);
+        scene.tweens.add({
+            targets: anticipGlow,
+            alpha: 1,
+            duration: 60,
+            yoyo: true,
+            repeat: 1,
+            onComplete: function () { anticipGlow.destroy(); }
+        });
 
-        this.tweens.add({
-            targets: flash,
+        // Attacker slot border flash
+        var srcBorder = scene.add.graphics();
+        srcBorder.lineStyle(3, isCrit ? 0xffd700 : 0xffaa44, 1);
+        srcBorder.strokeRect(srcPanel.x + 1, srcPanel.y + 1, srcPanel.w - 2, srcPanel.h - 2);
+        srcBorder.setDepth(41);
+        srcBorder.setAlpha(0);
+
+        scene.tweens.add({
+            targets: srcBorder,
+            alpha: 1,
+            duration: 60,
+            yoyo: true,
+            repeat: 1,
+            onComplete: function () { srcBorder.destroy(); }
+        });
+
+        // PHASE 2: DASH FORWARD — ghost silhouette rushes toward target (120-320ms)
+        scene.time.delayedCall(120, function () {
+            var dashEmoji = isPlayerAttacking ? '⚔️' : '💀';
+            var ghost = scene.add.text(srcX, srcY, dashEmoji, { fontSize: '32px' });
+            ghost.setOrigin(0.5, 0.5);
+            ghost.setAlpha(0.5);
+            ghost.setDepth(50);
+
+            // Trail particles during dash
+            scene.tweens.add({
+                targets: ghost,
+                x: tgtX + (isPlayerAttacking ? -30 : 30),
+                y: tgtY,
+                duration: 180,
+                ease: 'Power3',
+                onUpdate: function () {
+                    if (Math.random() > 0.3) {
+                        var px = ghost.x + (Math.random() - 0.5) * 12;
+                        var py = ghost.y + (Math.random() - 0.5) * 12;
+                        var p = scene.add.graphics();
+                        p.fillStyle(isCrit ? 0xff4444 : 0xffd700, 0.7);
+                        p.fillCircle(0, 0, 1 + Math.random() * 2);
+                        p.setPosition(px, py);
+                        p.setDepth(49);
+                        scene.tweens.add({
+                            targets: p,
+                            alpha: 0,
+                            scaleX: 0,
+                            scaleY: 0,
+                            duration: 180,
+                            onComplete: function () { p.destroy(); }
+                        });
+                    }
+                },
+                onComplete: function () {
+                    ghost.destroy();
+
+                    // PHASE 3: PROJECTILE + IMPACT (320ms)
+                    scene.time.delayedCall(40, function () {
+                        scene._fireProjectile(srcX, srcY, tgtX, tgtY, tgtPanel, damage, isCrit);
+                    });
+                }
+            });
+        });
+    },
+
+    // Internal: projectile trail → impact → damage number → slash → particles
+    _fireProjectile: function (srcX, srcY, tgtX, tgtY, tgtPanel, damage, isCrit) {
+        var scene = this;
+
+        // Projectile orb
+        var orb = scene.add.graphics();
+        orb.fillStyle(isCrit ? 0xff4444 : 0xffffff, 1);
+        orb.fillCircle(0, 0, isCrit ? 10 : 7);
+        orb.setPosition(srcX, srcY);
+        orb.setDepth(52);
+
+        // Trail line
+        var trail = scene.add.graphics();
+        trail.setDepth(51);
+
+        scene.tweens.add({
+            targets: orb,
             x: tgtX,
             y: tgtY,
-            duration: 280,
+            duration: 200,
             ease: 'Power2',
-            onUpdate: function (tween) {
-                var progress = tween.progress;
-                var cx = srcX + (tgtX - srcX) * progress;
-                var cy = srcY + (tgtY - srcY) * progress;
+            onUpdate: function (tw) {
+                var prog = tw.progress;
+                var cx = srcX + (tgtX - srcX) * prog;
+                var cy = srcY + (tgtY - srcY) * prog;
                 trail.clear();
                 trail.lineStyle(isCrit ? 4 : 2, isCrit ? 0xff4444 : 0xffffff, 0.7);
                 trail.beginPath();
@@ -912,92 +1066,428 @@ const PhaserBattleScene = new Phaser.Class({
                 trail.strokePath();
             },
             onComplete: function () {
-                // Impact effects
-                scene.spawnDamageNumber(tgtX + (Math.random() - 0.5) * 30, tgtY - 20, damage, isCrit);
-                scene.triggerShake(isCrit ? 12 : 5, isCrit ? 0.8 : 0.4);
-
-                // Flash on target
-                var impactFlash = scene.add.graphics();
-                impactFlash.setDepth(48);
-                impactFlash.fillStyle(isCrit ? 0xff3232 : 0xffffff, isCrit ? 0.5 : 0.35);
-                impactFlash.fillRect(tgtPanel.x, tgtPanel.y, tgtPanel.w, tgtPanel.h);
-
-                scene.tweens.add({
-                    targets: impactFlash,
-                    alpha: 0,
-                    duration: 400,
-                    onComplete: function () { impactFlash.destroy(); }
-                });
-
-                // Slash X mark
-                var slash = scene.add.graphics();
-                slash.setDepth(51);
-                var slashColor = isCrit ? 0xff2222 : 0xffffff;
-                var slashSize = isCrit ? 22 : 16;
-                slash.lineStyle(isCrit ? 4 : 3, slashColor, 0.9);
-                slash.beginPath();
-                slash.moveTo(tgtX - slashSize, tgtY - slashSize);
-                slash.lineTo(tgtX + slashSize, tgtY + slashSize);
-                slash.strokePath();
-                slash.beginPath();
-                slash.moveTo(tgtX + slashSize, tgtY - slashSize);
-                slash.lineTo(tgtX - slashSize, tgtY + slashSize);
-                slash.strokePath();
-
-                scene.tweens.add({
-                    targets: slash,
-                    alpha: 0,
-                    scaleX: 1.5,
-                    scaleY: 1.5,
-                    duration: 400,
-                    ease: 'Power2',
-                    onComplete: function () { slash.destroy(); }
-                });
-
-                // Particle burst
-                var particleCount = isCrit ? 14 : 8;
-                var particleColor = isCrit ? 0xff4444 : 0xffd700;
-                for (var p = 0; p < particleCount; p++) {
-                    (function (index) {
-                        var angle = (index / particleCount) * Math.PI * 2;
-                        var speed = 40 + Math.random() * 50;
-                        var particle = scene.add.graphics();
-                        var pSize = isCrit ? 3 + Math.random() * 3 : 2 + Math.random() * 2;
-                        particle.fillStyle(particleColor, 0.9);
-                        particle.fillCircle(0, 0, pSize);
-                        particle.setPosition(tgtX, tgtY);
-                        particle.setDepth(52);
-
-                        scene.tweens.add({
-                            targets: particle,
-                            x: tgtX + Math.cos(angle) * speed,
-                            y: tgtY + Math.sin(angle) * speed,
-                            alpha: 0,
-                            scaleX: 0.2,
-                            scaleY: 0.2,
-                            duration: 350 + Math.random() * 200,
-                            ease: 'Power2',
-                            onComplete: function () { particle.destroy(); }
-                        });
-                    })(p);
-                }
-
-                // Brief full-screen flash
-                var fullFlash = scene.add.graphics();
-                fullFlash.setDepth(47);
-                fullFlash.fillStyle(isCrit ? 0xff2222 : 0xffffff, isCrit ? 0.08 : 0.05);
-                fullFlash.fillRect(0, 0, scene.W, scene.H);
-                scene.tweens.add({
-                    targets: fullFlash,
-                    alpha: 0,
-                    duration: 200,
-                    onComplete: function () { fullFlash.destroy(); }
-                });
-
-                flash.destroy();
+                orb.destroy();
                 trail.destroy();
+                scene._impactEffects(tgtX, tgtY, tgtPanel, damage, isCrit);
             }
         });
+    },
+
+    // Internal: all impact effects (hit flash, damage number, slash, particles, shake)
+    _impactEffects: function (tgtX, tgtY, tgtPanel, damage, isCrit) {
+        var scene = this;
+
+        // Damage number
+        scene.spawnDamageNumber(tgtX + (Math.random() - 0.5) * 30, tgtY - 20, damage, isCrit);
+
+        // Screen shake
+        scene.triggerShake(isCrit ? 12 : 5, isCrit ? 0.8 : 0.4);
+
+        // Hit flash on target panel
+        var impactFlash = scene.add.graphics();
+        impactFlash.setDepth(53);
+        impactFlash.fillStyle(isCrit ? 0xff3232 : 0xffffff, isCrit ? 0.55 : 0.4);
+        impactFlash.fillRect(tgtPanel.x, tgtPanel.y, tgtPanel.w, tgtPanel.h);
+
+        scene.tweens.add({
+            targets: impactFlash,
+            alpha: 0,
+            duration: isCrit ? 350 : 250,
+            ease: 'Power2',
+            onComplete: function () { impactFlash.destroy(); }
+        });
+
+        // Energy burst rings on impact point
+        var burstColor = isCrit ? 0xff4444 : 0xffffff;
+        for (var r = 0; r < 2; r++) {
+            (function (delay) {
+                scene.time.delayedCall(delay, function () {
+                    var ring = scene.add.graphics();
+                    ring.lineStyle(isCrit ? 3 : 2, burstColor, 0.7);
+                    ring.strokeCircle(0, 0, 10);
+                    ring.setPosition(tgtX, tgtY);
+                    ring.setDepth(54);
+
+                    scene.tweens.add({
+                        targets: ring,
+                        scaleX: 3.5,
+                        scaleY: 3.5,
+                        alpha: 0,
+                        duration: 300,
+                        ease: 'Power2',
+                        onComplete: function () { ring.destroy(); }
+                    });
+                });
+            })(r * 80);
+        }
+
+        // Slash X mark
+        var slash = scene.add.graphics();
+        slash.setDepth(55);
+        var slashColor = isCrit ? 0xff2222 : 0xffffff;
+        var slashSize = isCrit ? 22 : 16;
+        slash.lineStyle(isCrit ? 4 : 3, slashColor, 0.9);
+        slash.beginPath();
+        slash.moveTo(tgtX - slashSize, tgtY - slashSize);
+        slash.lineTo(tgtX + slashSize, tgtY + slashSize);
+        slash.strokePath();
+        slash.beginPath();
+        slash.moveTo(tgtX + slashSize, tgtY - slashSize);
+        slash.lineTo(tgtX - slashSize, tgtY + slashSize);
+        slash.strokePath();
+
+        scene.tweens.add({
+            targets: slash,
+            alpha: 0,
+            scaleX: 1.5,
+            scaleY: 1.5,
+            duration: 400,
+            ease: 'Power2',
+            onComplete: function () { slash.destroy(); }
+        });
+
+        // Particle burst
+        var particleCount = isCrit ? 16 : 10;
+        var particleColor = isCrit ? 0xff4444 : 0xffd700;
+        for (var p = 0; p < particleCount; p++) {
+            (function (index) {
+                var angle = (index / particleCount) * Math.PI * 2;
+                var speed = 40 + Math.random() * 60;
+                var particle = scene.add.graphics();
+                var pSize = isCrit ? 3 + Math.random() * 3 : 2 + Math.random() * 2;
+                particle.fillStyle(particleColor, 0.9);
+                particle.fillCircle(0, 0, pSize);
+                particle.setPosition(tgtX, tgtY);
+                particle.setDepth(56);
+
+                scene.tweens.add({
+                    targets: particle,
+                    x: tgtX + Math.cos(angle) * speed,
+                    y: tgtY + Math.sin(angle) * speed,
+                    alpha: 0,
+                    scaleX: 0.2,
+                    scaleY: 0.2,
+                    duration: 350 + Math.random() * 200,
+                    ease: 'Power2',
+                    onComplete: function () { particle.destroy(); }
+                });
+            })(p);
+        }
+
+        // Brief full-screen flash
+        var fullFlash = scene.add.graphics();
+        fullFlash.setDepth(47);
+        fullFlash.fillStyle(isCrit ? 0xff2222 : 0xffffff, isCrit ? 0.1 : 0.06);
+        fullFlash.fillRect(0, 0, scene.W, scene.H);
+        scene.tweens.add({
+            targets: fullFlash,
+            alpha: 0,
+            duration: 150,
+            onComplete: function () { fullFlash.destroy(); }
+        });
+    },
+
+    // ===== DEATH FADE ANIMATION =====
+    deathFade: function (side, slotIndex, emoji, cb) {
+        var scene = this;
+        var sideSlots = scene.skillSlots.filter(function (s) { return s.side === side; });
+        if (slotIndex >= sideSlots.length) { if (cb) cb(); return; }
+
+        var slot = sideSlots[slotIndex];
+        var cx = slot.x + slot.w / 2;
+        var cy = slot.y + slot.h / 2;
+
+        // Red flash on slot
+        var redFlash = scene.add.graphics();
+        redFlash.fillStyle(0xff0000, 0.4);
+        redFlash.fillRect(slot.x, slot.y, slot.w, slot.h);
+        redFlash.setDepth(54);
+        scene.tweens.add({
+            targets: redFlash,
+            alpha: 0,
+            duration: 200,
+            onComplete: function () { redFlash.destroy(); }
+        });
+
+        // Ghost emoji fade + shrink
+        var ghost = scene.add.text(cx, cy - 8, emoji || '💀', { fontSize: '38px' });
+        ghost.setOrigin(0.5, 0.5);
+        ghost.setDepth(57);
+
+        scene.tweens.add({
+            targets: ghost,
+            alpha: 0,
+            scaleX: 0.2,
+            scaleY: 0.2,
+            duration: 500,
+            ease: 'Power2'
+        });
+
+        // Dissolve particles (gray squares floating up)
+        for (var i = 0; i < 10; i++) {
+            (function (delay) {
+                scene.time.delayedCall(delay, function () {
+                    var px = scene.add.graphics();
+                    px.fillStyle(0x888888, 0.8);
+                    px.fillRect(-2, -2, 4, 4);
+                    px.setPosition(cx + (Math.random() - 0.5) * 40, cy + (Math.random() - 0.5) * 30);
+                    px.setDepth(58);
+                    scene.tweens.add({
+                        targets: px,
+                        y: px.y - 30 - Math.random() * 40,
+                        x: px.x + (Math.random() - 0.5) * 40,
+                        alpha: 0,
+                        duration: 400 + Math.random() * 200,
+                        onComplete: function () { px.destroy(); }
+                    });
+                });
+            })(i * 40);
+        }
+
+        // Skull pop-up
+        scene.time.delayedCall(200, function () {
+            var skull = scene.add.text(cx, cy, '💀', { fontSize: '18px' });
+            skull.setOrigin(0.5, 0.5);
+            skull.setDepth(59);
+            skull.setAlpha(0);
+            scene.tweens.add({
+                targets: skull,
+                y: cy - 25,
+                alpha: 1,
+                duration: 300,
+                ease: 'Power2',
+                onComplete: function () {
+                    scene.tweens.add({
+                        targets: skull,
+                        y: cy - 45,
+                        alpha: 0,
+                        duration: 300,
+                        delay: 200,
+                        onComplete: function () {
+                            skull.destroy();
+                            ghost.destroy();
+                            if (cb) cb();
+                        }
+                    });
+                }
+            });
+        });
+
+        // Fallback cleanup
+        scene.time.delayedCall(800, function () {
+            if (ghost.active) ghost.destroy();
+            if (cb) cb();
+        });
+    },
+
+    // ===== VICTORY CELEBRATION =====
+    playVictory: function (cb) {
+        var scene = this;
+        var W = scene.W;
+        var H = scene.H;
+
+        // Gold confetti rain
+        var confettiColors = [0xffd700, 0xffaa00, 0x44ff88, 0x44aaff, 0xff44aa, 0xffffff];
+        for (var i = 0; i < 40; i++) {
+            (function (delay) {
+                scene.time.delayedCall(delay, function () {
+                    var color = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+                    var size = 2 + Math.random() * 4;
+                    var cp = scene.add.graphics();
+                    cp.fillStyle(color, 0.9);
+                    if (Math.random() > 0.5) {
+                        cp.fillRect(-size / 2, -size / 2, size, size);
+                    } else {
+                        cp.fillCircle(0, 0, size / 2);
+                    }
+                    cp.setPosition(Math.random() * W, -10);
+                    cp.setDepth(110);
+                    cp.setAngle(Math.random() * 360);
+                    scene.tweens.add({
+                        targets: cp,
+                        y: H + 20,
+                        x: cp.x + (Math.random() - 0.5) * 100,
+                        angle: cp.angle + 360 + Math.random() * 360,
+                        duration: 1500 + Math.random() * 1000,
+                        onComplete: function () { cp.destroy(); }
+                    });
+                });
+            })(i * 40);
+        }
+
+        // Gold screen pulse
+        var pulse = scene.add.graphics();
+        pulse.fillStyle(0xffd700, 0.12);
+        pulse.fillRect(0, 0, W, H);
+        pulse.setDepth(108);
+        pulse.setAlpha(0);
+        scene.tweens.add({
+            targets: pulse,
+            alpha: 1,
+            duration: 300,
+            yoyo: true,
+            repeat: 2,
+            onComplete: function () { pulse.destroy(); }
+        });
+
+        // VICTORY text
+        scene.time.delayedCall(300, function () {
+            var txt = scene.add.text(W / 2, H / 2 - 20, '🏆 VICTORY!', {
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: '28px',
+                color: '#ffd700',
+                fontStyle: 'bold',
+                stroke: '#000000',
+                strokeThickness: 4
+            });
+            txt.setOrigin(0.5, 0.5);
+            txt.setDepth(115);
+            txt.setScale(0.2);
+            txt.setAlpha(0);
+
+            scene.tweens.add({
+                targets: txt,
+                scaleX: 1.1,
+                scaleY: 1.1,
+                alpha: 1,
+                duration: 400,
+                ease: 'Back.easeOut',
+                onComplete: function () {
+                    scene.tweens.add({
+                        targets: txt,
+                        scaleX: 1.2,
+                        scaleY: 1.2,
+                        duration: 200,
+                        yoyo: true,
+                        repeat: -1
+                    });
+                }
+            });
+        });
+
+        // Star burst
+        scene.time.delayedCall(600, function () {
+            for (var j = 0; j < 8; j++) {
+                (function (delay) {
+                    scene.time.delayedCall(delay, function () {
+                        var star = scene.add.text(
+                            W / 2 + (Math.random() - 0.5) * 200,
+                            H / 2 + (Math.random() - 0.5) * 100,
+                            '⭐',
+                            { fontSize: '16px' }
+                        );
+                        star.setOrigin(0.5, 0.5);
+                        star.setDepth(112);
+                        star.setAlpha(0);
+                        scene.tweens.add({
+                            targets: star,
+                            y: star.y - 60,
+                            alpha: 1,
+                            duration: 400,
+                            ease: 'Power2',
+                            onComplete: function () {
+                                scene.tweens.add({
+                                    targets: star,
+                                    y: star.y - 30,
+                                    alpha: 0,
+                                    duration: 500,
+                                    delay: 300,
+                                    onComplete: function () { star.destroy(); }
+                                });
+                            }
+                        });
+                    });
+                })(j * 80);
+            }
+        });
+
+        scene.cameras.main.shake(800, 0.012);
+        scene.time.delayedCall(2500, function () { if (cb) cb(); });
+    },
+
+    // ===== DEFEAT ANIMATION =====
+    playDefeat: function (cb) {
+        var scene = this;
+        var W = scene.W;
+        var H = scene.H;
+
+        // Red vignette
+        var vignette = scene.add.graphics();
+        vignette.fillStyle(0x880000, 0.4);
+        vignette.fillCircle(0, 0, W * 0.8);
+        vignette.fillCircle(W, 0, W * 0.8);
+        vignette.fillCircle(0, H, W * 0.8);
+        vignette.fillCircle(W, H, W * 0.8);
+        vignette.setDepth(107);
+        vignette.setAlpha(0);
+        scene.tweens.add({
+            targets: vignette,
+            alpha: 1,
+            duration: 800,
+            ease: 'Power2'
+        });
+
+        // Red overlay
+        var redOvl = scene.add.graphics();
+        redOvl.fillStyle(0xff0000, 0.08);
+        redOvl.fillRect(0, 0, W, H);
+        redOvl.setDepth(108);
+        redOvl.setAlpha(0);
+        scene.tweens.add({
+            targets: redOvl,
+            alpha: 1,
+            duration: 600
+        });
+
+        // Screen shake
+        scene.cameras.main.shake(1000, 0.008);
+
+        // DEFEAT text
+        scene.time.delayedCall(400, function () {
+            var txt = scene.add.text(W / 2, H / 2 - 20, '💀 DEFEAT', {
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: '28px',
+                color: '#ff3333',
+                fontStyle: 'bold',
+                stroke: '#000000',
+                strokeThickness: 4
+            });
+            txt.setOrigin(0.5, 0.5);
+            txt.setDepth(115);
+            txt.setScale(0.2);
+            txt.setAlpha(0);
+
+            scene.tweens.add({
+                targets: txt,
+                scaleX: 1,
+                scaleY: 1,
+                alpha: 1,
+                duration: 600,
+                ease: 'Back.easeOut'
+            });
+        });
+
+        // Red rain particles
+        for (var i = 0; i < 20; i++) {
+            (function (delay) {
+                scene.time.delayedCall(delay, function () {
+                    var rp = scene.add.graphics();
+                    rp.fillStyle(0xff3333, 0.6);
+                    rp.fillRect(-1, -1, 2, 6);
+                    rp.setPosition(Math.random() * W, -10);
+                    rp.setDepth(106);
+                    scene.tweens.add({
+                        targets: rp,
+                        y: H + 10,
+                        alpha: 0,
+                        duration: 1000 + Math.random() * 500,
+                        onComplete: function () { rp.destroy(); }
+                    });
+                });
+            })(i * 60);
+        }
+
+        scene.time.delayedCall(2500, function () { if (cb) cb(); });
     },
 
     // ===== SCREEN SHAKE =====

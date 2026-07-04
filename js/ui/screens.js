@@ -436,7 +436,15 @@ const UI = {
             }
         };
 
+        // Track previous board state for death detection
+        this._prevFieldState = { player: [], enemy: [] };
+
         BattleEngine.onFieldUpdate = () => {
+            // Detect deaths BEFORE re-rendering (compare prev vs current)
+            if (this._prevFieldState && this._prevFieldState.player.length) {
+                this._detectAndAnimateDeaths();
+            }
+
             BattlePhaser.renderField(BattleEngine.player, BattleEngine.enemy);
 
             // Always re-render card hand during active battle phases
@@ -451,6 +459,12 @@ const UI = {
             if (BattleEngine.currentPhase === 'arrange') {
                 this._renderArrangeOverlay();
             }
+
+            // Save current board state for next comparison
+            this._prevFieldState = {
+                player: BattleEngine.player.board.map(u => u ? { emoji: u.emoji, name: u.name } : null),
+                enemy: BattleEngine.enemy.board.map(u => u ? { emoji: u.emoji, name: u.name } : null)
+            };
         };
 
         BattleEngine.onAttack = (data) => {
@@ -653,6 +667,13 @@ const UI = {
         const result = BattleEngine._checkWinLose();
         const isWin = result === 'player';
 
+        // Trigger Phaser victory/defeat animation
+        if (isWin) {
+            BattlePhaser.playVictory();
+        } else {
+            BattlePhaser.playDefeat();
+        }
+
         // Create result overlay
         let overlay = document.getElementById('battle-result-overlay');
         if (!overlay) {
@@ -701,6 +722,37 @@ const UI = {
                 </div>
             </div>
         `;
+    },
+
+    // ===== DEATH ANIMATION DETECTION =====
+    _detectAndAnimateDeaths() {
+        if (!BattleEngine.player || !BattleEngine.enemy) return;
+        if (!this._prevFieldState || !this._prevFieldState.player.length) return;
+
+        const curPlayer = BattleEngine.player.board;
+        const curEnemy = BattleEngine.enemy.board;
+        const prevPlayer = this._prevFieldState.player;
+        const prevEnemy = this._prevFieldState.enemy;
+
+        // Check player board for deaths
+        for (let i = 0; i < Math.max(prevPlayer.length, curPlayer.length); i++) {
+            const wasAlive = prevPlayer[i] && prevPlayer[i] !== null;
+            const isDead = !curPlayer[i] || curPlayer[i] === null;
+            if (wasAlive && isDead) {
+                const emoji = prevPlayer[i].emoji || '💀';
+                BattlePhaser.deathFade('player', i, emoji);
+            }
+        }
+
+        // Check enemy board for deaths
+        for (let i = 0; i < Math.max(prevEnemy.length, curEnemy.length); i++) {
+            const wasAlive = prevEnemy[i] && prevEnemy[i] !== null;
+            const isDead = !curEnemy[i] || curEnemy[i] === null;
+            if (wasAlive && isDead) {
+                const emoji = prevEnemy[i].emoji || '💀';
+                BattlePhaser.deathFade('enemy', i, emoji);
+            }
+        }
     },
 
     _handleBattleResult(type) {

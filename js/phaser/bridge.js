@@ -413,6 +413,24 @@ var BattlePhaser = {
         this._scene.showPhaseBanner(text, isPlayer);
     },
 
+    // ===== DEATH FADE ANIMATION =====
+    deathFade: function (side, slotIndex, emoji, cb) {
+        if (!this._scene || !this._active) { if (cb) cb(); return; }
+        this._scene.deathFade(side, slotIndex, emoji, cb);
+    },
+
+    // ===== VICTORY CELEBRATION =====
+    playVictory: function (cb) {
+        if (!this._scene || !this._active) { if (cb) cb(); return; }
+        this._scene.playVictory(cb);
+    },
+
+    // ===== DEFEAT ANIMATION =====
+    playDefeat: function (cb) {
+        if (!this._scene || !this._active) { if (cb) cb(); return; }
+        this._scene.playDefeat(cb);
+    },
+
     // ===== DESTROY =====
     destroy: function () {
         this._active = false;
