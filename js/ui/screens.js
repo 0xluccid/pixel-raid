@@ -362,6 +362,14 @@ const UI = {
         // Stop any previous battle
         BattleEngine.stop();
 
+        // Clear any leftover inline display styles from previous battle cleanup
+        // (inline styles override CSS, so battle-active rules wouldn't take effect)
+        var resetEls = ['#card-hand-area', '#battle-canvas-container', '.battle-action-row', '.battle-info-strip'];
+        for (var i = 0; i < resetEls.length; i++) {
+            var el = document.querySelector(resetEls[i]);
+            if (el) { el.style.cssText = ''; el.removeAttribute('style'); }
+        }
+
         // Show battle canvas container
         const battleContainer = document.getElementById('battle-canvas-container');
         if (battleContainer) battleContainer.style.display = 'block';
@@ -431,9 +439,10 @@ const UI = {
         BattleEngine.onFieldUpdate = () => {
             BattlePhaser.renderField(BattleEngine.player, BattleEngine.enemy);
 
-            // Bug #3: Re-render card hand during play phase AND when drawing cards
+            // Always re-render card hand during active battle phases
             if (typeof CardHand !== 'undefined' && BattleEngine.player) {
-                if (BattleEngine.currentPhase === 'play' || BattleEngine.currentPhase === 'energy') {
+                const activePhases = ['draw', 'energy', 'play', 'arrange'];
+                if (activePhases.includes(BattleEngine.currentPhase)) {
                     CardHand.renderHand(BattleEngine.player.hand, BattleEngine.player.energy);
                 }
             }
@@ -775,11 +784,20 @@ const UI = {
             BattlePhaser.destroy();
         }
 
-        // Hide battle canvas container
+        // Hide battle canvas container AND reset its wrapper
         const battleContainer = document.getElementById('battle-canvas-container');
         if (battleContainer) {
             battleContainer.style.cssText = '';
             battleContainer.style.display = 'none';
+            // Clear any leftover canvas elements from Phaser
+            var oldCanvas = battleContainer.querySelector('canvas');
+            if (oldCanvas) oldCanvas.remove();
+        }
+        const canvasWrap = document.querySelector('.battle-canvas-wrap');
+        if (canvasWrap) {
+            canvasWrap.style.cssText = '';
+            canvasWrap.style.height = '';
+            canvasWrap.style.minHeight = '';
         }
 
         // Remove battle-active class (exits fullscreen mode)

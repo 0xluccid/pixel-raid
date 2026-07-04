@@ -204,6 +204,16 @@ var BattlePhaser = {
             var container = document.getElementById(this._containerId);
             if (container) {
                 container.style.cssText = '';
+                container.style.display = 'none';
+                // Remove leftover canvas from Phaser
+                var oldCanvas = container.querySelector('canvas');
+                if (oldCanvas) oldCanvas.remove();
+            }
+            var wrap = document.querySelector('.battle-canvas-wrap');
+            if (wrap) {
+                wrap.style.cssText = '';
+                wrap.style.height = '';
+                wrap.style.minHeight = '';
             }
 
             // Robustly restore nav/header visibility
@@ -347,7 +357,7 @@ var BattlePhaser = {
             PhaserAnimations.stop();
         }
         if (this._game) {
-            this._game.destroy(true);
+            this._game.destroy(true, false); // removeCanvas=true, no scene shutdown
             this._game = null;
         }
         this._scene = null;

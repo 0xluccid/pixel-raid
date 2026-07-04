@@ -279,13 +279,29 @@ const RewardPopup = {
         if (actionRow) { actionRow.innerHTML = ''; actionRow.style.display = 'none'; }
 
         const battleContainer = document.getElementById('battle-canvas-container');
+        const canvasWrap = document.querySelector('.battle-canvas-wrap');
+
+        // Helper: clean up all battle DOM remnants
+        function _cleanBattleDOM() {
+            if (battleContainer) {
+                battleContainer.style.cssText = '';
+                battleContainer.style.display = 'none';
+                var oldCanvas = battleContainer.querySelector('canvas');
+                if (oldCanvas) oldCanvas.remove();
+            }
+            if (canvasWrap) {
+                canvasWrap.style.cssText = '';
+                canvasWrap.style.height = '';
+                canvasWrap.style.minHeight = '';
+            }
+        }
 
         if (action === 'continue') {
             // Exit battle, go to collection — destroy if still active, otherwise just clean up
             if (typeof BattlePhaser !== 'undefined' && BattlePhaser.isActive()) {
                 BattlePhaser.destroy();
             }
-            if (battleContainer) { battleContainer.style.cssText = ''; battleContainer.style.display = 'none'; }
+            _cleanBattleDOM();
             var sb = document.getElementById('screen-battle');
             if (sb) sb.classList.remove('battle-active');
             BattleEngine.stop();
@@ -303,7 +319,7 @@ const RewardPopup = {
             if (typeof BattlePhaser !== 'undefined' && BattlePhaser.isActive()) {
                 BattlePhaser.destroy();
             }
-            if (battleContainer) { battleContainer.style.cssText = ''; battleContainer.style.display = 'none'; }
+            _cleanBattleDOM();
             var sb2 = document.getElementById('screen-battle');
             if (sb2) sb2.classList.remove('battle-active');
             BattleEngine.stop();
@@ -319,7 +335,7 @@ const RewardPopup = {
             if (typeof BattlePhaser !== 'undefined' && BattlePhaser.isActive()) {
                 BattlePhaser.destroy();
             }
-            if (battleContainer) { battleContainer.style.cssText = ''; battleContainer.style.display = 'none'; }
+            _cleanBattleDOM();
             var sb3 = document.getElementById('screen-battle');
             if (sb3) sb3.classList.remove('battle-active');
             BattleEngine.stop();
