@@ -507,22 +507,29 @@ const PhaserBattleScene = new Phaser.Class({
         if (side === 'player' && typeof POSITION_BONUSES !== 'undefined') {
             var cfg = POSITION_BONUSES[index];
             if (cfg) {
-                bonusIcon = this.add.text(w / 2, 8, cfg.icon, {
-                    fontSize: '14px',
+                bonusIcon = this.add.text(w / 2, 10, cfg.icon, {
+                    fontSize: '18px',
                 });
                 bonusIcon.setOrigin(0.5, 0);
+                bonusIcon.setDepth(6);
                 container.add(bonusIcon);
 
-                bonusLabel = this.add.text(w / 2, h - 6, cfg.description, {
+                bonusLabel = this.add.text(w / 2, h - 4, cfg.description, {
                     fontFamily: '"Press Start 2P", monospace',
-                    fontSize: '6px',
+                    fontSize: '7px',
                     color: cfg.color,
                     align: 'center',
+                    stroke: '#000000',
+                    strokeThickness: 2,
                 });
                 bonusLabel.setOrigin(0.5, 1);
+                bonusLabel.setDepth(6);
                 container.add(bonusLabel);
             }
         }
+
+        // Set container depth above hitArea
+        container.setDepth(3);
 
         var slotData = {
             container: container,
