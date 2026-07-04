@@ -66,8 +66,9 @@ const CardRenderer = {
     _px: null, // cached pixel buffer
 
     _getEl(card) {
-        const el = getCardElement ? getCardElement(card) : (card.element || 'shadow');
-        return (typeof ELEMENTS !== 'undefined' && ELEMENTS[el]) ? ELEMENTS[el] : { color: '#aa44cc', bg: '#1a0a2a', icon: '🌑' };
+        if (typeof getCardElement === 'function') return getCardElement(card);
+        const key = (card && card.element && ELEMENTS[card.element]) ? card.element : 'shadow';
+        return ELEMENTS[key] || { color: '#aa44cc', bg: '#1a0a2a', icon: '🌑', name: 'Shadow' };
     },
 
     _darken(hex, amt) {

@@ -277,10 +277,13 @@ function getCardPower(card) {
 }
 
 function getCardElement(card) {
-    if (card.element && ELEMENTS[card.element]) return card.element;
-    const tmpl = getTemplateByName(card.templateId || card.name);
-    if (tmpl && tmpl.element && ELEMENTS[tmpl.element]) return tmpl.element;
-    return 'shadow'; // default fallback
+    const key = card.element && ELEMENTS[card.element]
+        ? card.element
+        : (function() {
+            const tmpl = getTemplateByName(card.templateId || card.name);
+            return (tmpl && tmpl.element && ELEMENTS[tmpl.element]) ? tmpl.element : null;
+          })() || 'shadow';
+    return ELEMENTS[key];
 }
 
 function getCardSellPrice(card) {
