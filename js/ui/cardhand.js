@@ -168,25 +168,65 @@ const CardHand = {
                 </div>
             `;
         } else {
-            // ===== SKILL CARD — Spell/Trap style =====
+            // ===== SKILL CARD — TCG style with full info =====
             const typeInfo = CARD_TYPES[card.type] || { emoji: '✨', color: '#888' };
             const rarityStars = { common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
             const stars = rarityStars[card.rarity] || 1;
 
+            // Map unit type → element for TCG display
+            const typeElementMap = {
+                goblin: 'nature', beast: 'nature', undead: 'shadow',
+                machine: 'arcane', knight: 'arcane', special: 'arcane'
+            };
+            const elKey = card.element || typeElementMap[card.type] || 'arcane';
+            const elData = (typeof ELEMENTS !== 'undefined' && ELEMENTS[elKey]) || null;
+            const elIcon = elData ? elData.icon : (card.emoji || typeInfo.emoji);
+            const elName = elData ? elData.name : (card.type || 'Skill');
+            const elColor = elData ? elData.color : typeInfo.color;
+
+            // Build stats from card data
+            const atk = card.atk || card.stats?.atk || 0;
+            const hp = card.hp || card.stats?.hp || 0;
+            const def = card.def || card.stats?.def || Math.floor(hp * 0.4);
+            const spd = card.spd || card.stats?.spd || Math.floor(atk * 0.8);
+            const manaCost = card.cost || card.manaCost || 0;
+
+            // Skill description from card.desc or skill
+            const skillDesc = card.skill
+                ? this._formatSkillDesc(card.skill)
+                : (card.desc || `${card.name} — ${elName} unit, ATK ${atk} HP ${hp}`);
+
             el.innerHTML = `
-                <div class="tcg-header skill-header" style="background:rgba(10,20,60,0.9)">
-                    <span class="tcg-header-icon">${typeInfo.emoji}</span>
+                <div class="tcg-header" style="background:linear-gradient(135deg, ${elColor}cc, ${typeInfo.color}88)">
+                    <span class="tcg-el-icon">${elIcon}</span>
                     <span class="tcg-name">${card.name}</span>
+                    ${manaCost ? `<span class="tcg-hp" style="color:#4fc3f7">⚡${manaCost}</span>` : ''}
                 </div>
                 <div class="tcg-stars-row">
                     <span class="tcg-stars">${'★'.repeat(stars)}</span>
                 </div>
-                <div class="tcg-art-window skill-art" style="background:rgba(15,52,96,0.5)">
-                    <div class="card-art-icon skill-icon">${typeInfo.emoji}</div>
+                <div class="tcg-art-window" style="background:linear-gradient(180deg, ${elColor}33, #0f3460, ${elColor}22)">
+                    <div class="card-art-icon">${card.emoji || elIcon}</div>
                 </div>
-                <div class="tcg-divider"></div>
-                <div class="tcg-effect-text">${card.description || ''}</div>
-                ${card.manaCost !== undefined ? `<div class="tcg-cooldown">CD: ${card.manaCost}</div>` : ''}
+                <div class="tcg-el-badge" style="background:${elColor}44;border-color:${elColor}">
+                    <span>${elIcon} ${elName}</span>
+                    <span style="color:#aaa">${card.rarity ? card.rarity.charAt(0).toUpperCase() + card.rarity.slice(1) : 'Common'}</span>
+                </div>
+                <div class="tcg-skill-box">
+                    <div class="tcg-skill-header">
+                        <span class="tcg-skill-icon">${card.skill ? this._getSkillIcon(card.skill.type) : elIcon}</span>
+                        <span class="tcg-skill-name">${card.name}</span>
+                    </div>
+                    <div class="tcg-skill-desc">${skillDesc}</div>
+                </div>
+                <div class="tcg-stats-box">
+                    <div class="tcg-hp-bar"><div class="tcg-hp-fill" style="background:${elColor}"></div></div>
+                    <div class="tcg-stat-row">
+                        <span class="card-atk">⚔${atk}</span>
+                        <span class="card-def">🛡${def}</span>
+                        <span class="card-spd">💨${spd}</span>
+                    </div>
+                </div>
             `;
         }
 
