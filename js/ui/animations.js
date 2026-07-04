@@ -17,6 +17,7 @@ const BattleAnimations = {
     _summonEffects: [],
     _attackFlashes: [],
     _turnBanners: [],
+    _particles: [],
 
     init() {
         this._startLoop();
@@ -41,6 +42,7 @@ const BattleAnimations = {
         this._summonEffects = [];
         this._attackFlashes = [];
         this._turnBanners = [];
+        this._particles = [];
         this._isAnimating = false;
     },
 
@@ -278,11 +280,51 @@ const BattleAnimations = {
 
         // Clean up attack flashes
         this._attackFlashes = this._attackFlashes.filter(e => now - e.startTime < e.duration);
+
+        // Update particles
+        for (const p of this._particles) {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += p.gravity || 0.08;
+            p.life -= 1;
+            p.alpha = Math.max(0, p.life / p.maxLife);
+            p.rotation = (p.rotation || 0) + (p.rotSpeed || 0);
+        }
+        this._particles = this._particles.filter(p => p.life > 0);
     },
 
     // ===== RENDER OVERLAY EFFECTS ON CANVAS =====
     renderOverlay(ctx, W, H) {
         const now = performance.now();
+
+        // === PARTICLES ===
+        for (const p of this._particles) {
+            ctx.save();
+            ctx.globalAlpha = p.alpha * 0.9;
+            if (p.rotation) {
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation);
+                ctx.translate(-p.x, -p.y);
+            }
+            ctx.fillStyle = p.color;
+            if (p.shape === 'rect') {
+                ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+            } else if (p.shape === 'star') {
+                ctx.beginPath();
+                for (let i = 0; i < 5; i++) {
+                    const a = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+                    const r = i % 2 === 0 ? p.size : p.size * 0.4;
+                    ctx[i === 0 ? 'moveTo' : 'lineTo'](p.x + Math.cos(a) * r, p.y + Math.sin(a) * r);
+                }
+                ctx.closePath();
+                ctx.fill();
+            } else {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
 
         // Summon effects — expanding golden rings + flash
         for (const eff of this._summonEffects) {
@@ -355,6 +397,89 @@ const BattleAnimations = {
             }
 
             ctx.restore();
+        }
+    },
+
+    // ===== HAND CARD ANIMATIONS (CSS-based) =====
+
+    // ===== PARTICLE SPAWNERS =====
+
+    // Victory confetti — gold/green/blue sparkles falling
+    spawnVictoryConfetti(W, H) {
+        const colors = ['#ffd700', '#00ff88', '#4488ff', '#ff6b35', '#e94560', '#9b59b6'];
+        for (let i = 0; i < 40; i++) {
+            this._particles.push({
+                x: Math.random() * W,
+                y: -10 - Math.random() * 30,
+                vx: (Math.random() - 0.5) * 3,
+                vy: 1 + Math.random() * 2,
+                gravity: 0.04,
+                size: 2 + Math.random() * 4,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                shape: Math.random() > 0.5 ? 'rect' : 'star',
+                alpha: 1,
+                life: 80 + Math.random() * 60,
+                maxLife: 140,
+                rotation: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 0.15,
+            });
+        }
+    },
+
+    // Crit burst — big flash + sparks
+    spawnCritBurst(x, y) {
+        for (let i = 0; i < 12; i++) {
+            const angle = (i / 12) * Math.PI * 2;
+            this._particles.push({
+                x, y,
+                vx: Math.cos(angle) * (3 + Math.random() * 4),
+                vy: Math.sin(angle) * (3 + Math.random() * 4),
+                gravity: 0,
+                size: 2 + Math.random() * 3,
+                color: Math.random() > 0.5 ? '#ffd700' : '#ffffff',
+                shape: 'circle',
+                alpha: 1,
+                life: 20 + Math.random() * 15,
+                maxLife: 35,
+            });
+        }
+    },
+
+    // Death dust — brown/gray debris fading
+    spawnDeathDust(x, y) {
+        for (let i = 0; i < 8; i++) {
+            this._particles.push({
+                x: x + (Math.random() - 0.5) * 16,
+                y: y + (Math.random() - 0.5) * 16,
+                vx: (Math.random() - 0.5) * 2,
+                vy: -0.5 - Math.random() * 1.5,
+                gravity: 0.06,
+                size: 1 + Math.random() * 3,
+                color: Math.random() > 0.5 ? '#8b7355' : '#666666',
+                shape: 'rect',
+                alpha: 1,
+                life: 25 + Math.random() * 20,
+                maxLife: 45,
+                rotSpeed: (Math.random() - 0.5) * 0.2,
+            });
+        }
+    },
+
+    // Card play sparkle — gold sparkles at position
+    spawnCardSparkle(x, y) {
+        for (let i = 0; i < 6; i++) {
+            this._particles.push({
+                x, y,
+                vx: (Math.random() - 0.5) * 3,
+                vy: -1 - Math.random() * 2,
+                gravity: 0.02,
+                size: 1 + Math.random() * 2,
+                color: '#ffd700',
+                shape: 'star',
+                alpha: 1,
+                life: 15 + Math.random() * 10,
+                maxLife: 25,
+            });
         }
     },
 

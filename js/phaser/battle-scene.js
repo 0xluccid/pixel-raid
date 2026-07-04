@@ -1080,6 +1080,11 @@ const PhaserBattleScene = new Phaser.Class({
         // Damage number
         scene.spawnDamageNumber(tgtX + (Math.random() - 0.5) * 30, tgtY - 20, damage, isCrit);
 
+        // Crit burst particles (DOM overlay)
+        if (isCrit && typeof BattleAnimations !== 'undefined') {
+            BattleAnimations.spawnCritBurst(tgtX, tgtY);
+        }
+
         // Screen shake
         scene.triggerShake(isCrit ? 12 : 5, isCrit ? 0.8 : 0.4);
 
