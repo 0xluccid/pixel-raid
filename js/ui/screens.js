@@ -828,6 +828,16 @@ const UI = {
                         ← Back
                     </button>
                 </div>
+                <div style="text-align:center;margin-top:8px;">
+                    <button onclick="UI.openBattleCoach({isWin:${isWin},turnNumber:BattleEngine.turnNumber,player:{heroHp:BattleEngine.player.heroHp,heroMaxHp:BattleEngine.player.heroMaxHp},enemy:{heroHp:BattleEngine.enemy.heroHp,heroMaxHp:BattleEngine.enemy.heroMaxHp}})" style="
+                        font-family:'Press Start 2P',monospace;font-size:7px;
+                        padding:8px 14px;background:rgba(255,215,0,0.08);color:var(--gold);
+                        border:1px solid rgba(255,215,0,0.25);border-radius:4px;
+                        cursor:pointer;transition:all 0.2s ease;
+                    " onmouseover="this.style.background='rgba(255,215,0,0.15)'" onmouseout="this.style.background='rgba(255,215,0,0.08)'">
+                        🤖 AI Coach
+                    </button>
+                </div>
             </div>
         `;
     },
@@ -1107,37 +1117,203 @@ const UI = {
 
     // ===== HEROES SCREEN =====
     // ===== SPRINT 3: ENHANCED COLLECTION SCREEN =====
-    renderHeroesScreen() {
-        const grid = document.getElementById('hero-list');
-        grid.innerHTML = '';
+    // ===== FEATURE 1: Collection Screen Improvements =====
+    _collectionState: { search: '', sort: 'name', rarityFilter: 'all', classFilter: 'all' },
 
-        // Build set of owned template IDs for quick lookup
-        const ownedTemplates = new Set();
-        GameState.collection.forEach(c => {
-            ownedTemplates.add(c.templateId || c.name);
+    _bindCollectionToolbar() {
+        const searchInput = document.getElementById('collection-search');
+        const sortSelect = document.getElementById('collection-sort');
+        if (!searchInput || !sortSelect) return;
+
+        searchInput.addEventListener('input', () => {
+            this._collectionState.search = searchInput.value.trim().toLowerCase();
+            this._renderCollectionCards();
         });
 
-        // Count unique owned templates
-        const ownedCount = ownedTemplates.size;
-        const totalCount = CARD_TEMPLATES.length;
+        sortSelect.addEventListener('change', () => {
+            this._collectionState.sort = sortSelect.value;
+            this._renderCollectionCards();
+        });
 
-        // Header: owned counter
-        const header = document.createElement('div');
-        header.style.cssText = 'font-family:"Press Start 2P";font-size:9px;color:var(--gold);margin-bottom:12px;text-align:center;';
-        header.innerHTML = `🃏 Collection — <span style="color:#44ff88">${ownedCount}</span>/${totalCount} Heroes`;
-        grid.appendChild(header);
-        // Show all 20 templates: owned cards full detail, locked as silhouettes
-        CARD_TEMPLATES.forEach(tmpl => {
+        this._renderRarityFilters();
+        this._renderClassFilters();
+    },
+
+    _renderRarityFilters() {
+        const container = document.getElementById('rarity-filters');
+        if (!container) return;
+        const rarities = [
+            { key: 'all', label: 'All' },
+            { key: 'common', label: 'Common' },
+            { key: 'rare', label: 'Rare' },
+            { key: 'epic', label: 'Epic' },
+            { key: 'legendary', label: 'Legendary' },
+            { key: 'mythic', label: 'Mythic' }
+        ];
+        container.innerHTML = `<span style="font-size:7px;color:var(--text-dim);font-family:'Press Start 2P',monospace;">R:</span>`;
+        rarities.forEach(r => {
+            const isActive = this._collectionState.rarityFilter === r.key;
+            const rColor = r.key !== 'all' && RARITIES[r.key] ? RARITIES[r.key].color : 'var(--gold)';
+            const btn = document.createElement('button');
+            btn.style.cssText = `
+                font-family:'Press Start 2P',monospace;font-size:6px;padding:3px 6px;
+                background:${isActive ? rColor : 'rgba(255,215,0,0.06)'};
+                color:${isActive ? '#000' : rColor};
+                border:1px solid ${isActive ? rColor : rColor+'44'};
+                border-radius:4px;cursor:pointer;transition:all 0.2s ease;white-space:nowrap;
+            `;
+            btn.textContent = r.label;
+            btn.addEventListener('click', () => {
+                this._collectionState.rarityFilter = r.key;
+                this._renderRarityFilters();
+                this._renderCollectionCards();
+            });
+            container.appendChild(btn);
+        });
+    },
+
+    _renderClassFilters() {
+        const container = document.getElementById('class-filters');
+        if (!container) return;
+        const classes = [
+            { key: 'all', label: 'All' },
+            { key: 'warrior', label: '⚔️Warrior' },
+            { key: 'mage', label: '🔮Mage' },
+            { key: 'archer', label: '🏹Archer' },
+            { key: 'healer', label: '💚Healer' },
+            { key: 'assassin', label: '🗡️Assassin' },
+            { key: 'tank', label: '🛡️Tank' }
+        ];
+        container.innerHTML = `<span style="font-size:7px;color:var(--text-dim);font-family:'Press Start 2P',monospace;">C:</span>`;
+        classes.forEach(c => {
+            const isActive = this._collectionState.classFilter === c.key;
+            const cInfo = CLASSES[c.key] || {};
+            const cColor = cInfo.color || 'var(--gold)';
+            const btn = document.createElement('button');
+            btn.style.cssText = `
+                font-family:'Press Start 2P',monospace;font-size:6px;padding:3px 6px;
+                background:${isActive ? cColor : 'rgba(255,215,0,0.06)'};
+                color:${isActive ? '#000' : cColor};
+                border:1px solid ${isActive ? cColor : cColor+'44'};
+                border-radius:4px;cursor:pointer;transition:all 0.2s ease;white-space:nowrap;
+            `;
+            btn.textContent = c.label;
+            btn.addEventListener('click', () => {
+                this._collectionState.classFilter = c.key;
+                this._renderClassFilters();
+                this._renderCollectionCards();
+            });
+            container.appendChild(btn);
+        });
+    },
+
+    _renderCollectionProgressBar() {
+        const el = document.getElementById('collection-progress-bar');
+        if (!el) return;
+        const ownedTemplates = new Set();
+        GameState.collection.forEach(c => ownedTemplates.add(c.templateId || c.name));
+        const owned = ownedTemplates.size;
+        const total = CARD_TEMPLATES.length;
+        const pct = total > 0 ? Math.round((owned / total) * 100) : 0;
+        el.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:var(--gold);">Collection: <span style="color:#44ff88">${owned}</span>/${total}</span>
+                <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:var(--gold);">${pct}%</span>
+            </div>
+            <div style="width:100%;height:8px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,215,0,0.15);border-radius:4px;overflow:hidden;">
+                <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--gold-dark),var(--gold),#ffe060);transition:width 0.3s ease;border-radius:4px;"></div>
+            </div>
+        `;
+    },
+
+    _getFilteredSortedTemplates() {
+        const s = this._collectionState;
+        let templates = [...CARD_TEMPLATES];
+
+        // Search filter
+        if (s.search) {
+            templates = templates.filter(t => t.name.toLowerCase().includes(s.search));
+        }
+
+        // Rarity filter: only show templates whose owned card matches rarity, or show all owned/unowned
+        if (s.rarityFilter !== 'all') {
+            templates = templates.filter(t => {
+                const owned = GameState.collection.find(c => (c.templateId || c.name) === t.name);
+                return owned && owned.rarity === s.rarityFilter;
+            });
+        }
+
+        // Class filter
+        if (s.classFilter !== 'all') {
+            templates = templates.filter(t => t.cls === s.classFilter);
+        }
+
+        // Sort
+        const rarityOrder = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
+        const sortFn = (a, b) => {
+            switch (s.sort) {
+                case 'name': return a.name.localeCompare(b.name);
+                case 'rarity': {
+                    const ra = GameState.collection.find(c => (c.templateId || c.name) === a.name);
+                    const rb = GameState.collection.find(c => (c.templateId || c.name) === b.name);
+                    return (rarityOrder[rb?.rarity || 'common'] || 0) - (rarityOrder[ra?.rarity || 'common'] || 0);
+                }
+                case 'class': return (a.cls || '').localeCompare(b.cls || '');
+                case 'power': {
+                    const pa = GameState.collection.find(c => (c.templateId || c.name) === a.name);
+                    const pb = GameState.collection.find(c => (c.templateId || c.name) === b.name);
+                    return (getCardPower(pb || { stats: { hp: b.hp, atk: b.atk, def: b.def, spd: b.spd } }) || 0)
+                         - (getCardPower(pa || { stats: { hp: a.hp, atk: a.atk, def: a.def, spd: a.spd } }) || 0);
+                }
+                default: return 0;
+            }
+        };
+        templates.sort(sortFn);
+        return templates;
+    },
+
+    _renderCollectionCards() {
+        const grid = document.getElementById('hero-list');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        const templates = this._getFilteredSortedTemplates();
+        const totalTemplates = CARD_TEMPLATES.length;
+        const deckIds = new Set((GameState.deck || []).map(d => typeof d === 'string' ? d : d.id));
+
+        // Update count display
+        const countEl = document.getElementById('collection-count');
+        if (countEl) {
+            countEl.textContent = `Showing ${templates.length} of ${totalTemplates}`;
+        }
+
+        // Update progress bar
+        this._renderCollectionProgressBar();
+
+        if (templates.length === 0) {
+            grid.innerHTML = `<div style="text-align:center;padding:24px;grid-column:1/-1;">
+                <div style="font-size:24px;margin-bottom:8px;">🔍</div>
+                <div style="font-family:'Press Start 2P',monospace;font-size:8px;color:var(--text-dim);">No cards match your filters</div>
+            </div>`;
+            return;
+        }
+
+        templates.forEach(tmpl => {
             const ownedCard = GameState.collection.find(c => (c.templateId || c.name) === tmpl.name);
             const isOwned = !!ownedCard;
 
             const el = document.createElement('div');
-            el.style.minHeight = '120px';
+            el.style.cssText = 'min-height:120px;position:relative;transition:opacity 0.3s ease,transform 0.3s ease;';
 
             if (isOwned) {
-                // Full card with stats
                 const card = ownedCard;
-                el.className = `card ${card.rarity}`;
+                const rarity = card.rarity || 'common';
+                const rColor = (RARITIES[rarity] || {}).color || '#aaa';
+                const clsInfo = CLASSES[card.class] || {};
+                el.className = `card ${rarity}`;
+                // Prominent left border for rarity
+                el.style.borderLeft = `4px solid ${rColor}`;
+                el.style.paddingLeft = '10px';
                 el.onclick = () => this.showHeroDetail(card);
 
                 const template = getTemplateByName(card.templateId || card.name);
@@ -1162,12 +1338,12 @@ const UI = {
 
                 const name = document.createElement('div');
                 name.className = 'card-name';
-                name.style.color = RARITIES[card.rarity].color;
+                name.style.color = rColor;
                 name.textContent = card.name + (card.level > 1 ? ` Lv.${card.level}` : '');
 
                 const cls = document.createElement('div');
                 cls.className = 'card-class';
-                cls.textContent = CLASSES[card.class].emoji + ' ' + CLASSES[card.class].name;
+                cls.textContent = (clsInfo.emoji || '') + ' ' + (clsInfo.name || card.class);
 
                 const stats = document.createElement('div');
                 stats.className = 'card-stats';
@@ -1190,6 +1366,22 @@ const UI = {
                 el.appendChild(name);
                 el.appendChild(cls);
                 el.appendChild(stats);
+
+                // "IN DECK" badge
+                if (deckIds.has(card.id)) {
+                    const badge = document.createElement('div');
+                    badge.style.cssText = 'position:absolute;top:4px;right:4px;font-family:"Press Start 2P",monospace;font-size:5px;padding:2px 4px;background:var(--gold);color:#000;border-radius:4px;z-index:2;box-shadow:0 0 6px rgba(255,215,0,0.4);';
+                    badge.textContent = 'IN DECK';
+                    el.appendChild(badge);
+                }
+
+                // Class badge (bottom right)
+                if (clsInfo.color) {
+                    const classBadge = document.createElement('div');
+                    classBadge.style.cssText = `position:absolute;bottom:4px;right:4px;font-family:'Press Start 2P',monospace;font-size:5px;padding:2px 4px;background:${clsInfo.color};color:#000;border-radius:4px;z-index:2;`;
+                    classBadge.textContent = (clsInfo.emoji || '') + ' ' + (clsInfo.name || card.class);
+                    el.appendChild(classBadge);
+                }
             } else {
                 // Locked silhouette
                 el.className = 'card common';
@@ -1207,7 +1399,8 @@ const UI = {
 
                 const cls = document.createElement('div');
                 cls.className = 'card-class';
-                cls.textContent = CLASSES[tmpl.cls]?.emoji + ' ' + (CLASSES[tmpl.cls]?.name || tmpl.cls);
+                const clsInfo = CLASSES[tmpl.cls] || {};
+                cls.textContent = (clsInfo.emoji || '') + ' ' + (clsInfo.name || tmpl.cls);
                 cls.style.color = '#555';
 
                 const stats = document.createElement('div');
@@ -1222,6 +1415,15 @@ const UI = {
             }
             grid.appendChild(el);
         });
+    },
+
+    renderHeroesScreen() {
+        // Initialize toolbar (only once)
+        if (!this._collectionToolbarBound) {
+            this._bindCollectionToolbar();
+            this._collectionToolbarBound = true;
+        }
+        this._renderCollectionCards();
     },
 
     showHeroDetail(card) {
@@ -1353,6 +1555,24 @@ const UI = {
         html += '<div id="ai-recommendation-panel"></div>';
 
         container.innerHTML = html;
+
+        // Render AI Deck Builder button into the dedicated panel
+        const adbPanel = document.getElementById('ai-deck-builder-panel');
+        if (adbPanel) {
+            adbPanel.innerHTML = `
+                <div style="margin-top:12px;text-align:center;">
+                    <button onclick="UI.openAIDeckBuilder()" style="
+                        font-family:'Press Start 2P',monospace;font-size:8px;
+                        padding:10px 20px;background:linear-gradient(180deg,#1a1a4e,#0a0a2e);
+                        color:var(--gold);border:2px solid var(--gold-dark);border-radius:4px;
+                        cursor:pointer;transition:all 0.2s ease;
+                        box-shadow:0 0 12px rgba(255,215,0,0.15);
+                    " onmouseover="this.style.boxShadow='0 0 20px rgba(255,215,0,0.3)'" onmouseout="this.style.boxShadow='0 0 12px rgba(255,215,0,0.15)'">
+                        🤖 AI Deck Builder
+                    </button>
+                </div>
+            `;
+        }
 
         // Draw sprites after DOM update
         setTimeout(() => {
@@ -2045,6 +2265,353 @@ const UI = {
         popup.querySelector('.enemy-info-close').addEventListener('click', () => popup.remove());
         popup.addEventListener('click', (e) => { if (e.target === popup) popup.remove(); });
         setTimeout(() => { if (popup.parentNode) popup.remove(); }, 5000);
+    },
+
+    // ===== FEATURE 2: AI DECK BUILDER =====
+    openAIDeckBuilder() {
+        const panel = document.getElementById('ai-deck-builder-panel');
+        if (!panel) return;
+
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'ai-deck-builder-overlay';
+        overlay.style.cssText = `
+            position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;
+            display:flex;align-items:center;justify-content:center;
+            background:rgba(0,0,0,0.75);animation:s3FadeIn 0.2s ease;
+        `;
+        overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+        // Loading panel
+        const loadingPanel = document.createElement('div');
+        loadingPanel.style.cssText = `
+            background:linear-gradient(135deg,#0a0a2e,#141432);border:2px solid var(--gold-dark);
+            border-radius:4px;padding:24px 20px;text-align:center;max-width:340px;width:90%;
+            animation:resultSlideIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+        `;
+
+        const messages = [
+            '🧠 Analyzing your collection...',
+            '⚡ Finding card synergies...',
+            '📊 Optimizing mana curve...',
+            '✨ Finalizing recommendations...'
+        ];
+
+        loadingPanel.innerHTML = `
+            <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:var(--gold);margin-bottom:16px;">🤖 AI DECK BUILDER</div>
+            <div id="ai-db-loading-text" style="font-size:9px;color:var(--text);min-height:40px;display:flex;align-items:center;justify-content:center;">${messages[0]}</div>
+            <div style="width:100%;height:4px;background:rgba(0,0,0,0.5);border-radius:4px;overflow:hidden;margin-top:12px;">
+                <div id="ai-db-loading-bar" style="height:100%;width:0%;background:var(--gold);transition:width 0.3s ease;border-radius:4px;"></div>
+            </div>
+            <button onclick="this.closest('#ai-deck-builder-overlay').remove()" style="margin-top:16px;font-family:'Press Start 2P',monospace;font-size:7px;padding:8px 16px;background:rgba(255,255,255,0.05);color:var(--text-dim);border:1px solid rgba(255,255,255,0.1);border-radius:4px;cursor:pointer;">Close</button>
+        `;
+
+        overlay.appendChild(loadingPanel);
+        document.body.appendChild(overlay);
+
+        // Cycle loading messages
+        let msgIdx = 0;
+        const loadingBar = document.getElementById('ai-db-loading-bar');
+        const loadingText = document.getElementById('ai-db-loading-text');
+        const interval = setInterval(() => {
+            msgIdx++;
+            if (msgIdx < messages.length && loadingText) {
+                loadingText.textContent = messages[msgIdx];
+                if (loadingBar) loadingBar.style.width = ((msgIdx + 1) / messages.length * 80) + '%';
+            }
+        }, 600);
+
+        // After ~2.5s, run AI recommendation
+        setTimeout(() => {
+            clearInterval(interval);
+            if (loadingBar) loadingBar.style.width = '100%';
+
+            // Get hero card from deck
+            const deckCards = GameState.getDeckCards();
+            const heroCard = deckCards.length > 0 ? deckCards[0] : null;
+
+            let result = null;
+            if (heroCard && typeof AIDeckBuilder !== 'undefined') {
+                result = AIDeckBuilder.recommendDeck(heroCard);
+            }
+
+            if (result) {
+                this._renderAIDeckBuilderResult(result, overlay);
+            } else {
+                loadingPanel.innerHTML = `
+                    <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:var(--gold);margin-bottom:12px;">🤖 AI DECK BUILDER</div>
+                    <div style="font-size:8px;color:var(--red);margin-bottom:12px;">⚠️ No hero in deck! Add a hero card first.</div>
+                    <button onclick="this.closest('#ai-deck-builder-overlay').remove()" style="font-family:'Press Start 2P',monospace;font-size:7px;padding:8px 16px;background:var(--gold);color:#000;border:none;border-radius:4px;cursor:pointer;">Close</button>
+                `;
+            }
+        }, 2500);
+    },
+
+    _renderAIDeckBuilderResult(result, overlay) {
+        const panel = document.getElementById('ai-deck-builder-overlay');
+        if (!panel) return;
+
+        const panelEl = panel.querySelector('div') || panel;
+
+        const typeIcons = { attack: '⚔️', defense: '🛡️', buff: '✨', debuff: '💀', special: '⚡' };
+        const cardType = CARD_TYPES || {};
+
+        // Build recommended cards HTML
+        let cardsHTML = '<div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:12px 0;">';
+        result.cards.forEach(card => {
+            const typeIcon = typeIcons[card.type] || '🃏';
+            const tColor = (cardType[card.type] || {}).color || '#aaa';
+            cardsHTML += `
+                <div style="background:var(--bg-card);border:1px solid ${tColor};border-radius:4px;padding:8px;text-align:center;min-width:70px;flex:1 1 0;max-width:120px;">
+                    <div style="font-size:16px;margin-bottom:4px;">${typeIcon}</div>
+                    <div style="font-family:'Press Start 2P',monospace;font-size:5px;color:${tColor};margin-bottom:4px;word-break:break-word;">${card.name}</div>
+                    <div style="font-size:7px;color:var(--text-dim);">${card.manaCost}💎</div>
+                    <div style="font-size:7px;color:#ff6644;">${card.damage || card.value || '-'}</div>
+                </div>
+            `;
+        });
+        cardsHTML += '</div>';
+
+        // Mana curve bar chart
+        const manaCounts = {};
+        result.cards.forEach(c => {
+            const cost = c.manaCost || 2;
+            manaCounts[cost] = (manaCounts[cost] || 0) + 1;
+        });
+        const maxManaCount = Math.max(...Object.values(manaCounts), 1);
+        let manaHTML = '<div style="display:flex;gap:4px;align-items:flex-end;justify-content:center;height:50px;margin:8px 0;">';
+        const manaCosts = Object.keys(manaCounts).sort((a, b) => a - b);
+        manaCosts.forEach(cost => {
+            const h = (manaCounts[cost] / maxManaCount) * 40;
+            manaHTML += `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                <div style="width:18px;height:${h}px;background:linear-gradient(180deg,#4488ff,#2244aa);border-radius:2px;"></div>
+                <div style="font-size:6px;color:var(--text-dim);">${cost}💎</div>
+            </div>`;
+        });
+        manaHTML += '</div>';
+
+        // Synergy score
+        const score = result.score || 0;
+        const scoreColor = score >= 80 ? '#44ff88' : score >= 60 ? '#ffd700' : score >= 40 ? '#ff8844' : '#ff4444';
+
+        panelEl.innerHTML = `
+            <div style="background:linear-gradient(135deg,#0a0a2e,#141432);border:2px solid var(--gold-dark);border-radius:4px;padding:20px;max-width:380px;width:92%;animation:resultSlideIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275);max-height:85vh;overflow-y:auto;">
+                <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:var(--gold);text-align:center;margin-bottom:12px;">🤖 AI DECK BUILDER</div>
+
+                <!-- Synergy Score -->
+                <div style="text-align:center;margin-bottom:12px;">
+                    <div style="font-size:28px;font-family:'Press Start 2P',monospace;color:${scoreColor};text-shadow:0 0 10px ${scoreColor}44;">${score}</div>
+                    <div style="font-size:7px;color:var(--text-dim);margin-bottom:4px;">SYNERGY SCORE</div>
+                    <div style="width:100%;height:6px;background:rgba(0,0,0,0.5);border-radius:4px;overflow:hidden;">
+                        <div style="width:${score}%;height:100%;background:${scoreColor};border-radius:4px;transition:width 0.5s ease;"></div>
+                    </div>
+                </div>
+
+                <!-- Recommended Cards -->
+                <div style="font-family:'Press Start 2P',monospace;font-size:7px;color:var(--gold);margin-bottom:4px;">📦 RECOMMENDED DECK</div>
+                ${cardsHTML}
+
+                <!-- Mana Curve -->
+                <div style="font-family:'Press Start 2P',monospace;font-size:7px;color:var(--gold);margin:8px 0 4px;">💎 MANA CURVE</div>
+                ${manaHTML}
+
+                <!-- Synergies -->
+                ${result.synergies && result.synergies.length > 0 ? `
+                    <div style="font-family:'Press Start 2P',monospace;font-size:7px;color:var(--gold);margin:8px 0 4px;">🔗 SYNERGIES</div>
+                    <div style="margin-bottom:8px;">
+                        ${result.synergies.map(s => `<div style="font-size:7px;color:#44ff88;margin-bottom:2px;">✅ ${s.name} — ${s.description}</div>`).join('')}
+                    </div>
+                ` : ''}
+
+                <!-- Reasoning -->
+                <div style="font-family:'Press Start 2P',monospace;font-size:7px;color:var(--gold);margin:8px 0 4px;">💡 REASONING</div>
+                <div style="font-size:7px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;">${result.reasoning || 'No reasoning available.'}</div>
+
+                <!-- Buttons -->
+                <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                    <button class="btn btn-gold" onclick="UI.applyAIDeck(${JSON.stringify(result.cards.map(c => c.name)).replace(/"/g, '&quot;')})" style="font-size:7px;padding:8px 16px;">✅ Apply Deck</button>
+                    <button onclick="this.closest('#ai-deck-builder-overlay').remove()" style="font-family:'Press Start 2P',monospace;font-size:7px;padding:8px 16px;background:rgba(255,255,255,0.08);color:var(--text-dim);border:1px solid rgba(255,255,255,0.15);border-radius:4px;cursor:pointer;">Close</button>
+                </div>
+            </div>
+        `;
+    },
+
+    applyAIDeck(cardNames) {
+        if (!cardNames || cardNames.length === 0) return;
+
+        // Find card IDs in skill deck or SKILL_CARD_TEMPLATES
+        const cardIds = [];
+        cardNames.forEach(name => {
+            const skillCard = SKILL_CARD_TEMPLATES.find(t => t.name === name);
+            if (skillCard) {
+                // Generate a unique ID if not present
+                const id = skillCard.id || ('skill-' + name.toLowerCase().replace(/\s+/g, '-'));
+                cardIds.push(id);
+            }
+        });
+
+        if (cardIds.length > 0) {
+            GameState.skillDeck = cardIds;
+            this.toast('✅ AI deck applied! ' + cardNames.join(', '), 'success');
+            this.renderStrategyScreen();
+        } else {
+            this.toast('Could not find skill cards to apply.', 'error');
+        }
+
+        // Close overlay
+        const overlay = document.getElementById('ai-deck-builder-overlay');
+        if (overlay) overlay.remove();
+    },
+
+    // ===== FEATURE 3: BATTLE COACH =====
+    openBattleCoach(battleResult) {
+        // battleResult: { isWin, turnNumber, player: {heroHp, heroMaxHp, ...}, enemy: {...} }
+        // Or can be called without args — uses last battle data
+
+        const overlay = document.createElement('div');
+        overlay.id = 'battle-coach-overlay';
+        overlay.style.cssText = `
+            position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;
+            display:flex;align-items:center;justify-content:center;
+            background:rgba(0,0,0,0.75);animation:s3FadeIn 0.2s ease;
+        `;
+        overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+        const coachPanel = document.createElement('div');
+        coachPanel.style.cssText = `
+            background:linear-gradient(135deg,#0a0a2e,#141432);border:2px solid var(--gold-dark);
+            border-radius:4px;padding:20px;max-width:400px;width:92%;max-height:85vh;overflow-y:auto;
+            animation:resultSlideIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
+        `;
+
+        overlay.appendChild(coachPanel);
+        document.body.appendChild(overlay);
+
+        // Run analysis
+        let analysis = null;
+        if (typeof AICoach !== 'undefined') {
+            analysis = AICoach.analyzeBattle(
+                battleResult ? battleResult.isWin : true,
+                battleResult || { turnNumber: 5, player: { heroHp: 15, heroMaxHp: 20 }, enemy: { heroHp: 0, heroMaxHp: 30 } }
+            );
+        }
+
+        if (!analysis) {
+            analysis = {
+                isWin: battleResult ? battleResult.isWin : true,
+                turns: battleResult ? battleResult.turnNumber : 5,
+                tips: [{ icon: '💡', text: 'Good battle! Keep practicing.', color: '#44ff88' }],
+                recommendation: 'Try upgrading your cards and experimenting with different skill combinations.'
+            };
+        }
+
+        this._renderCoachMessages(analysis, coachPanel);
+    },
+
+    _renderCoachMessages(analysis, container) {
+        const messages = [];
+
+        // Greeting
+        if (analysis.isWin) {
+            messages.push({ icon: '🏆', text: 'Great win!', color: '#44ff88', delay: 0 });
+        } else {
+            messages.push({ icon: '💪', text: "Don't worry, let's analyze...", color: '#ff8844', delay: 0 });
+        }
+
+        // Turns info
+        messages.push({ icon: '⏱️', text: `Battle lasted ${analysis.turns || '?'} turns.`, color: '#aaa', delay: 300 });
+
+        // Tips from analysis
+        if (analysis.tips && analysis.tips.length > 0) {
+            const tipText = analysis.tips.map(t => `${t.icon} ${t.text}`).join('\n');
+            messages.push({ icon: '📋', text: tipText, color: '#44ccff', delay: 600 });
+        }
+
+        // HP info
+        if (analysis.playerHPRemaining !== undefined) {
+            const hpPct = Math.round((analysis.playerHPRemaining / analysis.playerHPMax) * 100);
+            messages.push({
+                icon: '❤️',
+                text: `You finished with ${analysis.playerHPRemaining}/${analysis.playerHPMax} HP (${hpPct}%).`,
+                color: hpPct > 50 ? '#44ff88' : hpPct > 25 ? '#ffd700' : '#ff4444',
+                delay: 900
+            });
+        }
+
+        // Energy usage tips
+        if (analysis.isWin) {
+            messages.push({ icon: '⚡', text: 'Energy management was solid this battle!', color: '#ffaa00', delay: 1200 });
+        } else {
+            messages.push({ icon: '⚡', text: 'Consider using lower-cost cards to maintain tempo.', color: '#ffaa00', delay: 1200 });
+        }
+
+        // Recommendation
+        if (analysis.recommendation) {
+            messages.push({ icon: '🎯', text: analysis.recommendation, color: '#ffd700', delay: 1500 });
+        }
+
+        // Final message
+        messages.push({ icon: '🤖', text: 'Keep fighting, champion! Each battle makes you stronger.', color: '#44ff88', delay: 1800 });
+
+        // Render messages one by one
+        container.innerHTML = `
+            <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:var(--gold);text-align:center;margin-bottom:16px;">🤖 AI BATTLE COACH</div>
+            <div id="coach-messages-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+            <div style="text-align:center;margin-top:16px;">
+                <button onclick="this.closest('#battle-coach-overlay').remove()" style="font-family:'Press Start 2P',monospace;font-size:7px;padding:8px 16px;background:rgba(255,255,255,0.08);color:var(--text-dim);border:1px solid rgba(255,255,255,0.15);border-radius:4px;cursor:pointer;">Close</button>
+            </div>
+        `;
+
+        const listEl = document.getElementById('coach-messages-list');
+
+        messages.forEach((msg, i) => {
+            setTimeout(() => {
+                const bubble = document.createElement('div');
+                bubble.style.cssText = `
+                    display:flex;gap:8px;align-items:flex-start;
+                    opacity:0;transform:translateY(8px);
+                    transition:opacity 0.3s ease,transform 0.3s ease;
+                `;
+
+                // Avatar
+                const avatar = document.createElement('div');
+                avatar.style.cssText = 'font-size:18px;flex-shrink:0;';
+                avatar.textContent = '🤖';
+
+                // Message body
+                const body = document.createElement('div');
+                body.style.cssText = `
+                    background:rgba(26,26,46,0.9);border:1px solid ${msg.color}33;
+                    border-radius:4px;padding:8px 10px;flex:1;
+                `;
+
+                const label = document.createElement('div');
+                label.style.cssText = `font-family:'Press Start 2P',monospace;font-size:6px;color:${msg.color};margin-bottom:4px;`;
+                label.textContent = 'AI COACH';
+
+                const text = document.createElement('div');
+                text.style.cssText = `font-size:7px;color:var(--text);line-height:1.6;white-space:pre-line;`;
+                text.textContent = msg.text;
+
+                body.appendChild(label);
+                body.appendChild(text);
+                bubble.appendChild(avatar);
+                bubble.appendChild(body);
+
+                listEl.appendChild(bubble);
+
+                // Animate in
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        bubble.style.opacity = '1';
+                        bubble.style.transform = 'translateY(0)';
+                    });
+                });
+
+                // Scroll to bottom
+                listEl.scrollTop = listEl.scrollHeight;
+            }, msg.delay);
+        });
     },
 
     toast(message, type = 'info') {
