@@ -104,7 +104,7 @@ const CardHand = {
         el.style.setProperty('--rarity-glow', rarityColor);
 
         if (card.cardType === 'hero') {
-            // ===== HERO CARD — TCG Chaos Rising style =====
+            // ===== HERO CARD — Element-themed TCG style =====
             const template = getTemplateByName(card.templateId || card.name);
             const cls = CLASSES[card.class || card.cls];
             const rarityStars = { common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 };
@@ -113,28 +113,37 @@ const CardHand = {
             const clsName = cls ? cls.name : 'Hero';
             const clsEmoji = cls ? cls.emoji : '⚔️';
 
+            // Element info
+            const cardEl = (typeof getCardElement === 'function') ? getCardElement(card) : null;
+            const elIcon = cardEl ? cardEl.icon : '🌑';
+            const elColor = cardEl ? cardEl.color : '#aa44cc';
+            const elName = cardEl ? cardEl.name : 'Unknown';
+
+            el.style.setProperty('--el-glow', elColor);
+            el.style.borderColor = elColor;
+
             el.innerHTML = `
-                <div class="tcg-header" style="background:${clsColor}">
-                    <span class="tcg-header-icon">${clsEmoji}</span>
+                <div class="tcg-header" style="background:linear-gradient(135deg, ${elColor}cc, ${clsColor}88)">
+                    <span class="tcg-el-icon">${elIcon}</span>
                     <span class="tcg-name">${card.name}</span>
                     <span class="tcg-hp">HP ${card.stats.hp}</span>
                 </div>
                 <div class="tcg-stars-row">
                     <span class="tcg-stars">${'★'.repeat(stars)}</span>
                 </div>
-                <div class="tcg-art-window" style="background:#0f3460">
+                <div class="tcg-art-window" style="background:linear-gradient(180deg, ${elColor}33, #0f3460, ${elColor}22)">
                     ${template && template.image
-                        ? `<img src="${template.image}" class="tcg-art-img" onerror="this.parentElement.innerHTML='<div class=\\'card-art-icon\\'>${clsEmoji}</div>'">`
-                        : `<div class="card-art-icon">${clsEmoji}</div>`
+                        ? `<img src="${template.image}" class="tcg-art-img" onerror="this.parentElement.innerHTML='<div class=\\\\'card-art-icon\\\\'>${elIcon}</div>'">`
+                        : `<div class="card-art-icon">${elIcon}</div>`
                     }
                 </div>
-                <div class="tcg-type-badge" style="color:${clsColor}">
-                    <span>Type: ${clsName}</span>
+                <div class="tcg-el-badge" style="background:${elColor}44;border-color:${elColor}">
+                    <span>${elIcon} ${elName}</span>
                     <span style="color:${rarityColor}">${RARITIES[card.rarity] ? RARITIES[card.rarity].name : ''}</span>
                 </div>
                 <div class="tcg-stats-box">
                     <div class="tcg-hp-bar">
-                        <div class="tcg-hp-fill"></div>
+                        <div class="tcg-hp-fill" style="background:${elColor}"></div>
                     </div>
                     <div class="tcg-stat-row">
                         <span class="card-atk">⚔${card.stats.atk}</span>
@@ -309,6 +318,7 @@ const CardHand = {
             }
             .battle-card.hero-card {
                 border-width: 2px;
+                box-shadow: 0 0 4px var(--el-glow, rgba(170,68,204,0.3));
             }
             .battle-card.skill-card {
                 border-width: 2px;
@@ -344,7 +354,7 @@ const CardHand = {
                 animation: card-draw-in 0.5s ease-out;
             }
 
-            /* ===== HERO CARD HEADER — Class-colored banner ===== */
+            /* ===== HERO CARD HEADER — Element-themed banner ===== */
             .tcg-header {
                 display: flex;
                 justify-content: space-between;
@@ -353,9 +363,10 @@ const CardHand = {
                 min-height: 18px;
                 border-bottom: 1px solid rgba(255,255,255,0.1);
             }
-            .tcg-header-icon {
-                font-size: 8px;
+            .tcg-el-icon {
+                font-size: 10px;
                 flex-shrink: 0;
+                filter: drop-shadow(0 0 3px var(--el-glow, #aa44cc));
             }
             .tcg-name {
                 font-size: 5px;
@@ -400,7 +411,7 @@ const CardHand = {
                 width: calc(100% - 6px);
                 height: 80px;
                 margin: 3px;
-                border: 1px solid #c8a832;
+                border: 2px solid var(--el-glow, #c8a832);
                 border-radius: 3px;
                 display: flex;
                 align-items: center;
@@ -425,15 +436,17 @@ const CardHand = {
                 font-size: 32px;
             }
 
-            /* ===== TYPE BADGE ===== */
-            .tcg-type-badge {
+            /* ===== ELEMENT BADGE ===== */
+            .tcg-el-badge {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 padding: 2px 5px;
                 font-size: 4px;
-                background: rgba(0,0,0,0.3);
-                border-top: 1px solid rgba(255,255,255,0.05);
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 2px;
+                margin: 0 4px;
+                text-shadow: 0 0 4px var(--el-glow, #aa44cc);
             }
 
             /* ===== DIVIDER ===== */

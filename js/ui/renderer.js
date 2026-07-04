@@ -61,26 +61,55 @@ const PHASE_COLORS = {
     end:    '#9b59b6',
 };
 
-// Procedural pixel art card sprites (fallback)
+// Procedural pixel art card sprites (fallback) — Element-themed creatures
 const CardRenderer = {
-    // Generate deterministic pixel art from card's artSeed
+    _px: null, // cached pixel buffer
+
+    _getEl(card) {
+        const el = getCardElement ? getCardElement(card) : (card.element || 'shadow');
+        return (typeof ELEMENTS !== 'undefined' && ELEMENTS[el]) ? ELEMENTS[el] : { color: '#aa44cc', bg: '#1a0a2a', icon: '🌑' };
+    },
+
+    _darken(hex, amt) {
+        const n = parseInt(hex.replace('#', ''), 16);
+        const r = Math.max(0, (n >> 16) - amt), g = Math.max(0, ((n >> 8) & 0xFF) - amt), b = Math.max(0, (n & 0xFF) - amt);
+        return `rgb(${r},${g},${b})`;
+    },
+
+    // Generate deterministic pixel art from card's artSeed — element-themed creatures
     drawCardSprite(canvas, card, size) {
         const ctx = canvas.getContext('2d');
         const s = size || 48;
         canvas.width = s;
         canvas.height = s;
 
-        const pixelSize = Math.max(2, Math.floor(s / 12));
+        const px = Math.max(2, Math.floor(s / 14));
         const rarityColor = RARITIES[card.rarity] ? RARITIES[card.rarity].color : '#aaa';
         const classColor = CLASSES[card.class] ? CLASSES[card.class].color : '#888';
+        const elInfo = this._getEl(card);
 
-        // Use seed for deterministic random
         let seed = card.artSeed || 12345;
         const rand = () => { seed = (seed * 16807 + 0) % 2147483647; return seed / 2147483647; };
 
-        // Background
-        ctx.fillStyle = '#1a1a2e';
+        // Element-themed background gradient
+        const grad = ctx.createLinearGradient(0, 0, 0, s);
+        grad.addColorStop(0, elInfo.bg || '#1a0a2a');
+        grad.addColorStop(0.5, '#0a0a1a');
+        grad.addColorStop(1, elInfo.bg || '#1a0a2a');
+        ctx.fillStyle = grad;
         ctx.fillRect(0, 0, s, s);
+
+        // Element glow particles in background
+        ctx.globalAlpha = 0.15;
+        for (let i = 0; i < 6; i++) {
+            const gx = rand() * s, gy = rand() * s, gr = px * (1 + rand() * 2);
+            const gGrad = ctx.createRadialGradient(gx, gy, 0, gx, gy, gr);
+            gGrad.addColorStop(0, elInfo.color);
+            gGrad.addColorStop(1, 'transparent');
+            ctx.fillStyle = gGrad;
+            ctx.fillRect(gx - gr, gy - gr, gr * 2, gr * 2);
+        }
+        ctx.globalAlpha = 1;
 
         // Try to draw character image
         const template = getTemplateByName(card.templateId || card.name);
@@ -89,6 +118,12 @@ const CardRenderer = {
             if (img.complete && img.naturalWidth > 0 && !img._failed) {
                 ctx.imageSmoothingEnabled = false;
                 ctx.drawImage(img, 0, 0, s, s);
+                // Element glow overlay
+                ctx.globalAlpha = 0.12;
+                ctx.fillStyle = elInfo.color;
+                ctx.fillRect(0, 0, s, s);
+                ctx.globalAlpha = 1;
+                // Rarity border
                 ctx.strokeStyle = rarityColor;
                 ctx.lineWidth = 2;
                 ctx.strokeRect(1, 1, s - 2, s - 2);
@@ -96,100 +131,199 @@ const CardRenderer = {
             }
         }
 
-        // Fallback: procedural pixel art
-        const ox = Math.floor((s - pixelSize * 10) / 2);
-        const oy = Math.floor((s - pixelSize * 12) / 2);
+        // Fallback: procedural pixel art creature based on class
+        const ox = Math.floor((s - px * 10) / 2);
+        const oy = Math.floor((s - px * 12) / 2);
+        this._drawCreature(ctx, card.class, ox, oy, px, rand, classColor, elInfo);
 
-        // Head
-        ctx.fillStyle = '#ddb89a';
-        for (let x = 3; x <= 6; x++) {
-            for (let y = 0; y <= 3; y++) {
-                ctx.fillRect(ox + x * pixelSize, oy + y * pixelSize, pixelSize, pixelSize);
-            }
-        }
-
-        // Eyes
-        ctx.fillStyle = '#222';
-        ctx.fillRect(ox + 4 * pixelSize, oy + 1 * pixelSize, pixelSize, pixelSize);
-        ctx.fillRect(ox + 6 * pixelSize, oy + 1 * pixelSize, pixelSize, pixelSize);
-
-        // Class-specific body
-        ctx.fillStyle = classColor;
-        for (let x = 3; x <= 6; x++) {
-            for (let y = 4; y <= 8; y++) {
-                if (rand() > 0.15) {
-                    ctx.fillRect(ox + x * pixelSize, oy + y * pixelSize, pixelSize, pixelSize);
-                }
-            }
-        }
-
-        // Class-specific details
-        this.drawClassDetails(ctx, card.class, ox, oy, pixelSize, rand, classColor);
-
-        // Legs
-        ctx.fillStyle = '#5a4a3a';
-        ctx.fillRect(ox + 3 * pixelSize, oy + 9 * pixelSize, pixelSize * 2, pixelSize * 2);
-        ctx.fillRect(ox + 6 * pixelSize, oy + 9 * pixelSize, pixelSize * 2, pixelSize * 2);
-
-        // Rarity glow border
-        ctx.strokeStyle = rarityColor;
+        // Element border glow
+        ctx.strokeStyle = elInfo.color;
         ctx.lineWidth = 2;
         ctx.strokeRect(1, 1, s - 2, s - 2);
 
-        // Rarity stars
+        // Rarity stars bottom
         const starCount = { common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 }[card.rarity] || 1;
         ctx.fillStyle = rarityColor;
         for (let i = 0; i < starCount; i++) {
-            ctx.fillRect(ox + (i * 2 + 1) * pixelSize, oy + 11.5 * pixelSize, pixelSize, pixelSize);
+            const sx = ox + (2 + i * 2) * px;
+            this._drawStar(ctx, sx, oy + 11.5 * px, px * 0.6);
         }
     },
 
-    drawClassDetails(ctx, cls, ox, oy, ps, rand, color) {
+    // Draw pixel art star shape
+    _drawStar(ctx, cx, cy, r) {
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+            const a1 = (i * 72 - 90) * Math.PI / 180;
+            const a2 = ((i * 72 + 36) - 90) * Math.PI / 180;
+            if (i === 0) ctx.moveTo(cx + Math.cos(a1) * r, cy + Math.sin(a1) * r);
+            else ctx.lineTo(cx + Math.cos(a1) * r, cy + Math.sin(a1) * r);
+            ctx.lineTo(cx + Math.cos(a2) * r * 0.4, cy + Math.sin(a2) * r * 0.4);
+        }
+        ctx.closePath();
+        ctx.fill();
+    },
+
+    // Draw element-themed creature by class
+    _drawCreature(ctx, cls, ox, oy, ps, rand, clsColor, elInfo) {
+        const eColor = elInfo.color;
         switch (cls) {
             case 'warrior':
+                // Lion-like beast: broad head, mane, muscular body
+                ctx.fillStyle = '#ddb89a';
+                for (let x = 3; x <= 6; x++) for (let y = 1; y <= 2; y++) ctx.fillRect(ox + x * ps, oy + y * ps, ps, ps);
+                // Mane
+                ctx.fillStyle = '#c87a30';
+                for (let x = 2; x <= 7; x++) ctx.fillRect(ox + x * ps, oy, ps, ps);
+                ctx.fillRect(ox + 2 * ps, oy + ps, ps, ps);
+                ctx.fillRect(ox + 7 * ps, oy + ps, ps, ps);
+                // Eyes (fierce)
+                ctx.fillStyle = eColor;
+                ctx.fillRect(ox + 4 * ps, oy + 1 * ps, ps, ps);
+                ctx.fillRect(ox + 6 * ps, oy + 1 * ps, ps, ps);
+                // Body (muscular)
+                ctx.fillStyle = clsColor;
+                for (let x = 2; x <= 7; x++) for (let y = 3; y <= 7; y++) {
+                    if (rand() > 0.1) ctx.fillRect(ox + x * ps, oy + y * ps, ps, ps);
+                }
+                // Armor plate
                 ctx.fillStyle = '#aaaacc';
-                ctx.fillRect(ox + 8 * ps, oy + 3 * ps, ps, ps * 5);
-                ctx.fillStyle = '#ffdd44';
-                ctx.fillRect(ox + 7 * ps, oy + 4 * ps, ps * 3, ps);
-                ctx.fillStyle = '#888899';
-                ctx.fillRect(ox + 3 * ps, oy, ps * 4, ps);
+                ctx.fillRect(ox + 4 * ps, oy + 3 * ps, ps * 2, ps * 3);
+                // Legs
+                ctx.fillStyle = '#8B6914';
+                ctx.fillRect(ox + 2 * ps, oy + 8 * ps, ps * 2, ps * 3);
+                ctx.fillRect(ox + 6 * ps, oy + 8 * ps, ps * 2, ps * 3);
                 break;
+
             case 'mage':
-                ctx.fillStyle = '#8B4513';
-                ctx.fillRect(ox + 1 * ps, oy + 2 * ps, ps, ps * 7);
-                ctx.fillStyle = '#9b59b6';
-                ctx.fillRect(ox + 0 * ps, oy + 1 * ps, ps * 3, ps * 2);
-                ctx.fillStyle = '#6633aa';
-                ctx.fillRect(ox + 4 * ps, oy - ps, ps * 2, ps);
-                ctx.fillRect(ox + 3 * ps, oy, ps * 4, ps);
+                // Owl/mystic bird: big eyes, wing spread, arcane aura
+                ctx.fillStyle = '#8B6914';
+                ctx.fillRect(ox + 2 * ps, oy + 2 * ps, ps * 6, ps * 2);
+                // Big round head
+                ctx.fillStyle = '#ddd';
+                for (let x = 3; x <= 6; x++) for (let y = 0; y <= 3; y++) ctx.fillRect(ox + x * ps, oy + y * ps, ps, ps);
+                // Owl eyes (large, glowing)
+                ctx.fillStyle = eColor;
+                ctx.fillRect(ox + 3 * ps, oy + 1 * ps, ps * 2, ps * 2);
+                ctx.fillRect(ox + 6 * ps, oy + 1 * ps, ps * 2, ps * 2);
+                ctx.fillStyle = '#111';
+                ctx.fillRect(ox + 4 * ps, oy + 2 * ps, ps, ps);
+                ctx.fillRect(ox + 7 * ps, oy + 2 * ps, ps, ps);
+                // Wings
+                ctx.fillStyle = clsColor;
+                ctx.fillRect(ox + ps, oy + 3 * ps, ps * 2, ps * 4);
+                ctx.fillRect(ox + 7 * ps, oy + 3 * ps, ps * 2, ps * 4);
+                // Body
+                for (let x = 3; x <= 6; x++) for (let y = 4; y <= 8; y++) {
+                    if (rand() > 0.12) ctx.fillRect(ox + x * ps, oy + y * ps, ps, ps);
+                }
+                // Feet
+                ctx.fillStyle = '#8B6914';
+                ctx.fillRect(ox + 3 * ps, oy + 9 * ps, ps * 4, ps);
                 break;
+
             case 'archer':
-                ctx.fillStyle = '#8B4513';
-                ctx.fillRect(ox + 8 * ps, oy + 2 * ps, ps, ps * 5);
-                ctx.fillStyle = '#aaa';
-                ctx.fillRect(ox + 8 * ps, oy + 1 * ps, ps, ps);
-                ctx.fillRect(ox + 8 * ps, oy + 7 * ps, ps, ps);
-                ctx.fillStyle = '#2d5a2d';
-                ctx.fillRect(ox + 3 * ps, oy - ps, ps * 4, ps);
+                // Hawk/eagle: sharp beak, talons, spread wings
+                ctx.fillStyle = '#ddd';
+                for (let x = 3; x <= 6; x++) for (let y = 0; y <= 2; y++) ctx.fillRect(ox + x * ps, oy + y * ps, ps, ps);
+                // Beak
+                ctx.fillStyle = '#ffaa00';
+                ctx.fillRect(ox + 5 * ps, oy + 2 * ps, ps * 2, ps);
+                // Eyes (sharp)
+                ctx.fillStyle = eColor;
+                ctx.fillRect(ox + 3 * ps, oy + 1 * ps, ps, ps);
+                ctx.fillRect(ox + 6 * ps, oy + 1 * ps, ps, ps);
+                // Wings spread
+                ctx.fillStyle = clsColor;
+                ctx.fillRect(ox + ps, oy + 2 * ps, ps * 2, ps * 5);
+                ctx.fillRect(ox + 8 * ps, oy + 2 * ps, ps * 2, ps * 5);
+                // Wing tips
+                ctx.fillStyle = this._darken(clsColor, 30);
+                ctx.fillRect(ox, oy + 3 * ps, ps, ps * 3);
+                ctx.fillRect(ox + 9 * ps, oy + 3 * ps, ps, ps * 3);
+                // Body
+                for (let x = 3; x <= 6; x++) for (let y = 3; y <= 7; y++) {
+                    if (rand() > 0.12) ctx.fillRect(ox + x * ps, oy + y * ps, ps, ps);
+                }
+                // Talons
+                ctx.fillStyle = '#ffaa00';
+                ctx.fillRect(ox + 3 * ps, oy + 8 * ps, ps, ps * 2);
+                ctx.fillRect(ox + 6 * ps, oy + 8 * ps, ps, ps * 2);
                 break;
+
             case 'healer':
+                // Deer/stag with healing glow: antlers, gentle face
+                ctx.fillStyle = '#ddd';
+                for (let x = 3; x <= 6; x++) for (let y = 1; y <= 3; y++) ctx.fillRect(ox + x * ps, oy + y * ps, ps, ps);
+                // Antlers
+                ctx.fillStyle = '#c8a060';
+                ctx.fillRect(ox + 2 * ps, oy, ps, ps * 2);
+                ctx.fillRect(ox + ps, oy, ps, ps);
+                ctx.fillRect(ox + 7 * ps, oy, ps, ps * 2);
+                ctx.fillRect(ox + 8 * ps, oy, ps, ps);
+                // Healing glow eyes
+                ctx.fillStyle = eColor;
+                ctx.fillRect(ox + 4 * ps, oy + 2 * ps, ps, ps);
+                ctx.fillRect(ox + 6 * ps, oy + 2 * ps, ps, ps);
+                // Body (slender)
+                ctx.fillStyle = '#c8a060';
+                for (let x = 3; x <= 6; x++) for (let y = 4; y <= 8; y++) {
+                    if (rand() > 0.1) ctx.fillRect(ox + x * ps, oy + y * ps, ps, ps);
+                }
+                // Healing aura (cross)
                 ctx.fillStyle = '#ffffff';
+                ctx.globalAlpha = 0.5;
+                ctx.fillRect(ox + 4 * ps, oy + 5 * ps, ps * 2, ps);
                 ctx.fillRect(ox + 5 * ps, oy + 4 * ps, ps, ps * 3);
-                ctx.fillRect(ox + 4 * ps, oy + 5 * ps, ps * 3, ps);
-                ctx.fillStyle = '#ffdd44';
-                ctx.fillRect(ox + 4 * ps, oy - ps, ps * 3, ps);
+                ctx.globalAlpha = 1;
+                // Legs
+                ctx.fillStyle = '#a08040';
+                ctx.fillRect(ox + 3 * ps, oy + 9 * ps, ps, ps * 2);
+                ctx.fillRect(ox + 6 * ps, oy + 9 * ps, ps, ps * 2);
                 break;
+
             case 'assassin':
-                ctx.fillStyle = '#cc4466';
-                ctx.fillRect(ox + 1 * ps, oy + 4 * ps, ps, ps * 3);
-                ctx.fillRect(ox + 8 * ps, oy + 4 * ps, ps, ps * 3);
+                // Cat/panther: sleek, slit eyes, tail
                 ctx.fillStyle = '#333';
-                ctx.fillRect(ox + 3 * ps, oy + 1 * ps, ps * 4, ps);
+                for (let x = 3; x <= 6; x++) for (let y = 1; y <= 2; y++) ctx.fillRect(ox + x * ps, oy + y * ps, ps, ps);
+                // Ears (pointed)
+                ctx.fillStyle = '#444';
+                ctx.fillRect(ox + 2 * ps, oy, ps, ps);
+                ctx.fillRect(ox + 7 * ps, oy, ps, ps);
+                // Slit eyes
+                ctx.fillStyle = eColor;
+                ctx.fillRect(ox + 4 * ps, oy + 1 * ps, ps, ps);
+                ctx.fillRect(ox + 6 * ps, oy + 1 * ps, ps, ps);
+                // Sleek body
+                ctx.fillStyle = clsColor;
+                for (let x = 2; x <= 7; x++) for (let y = 3; y <= 8; y++) {
+                    if (rand() > 0.1) ctx.fillRect(ox + x * ps, oy + y * ps, ps, ps);
+                }
+                // Whiskers
+                ctx.fillStyle = '#888';
+                ctx.fillRect(ox + ps, oy + 2 * ps, ps * 2, ps);
+                ctx.fillRect(ox + 7 * ps, oy + 2 * ps, ps * 2, ps);
+                // Tail
+                ctx.fillStyle = '#444';
+                ctx.fillRect(ox + 8 * ps, oy + 5 * ps, ps, ps * 3);
+                ctx.fillRect(ox + 9 * ps, oy + 7 * ps, ps, ps);
+                // Legs
+                ctx.fillStyle = '#222';
+                ctx.fillRect(ox + 2 * ps, oy + 9 * ps, ps * 2, ps * 2);
+                ctx.fillRect(ox + 6 * ps, oy + 9 * ps, ps * 2, ps * 2);
                 break;
+
+            default:
+                // Generic creature body
+                ctx.fillStyle = clsColor;
+                for (let x = 3; x <= 6; x++) for (let y = 1; y <= 8; y++) ctx.fillRect(ox + x * ps, oy + y * ps, ps, ps);
+                ctx.fillStyle = eColor;
+                ctx.fillRect(ox + 4 * ps, oy + 2 * ps, ps, ps);
+                ctx.fillRect(ox + 6 * ps, oy + 2 * ps, ps, ps);
         }
     },
 
-    // Draw full card with Pokemon TCG Chaos Rising style
+    // Draw full card with element + rarity styling
     drawFullCard(canvas, card, width, height) {
         const ctx = canvas.getContext('2d');
         canvas.width = width;
@@ -198,6 +332,7 @@ const CardRenderer = {
         const rarityColor = RARITIES[card.rarity] ? RARITIES[card.rarity].color : '#aaa';
         const cls = CLASSES[card.class] || {};
         const clsColor = cls.color || '#888';
+        const elInfo = this._getEl(card);
 
         const darken = (hex, amt) => {
             const num = parseInt(hex.replace('#',''), 16);
@@ -216,20 +351,31 @@ const CardRenderer = {
 
         const pad = 4;
 
-        // 1. Outer border — class-colored
-        ctx.fillStyle = clsColor;
+        // 1. Outer border — element-colored with rarity glow
+        ctx.fillStyle = elInfo.color;
         ctx.fillRect(0, 0, width, height);
+
+        // Rarity glow layer
+        if (card.rarity === 'legendary' || card.rarity === 'mythic') {
+            ctx.globalAlpha = 0.3;
+            ctx.shadowColor = rarityColor;
+            ctx.shadowBlur = 8;
+            ctx.fillStyle = rarityColor;
+            ctx.fillRect(0, 0, width, height);
+            ctx.shadowBlur = 0;
+            ctx.globalAlpha = 1;
+        }
 
         // 2. Inner dark border
         ctx.fillStyle = '#111';
         ctx.fillRect(pad, pad, width - pad * 2, height - pad * 2);
 
-        // 3. Card body gradient
+        // 3. Card body gradient — element-themed
         const bodyGrad = ctx.createLinearGradient(0, 0, 0, height);
-        bodyGrad.addColorStop(0, lighten(clsColor, 30));
-        bodyGrad.addColorStop(0.15, darken(clsColor, 60));
-        bodyGrad.addColorStop(0.85, darken(clsColor, 80));
-        bodyGrad.addColorStop(1, darken(clsColor, 40));
+        bodyGrad.addColorStop(0, lighten(elInfo.color, 20));
+        bodyGrad.addColorStop(0.15, darken(elInfo.color, 50));
+        bodyGrad.addColorStop(0.85, darken(elInfo.color, 70));
+        bodyGrad.addColorStop(1, darken(elInfo.color, 30));
         ctx.fillStyle = bodyGrad;
         ctx.fillRect(pad + 1, pad + 1, width - (pad + 1) * 2, height - (pad + 1) * 2);
 
@@ -255,7 +401,7 @@ const CardRenderer = {
         // Class emoji + rarity stars
         ctx.font = '10px sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText(cls.emoji || '⚔', innerX + 1, headerY + 8);
+        ctx.fillText(elInfo.icon || (cls.emoji || '⚔'), innerX + 1, headerY + 8);
 
         const starCount = { common: 1, rare: 2, epic: 3, legendary: 4, mythic: 5 }[card.rarity] || 1;
         ctx.fillStyle = '#ffd700';
@@ -306,15 +452,19 @@ const CardRenderer = {
             ctx.fillRect(innerX + 1, artY + 1, innerW - 2, artH - 2);
         }
 
-        // 6. Type info line
+        // 6. Type info line — element icon + class + rarity
         const infoY = artY + artH + 3;
         ctx.fillStyle = 'rgba(0,0,0,0.4)';
         ctx.fillRect(innerX, infoY, innerW, 10);
 
+        ctx.fillStyle = elInfo.color;
+        ctx.font = '8px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(elInfo.icon || '🌑', innerX + 2, infoY + 8);
+
         ctx.fillStyle = clsColor;
         ctx.font = '7px "Press Start 2P"';
-        ctx.textAlign = 'left';
-        ctx.fillText(cls.name || 'Hero', innerX + 3, infoY + 8);
+        ctx.fillText(cls.name || 'Hero', innerX + 14, infoY + 8);
 
         ctx.fillStyle = rarityColor;
         ctx.textAlign = 'right';

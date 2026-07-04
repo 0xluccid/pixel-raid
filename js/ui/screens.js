@@ -144,13 +144,16 @@ const UI = {
                         <div class="arena-hp-text">20/20</div>
                     </div>
                     <div class="arena-cards">
-                        ${deck.slice(0, 3).map((card, i) => `
-                            <div class="hero-card arena-card" style="animation-delay:${i * 0.15}s">
-                                <span class="hero-card-icon">${this._getHeroIcon(card.class)}</span>
+                        ${deck.slice(0, 3).map((card, i) => {
+                            const elInfo = (typeof getCardElement === 'function') ? getCardElement(card) : null;
+                            const elIcon = elInfo ? elInfo.icon : '⚔️';
+                            const elColor = elInfo ? elInfo.color : '#888';
+                            return `<div class="hero-card arena-card" style="animation-delay:${i * 0.15}s;border-color:${elColor}">
+                                <span class="hero-card-icon">${elIcon}</span>
                                 <span class="hero-card-name">${card.name || 'Hero'}</span>
                                 <span class="hero-card-stats">⚔️${card.stats?.atk || 10} 🛡${card.stats?.def || 5}</span>
-                            </div>
-                        `).join('')}
+                            </div>`;
+                        }).join('')}
                         ${deck.length === 0 ? `
                             <div class="hero-card arena-card empty">
                                 <span class="hero-card-icon">❓</span>
@@ -1310,10 +1313,13 @@ const UI = {
                 const rarity = card.rarity || 'common';
                 const rColor = (RARITIES[rarity] || {}).color || '#aaa';
                 const clsInfo = CLASSES[card.class] || {};
+                const elInfo = (typeof getCardElement === 'function') ? getCardElement(card) : null;
+                const elColor = elInfo ? elInfo.color : rColor;
                 el.className = `card ${rarity}`;
-                // Prominent left border for rarity
-                el.style.borderLeft = `4px solid ${rColor}`;
+                // Element-colored left border
+                el.style.borderLeft = `4px solid ${elColor}`;
                 el.style.paddingLeft = '10px';
+                el.style.boxShadow = `inset 0 0 8px ${elColor}33`;
                 el.onclick = () => this.showHeroDetail(card);
 
                 const template = getTemplateByName(card.templateId || card.name);
@@ -1343,7 +1349,8 @@ const UI = {
 
                 const cls = document.createElement('div');
                 cls.className = 'card-class';
-                cls.textContent = (clsInfo.emoji || '') + ' ' + (clsInfo.name || card.class);
+                const elIcon = elInfo ? `${elInfo.icon} ${elInfo.name}` : '';
+                cls.innerHTML = `${elIcon} <span style="color:${rColor}">${clsInfo.emoji || ''} ${clsInfo.name || card.class}</span>`;
 
                 const stats = document.createElement('div');
                 stats.className = 'card-stats';

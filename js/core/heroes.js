@@ -10,6 +10,14 @@ const RARITIES = {
     mythic:    { name: 'Mythic',    color: '#ff2266', weight: 1,  statMul: 2.5, packWeight: 1  },
 };
 
+const ELEMENTS = {
+    fire:     { name: 'Fire',     icon: '🔥', color: '#ff4422', bg: '#3a1108', strong: 'nature',  weak: 'water' },
+    water:    { name: 'Water',    icon: '💧', color: '#2288ff', bg: '#081a3a', strong: 'fire',    weak: 'lightning' },
+    nature:   { name: 'Nature',   icon: '🌿', color: '#44cc44', bg: '#0a2a0a', strong: 'lightning', weak: 'fire' },
+    lightning:{ name: 'Lightning',icon: '⚡', color: '#ffdd00', bg: '#2a2a00', strong: 'water',   weak: 'nature' },
+    shadow:   { name: 'Shadow',   icon: '🌑', color: '#aa44cc', bg: '#1a0a2a', strong: null,      weak: null },
+};
+
 const CLASSES = {
     warrior:  { name: 'Warrior',  emoji: '⚔️',  color: '#ff6644', bonusStat: 'def', bonusVal: 1.15 },
     mage:     { name: 'Mage',     emoji: '🔮', color: '#8844ff', bonusStat: 'atk', bonusVal: 1.15 },
@@ -39,91 +47,91 @@ const COMBO_SYNERGIES = [
 // Card templates — base stats before rarity multiplier
 const CARD_TEMPLATES = [
     // ===== WARRIORS =====
-    { name: 'Silver Knight',    cls: 'warrior', type: 'tank',
+    { name: 'Silver Knight',    cls: 'warrior', type: 'tank', element: 'lightning',
       image: 'assets/heroes/silver_knight.png',  hp: 130, atk: 16, def: 24, spd: 8,  crit: 5,
       lore: 'Clad in gleaming silver armor forged from moonstone, the Silver Knight is the realm\'s unbreakable shield. His legendary Shield Wall has turned the tide of a thousand battles.',
       skill: { name: 'Shield Wall', type: 'buff_def', val: 0.4, chance: 0.3 } },
-    { name: 'Forest Warrior',   cls: 'warrior', type: 'warrior',
+    { name: 'Forest Warrior',   cls: 'warrior', type: 'warrior', element: 'nature',
       image: 'assets/heroes/forest_warrior.png',  hp: 110, atk: 22, def: 18, spd: 12, crit: 10,
       lore: 'Born from the ancient woods, he fights with nature\'s fury. His battle axe is carved from the Heartwood Tree, and the forest itself heals his wounds.',
       skill: { name: 'Nature\'s Wrath', type: 'buff_atk', val: 0.35, chance: 0.25 } },
-    { name: 'Dark Knight',      cls: 'warrior', type: 'warrior',
+    { name: 'Dark Knight',      cls: 'warrior', type: 'warrior', element: 'shadow',
       image: 'assets/heroes/dark_knight.png',  hp: 115, atk: 26, def: 19, spd: 9,  crit: 12,
       lore: 'A fallen paladin who embraced shadow to gain forbidden power. Every strike drains life from his enemies, feeding his cursed existence.',
       skill: { name: 'Drain Strike', type: 'lifesteal', val: 0.3, chance: 0.25 } },
-    { name: "Queen's Guard",    cls: 'warrior', type: 'tank',
+    { name: "Queen's Guard",    cls: 'warrior', type: 'tank', element: 'water',
       image: 'assets/heroes/queens_guard.png',  hp: 140, atk: 14, def: 26, spd: 7,  crit: 5,
       lore: 'Sworn to protect the crown with his life, the Queen\'s Guard stands as an immovable wall. His spear has never failed to hold the line.',
       skill: { name: 'Royal Guard', type: 'shield', val: 35, chance: 0.3 } },
 
     // ===== MAGES =====
-    { name: 'Arch Mage',        cls: 'mage', type: 'mage',
+    { name: 'Arch Mage',        cls: 'mage', type: 'mage', element: 'lightning',
       image: 'assets/heroes/arch_mage.png',  hp: 75,  atk: 34, def: 8,  spd: 12, crit: 10,
       lore: 'Grand master of the Arcane Academy, the Arch Mage commands elements with a wave of his staff. His crystal orb holds the power of a thousand storms.',
       skill: { name: 'Arcane Surge', type: 'aoe', val: 0.7, chance: 0.3 } },
-    { name: "King's Mage",      cls: 'mage', type: 'mage',
+    { name: "King's Mage",      cls: 'mage', type: 'mage', element: 'fire',
       image: 'assets/heroes/kings_mage.png',  hp: 80,  atk: 30, def: 10, spd: 11, crit: 8,
       lore: 'Personal advisor to the crown, the King\'s Mage weaves arcane protections around the throne. His golden staff amplifies magic tenfold.',
       skill: { name: 'Royal Decree', type: 'buff_atk', val: 0.4, chance: 0.25 } },
-    { name: 'Dark Sorcerer',    cls: 'mage', type: 'mage',
+    { name: 'Dark Sorcerer',    cls: 'mage', type: 'mage', element: 'shadow',
       image: 'assets/heroes/dark_sorcerer.png',  hp: 70,  atk: 36, def: 7,  spd: 13, crit: 12,
       lore: 'Peer into the abyss and the abyss peers back. The Dark Sorcerer wields void magic that tears reality apart, dealing damage no armor can block.',
       skill: { name: 'Void Rift', type: 'true_dmg', val: 25, chance: 0.25 } },
-    { name: 'Fire Wielder',     cls: 'mage', type: 'mage',
+    { name: 'Fire Wielder',     cls: 'mage', type: 'mage', element: 'fire',
       image: 'assets/heroes/fire_wielder.png',  hp: 72,  atk: 33, def: 9,  spd: 14, crit: 10,
       lore: 'His blade burns with eternal flame. The Fire Wielder merges swordplay with pyromancy, leaving a trail of ash wherever he fights.',
       skill: { name: 'Flame Slash', type: 'aoe', val: 0.6, chance: 0.3 } },
 
     // ===== ARCHERS =====
-    { name: 'Shadow Stalker',   cls: 'archer', type: 'archer',
+    { name: 'Shadow Stalker',   cls: 'archer', type: 'archer', element: 'shadow',
       image: 'assets/heroes/shadow_stalker.png',  hp: 70,  atk: 28, def: 8,  spd: 20, crit: 18,
       lore: 'A phantom who strikes from the darkness. The Shadow Stalker\'s twin daggers find vital points with surgical precision. By the time you see him, it\'s too late.',
       skill: { name: 'Shadow Strike', type: 'crit_boost', val: 2.0, chance: 0.25 } },
-    { name: 'Demon Hunter',     cls: 'archer', type: 'archer',
+    { name: 'Demon Hunter',     cls: 'archer', type: 'archer', element: 'fire',
       image: 'assets/heroes/demon_hunter.png',  hp: 80,  atk: 26, def: 12, spd: 16, crit: 15,
       lore: 'Marked by demon blood, she hunts the creatures of the night with her enchanted crossbow. Every bolt is tipped with holy water.',
       skill: { name: 'Demon Bane', type: 'ignore_def', val: 0.5, chance: 0.25 } },
-    { name: 'Ice Witch',        cls: 'archer', type: 'archer',
+    { name: 'Ice Witch',        cls: 'archer', type: 'archer', element: 'water',
       image: 'assets/heroes/ice_witch.png',  hp: 75,  atk: 28, def: 10, spd: 15, crit: 10,
       lore: 'The eternal winter that grips the northern forests is her doing. She freezes enemies in place, leaving them helpless before her frost constructs.',
       skill: { name: 'Frost Nova', type: 'debuff_spd', val: 0.35, chance: 0.3 } },
-    { name: 'Frost Giant',      cls: 'archer', type: 'archer',
+    { name: 'Frost Giant',      cls: 'archer', type: 'archer', element: 'water',
       image: 'assets/heroes/frost_giant.png',  hp: 95,  atk: 22, def: 16, spd: 8,  crit: 8,
       lore: 'A towering colossus of living ice from the Frozen Peaks. His frost breath can freeze an entire battalion solid in seconds.',
       skill: { name: 'Frozen Slam', type: 'stun', val: 1, chance: 0.2 } },
 
     // ===== HEALERS =====
-    { name: 'Golden Paladin',   cls: 'healer', type: 'healer',
+    { name: 'Golden Paladin',   cls: 'healer', type: 'healer', element: 'nature',
       image: 'assets/heroes/golden_paladin.png',  hp: 120, atk: 16, def: 20, spd: 8,  crit: 5,
       lore: 'Blessed by the Sun God, the Golden Paladin radiates healing light. His golden armor channels divine energy that mends wounds and smites evil.',
       skill: { name: 'Holy Light', type: 'heal', val: 0.25, chance: 0.35 } },
-    { name: 'Princess',         cls: 'healer', type: 'healer',
+    { name: 'Princess',         cls: 'healer', type: 'healer', element: 'nature',
       image: 'assets/heroes/princess.png',  hp: 85,  atk: 12, def: 14, spd: 12, crit: 5,
       lore: 'Don\'t let her gentle appearance fool you. The Princess carries ancient healing magic in her bloodline, mending allies with a wave of her hand.',
       skill: { name: 'Royal Blessing', type: 'heal', val: 0.30, chance: 0.4 } },
-    { name: 'Golem',            cls: 'healer', type: 'tank',
+    { name: 'Golem',            cls: 'healer', type: 'tank', element: 'nature',
       image: 'assets/heroes/golem.png',  hp: 130, atk: 14, def: 22, spd: 6,  crit: 5,
       lore: 'An ancient construct powered by a life crystal. The Golem absorbs damage meant for allies, channeling stored energy into protective shields.',
       skill: { name: 'Stone Guard', type: 'shield', val: 30, chance: 0.3 } },
-    { name: 'Stone Golem',      cls: 'healer', type: 'tank',
+    { name: 'Stone Golem',      cls: 'healer', type: 'tank', element: 'nature',
       image: 'assets/heroes/stone_golem.png',  hp: 140, atk: 12, def: 24, spd: 5,  crit: 5,
       lore: 'A massive guardian carved from enchanted bedrock. Its runic core pulses with ancient protective magic, shielding all who stand behind it.',
       skill: { name: 'Runic Shield', type: 'shield', val: 40, chance: 0.25 } },
 
     // ===== ASSASSINS =====
-    { name: 'Slime Lord',       cls: 'assassin', type: 'assassin',
+    { name: 'Slime Lord',       cls: 'assassin', type: 'assassin', element: 'nature',
       image: 'assets/heroes/slime_lord.png',  hp: 90,  atk: 24, def: 14, spd: 16, crit: 14,
       lore: 'The crowned king of the Slime Kingdom. Don\'t let his goofy face fool you — his acidic body dissolves armor on contact, and he reforms after every hit.',
       skill: { name: 'Acid Touch', type: 'dot', val: 12, chance: 0.3 } },
-    { name: 'Dark Spirit',      cls: 'assassin', type: 'assassin',
+    { name: 'Dark Spirit',      cls: 'assassin', type: 'assassin', element: 'shadow',
       image: 'assets/heroes/dark_spirit.png',  hp: 65,  atk: 32, def: 6,  spd: 22, crit: 22,
       lore: 'A wraith torn from the void between worlds. The Dark Spirit phases through solid matter, striking from angles no mortal can predict or defend.',
       skill: { name: 'Phase Strike', type: 'dodge_buff', val: 0.35, chance: 0.25 } },
-    { name: 'Dark Warlock',     cls: 'assassin', type: 'assassin',
+    { name: 'Dark Warlock',     cls: 'assassin', type: 'assassin', element: 'shadow',
       image: 'assets/heroes/dark_warlock.png',  hp: 72,  atk: 30, def: 8,  spd: 18, crit: 16,
       lore: 'Cursed by forbidden rituals, the Dark Warlock channels shadow flames that burn the soul. His grimoire contains spells that drive enemies mad.',
       skill: { name: 'Shadow Hex', type: 'debuff_spd', val: 0.3, chance: 0.3 } },
-    { name: 'King',             cls: 'assassin', type: 'assassin',
+    { name: 'King',             cls: 'assassin', type: 'assassin', element: 'fire',
       image: 'assets/heroes/king.png',  hp: 95,  atk: 26, def: 16, spd: 14, crit: 12,
       lore: 'The King fights not from a throne, but from the front lines. His golden scepter channels royal authority into devastating critical strikes.',
       skill: { name: 'Royal Execution', type: 'crit_boost', val: 1.8, chance: 0.2 } },
@@ -226,6 +234,7 @@ function generateCard(template, rarity) {
             maxMana: 0, // tracks max mana cap per turn
         },
         skill: { ...template.skill },
+        element: template.element || 'shadow',
         level: 1,
         exp: 0,
         equipped: false,
@@ -265,6 +274,13 @@ function openPack(count = 5) {
 function getCardPower(card) {
     const s = card.stats;
     return Math.floor((s.hp * 0.5 + s.atk * 2 + s.def * 1.5 + s.spd * 1.2 + s.crit * 1.8) * RARITIES[card.rarity].statMul);
+}
+
+function getCardElement(card) {
+    if (card.element && ELEMENTS[card.element]) return card.element;
+    const tmpl = getTemplateByName(card.templateId || card.name);
+    if (tmpl && tmpl.element && ELEMENTS[tmpl.element]) return tmpl.element;
+    return 'shadow'; // default fallback
 }
 
 function getCardSellPrice(card) {
