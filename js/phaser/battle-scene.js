@@ -1278,11 +1278,21 @@ const PhaserBattleScene = new Phaser.Class({
             });
         });
 
-        // Fallback cleanup
+        // Fallback cleanup — prevent double cb call
+        var _deathFadeDone = false;
         scene.time.delayedCall(800, function () {
+            if (_deathFadeDone) return;
+            _deathFadeDone = true;
             if (ghost.active) ghost.destroy();
             if (cb) cb();
         });
+        // Wrap original cb to mark as done
+        var origCb = cb;
+        cb = function () {
+            if (_deathFadeDone) return;
+            _deathFadeDone = true;
+            if (origCb) origCb();
+        };
     },
 
     // ===== VICTORY CELEBRATION =====

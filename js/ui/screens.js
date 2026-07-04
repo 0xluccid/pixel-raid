@@ -1062,7 +1062,7 @@ const UI = {
         rewardsHTML += `<div>💰 <strong>+${rewards.gold}</strong> Gold</div>`;
         rewardsHTML += `<div>⭐ <strong>+${rewards.exp}</strong> EXP</div>`;
         if (rewards.cards && rewards.cards.length > 0) {
-            rewardsHTML += `<div>🃏 New Card: <strong style="color:${RARITIES[rewards.cards[0].rarity].color}">${rewards.cards.map(c => c.name).join(', ')}</strong></div>`;
+            rewardsHTML += `<div>🃏 New Card: <strong style="color:${RARITIES[rewards.cards[0].rarity]?.color || 'var(--gold)'}">${rewards.cards.map(c => c.name).join(', ')}</strong></div>`;
         }
         if (rewards.items && rewards.items.length > 0) {
             rewardsHTML += `<div>🎁 Item: <strong>${rewards.items.map(i => i.name).join(', ')}</strong></div>`;
@@ -1901,8 +1901,8 @@ const UI = {
             el.className = `card ${item.rarity}`;
             el.innerHTML = `
                 <div style="text-align:center;font-size:16px;margin-bottom:8px;">${ITEM_TYPES[item.type].emoji}</div>
-                <div class="card-name" style="color:${RARITIES[item.rarity].color}">${item.name}</div>
-                <div class="card-class">${RARITIES[item.rarity].name}</div>
+                <div class="card-name" style="color:${RARITIES[item.rarity]?.color || 'var(--gold)'}">${item.name}</div>
+                <div class="card-class">${RARITIES[item.rarity]?.name || item.rarity}</div>
                 <div class="card-stats">
                     <span><span style="color:#888">${item.stat.toUpperCase()}</span> <span style="color:var(--gold)">+${item.val}</span></span>
                 </div>
@@ -2061,7 +2061,7 @@ const UI = {
                                         <div style="text-align:center;">
                                             <canvas class="catalog-sprite" data-hero="${hero.name}" width="48" height="48" style="image-rendering:pixelated;"></canvas>
                                         </div>
-                                        <div class="card-name" style="color:${RARITIES[defaultRarity].color};font-size:8px;">${hero.name}</div>
+                                        <div class="card-name" style="color:${RARITIES[defaultRarity]?.color || 'var(--gold)'};font-size:8px;">${hero.name}</div>
                                         <div class="card-class" style="font-size:7px;">${clsInfo.emoji} ${clsInfo.name}</div>
                                         <div style="font-size:7px;display:flex;gap:4px;justify-content:center;margin-top:4px;">
                                             <span style="color:#44cc44">HP:${hero.hp}</span>
@@ -2118,7 +2118,7 @@ const UI = {
                         <div style="text-align:center;">
                             <canvas id="market-card-${i}" width="48" height="48" style="image-rendering:pixelated;"></canvas>
                         </div>
-                        <div class="card-name" style="color:${RARITIES[listing.card.rarity].color};font-size:8px;">${listing.card.name}</div>
+                        <div class="card-name" style="color:${RARITIES[listing.card.rarity]?.color || 'var(--gold)'};font-size:8px;">${listing.card.name}</div>
                         <div class="card-class" style="font-size:7px;">${CLASSES[listing.card.class].emoji} ${CLASSES[listing.card.class].name}</div>
                         <div class="card-stats" style="font-size:7px;">
                             <span><span style="color:#888">PWR</span> <span style="color:var(--gold)">${getCardPower(listing.card)}</span></span>

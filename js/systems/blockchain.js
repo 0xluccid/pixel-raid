@@ -98,14 +98,18 @@ const BlockchainBridge = {
                 });
             }
 
-            // Listen for account/chain changes
-            window.ethereum.on('accountsChanged', (accounts) => {
-                this.account = accounts[0] || null;
-                if (!this.account) this.disconnect();
-                else this.updateUI('connected');
-            });
-
-            window.ethereum.on('chainChanged', () => window.location.reload());
+            // Listen for account/chain changes (guard against duplicate listeners)
+            if (!this._ethereumListenersBound) {
+                this._onAccountsChanged = (accounts) => {
+                    this.account = accounts[0] || null;
+                    if (!this.account) this.disconnect();
+                    else this.updateUI('connected');
+                };
+                this._onChainChanged = () => window.location.reload();
+                window.ethereum.on('accountsChanged', this._onAccountsChanged);
+                window.ethereum.on('chainChanged', this._onChainChanged);
+                this._ethereumListenersBound = true;
+            }
 
             console.log('✅ Wallet connected:', this.account);
             return true;
@@ -128,6 +132,12 @@ const BlockchainBridge = {
             } catch (e) {
                 console.warn('⚠️ revokePermissions failed (non-critical):', e.message);
             }
+        }
+        // Remove ethereum event listeners
+        if (this._ethereumListenersBound && window.ethereum) {
+            if (this._onAccountsChanged) window.ethereum.removeListener('accountsChanged', this._onAccountsChanged);
+            if (this._onChainChanged) window.ethereum.removeListener('chainChanged', this._onChainChanged);
+            this._ethereumListenersBound = false;
         }
         this.account = null;
         this.provider = null;

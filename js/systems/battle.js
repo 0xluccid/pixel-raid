@@ -260,9 +260,11 @@ const BattleEngine = {
     },
 
     _executeAttackSequence(attacks, index) {
+        if (!this.isRunning) return; // Guard against stale calls after stop()
         if (index >= attacks.length) {
             // All attacks done → check win/lose → result phase
             this._battleStepTimer = setTimeout(() => {
+                if (!this.isRunning) return; // Guard: stop() was called during attack sequence
                 this._cleanupDead();
                 this._notifyFieldUpdate();
 
