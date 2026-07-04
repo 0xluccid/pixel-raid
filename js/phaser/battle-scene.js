@@ -462,8 +462,8 @@ const PhaserBattleScene = new Phaser.Class({
         // 5 slots on each side of center divider for board units
         var W = this.W;
         var H = this.H;
-        var slotW = 58;
-        var slotH = 45;
+        var slotW = 70;
+        var slotH = 55;
         var slotGap = 6;
         var totalW = slotW * 5 + slotGap * 4;
         var startX = (W - totalW) / 2;
@@ -495,7 +495,7 @@ const PhaserBattleScene = new Phaser.Class({
         container.add(bg);
 
         var icon = this.add.text(w / 2, h / 2, '✨', {
-            fontSize: '18px',
+            fontSize: '22px',
             color: 'rgba(155,89,182,0.15)'
         });
         icon.setOrigin(0.5, 0.5);
@@ -575,17 +575,17 @@ const PhaserBattleScene = new Phaser.Class({
 
             // Unit emoji sprite
             var emoji = unit.emoji || '⚔️';
-            var unitText = scene.add.text(cx, cy - 4, emoji, {
-                fontSize: '20px'
+            var unitText = scene.add.text(cx, cy - 6, emoji, {
+                fontSize: '26px'
             });
             unitText.setOrigin(0.5, 0.5);
             scene._boardUnitTexts[side].push(unitText);
 
             // Unit name (truncated)
-            var nameStr = (unit.name || '?').substring(0, 6);
-            var nameText = scene.add.text(cx, cy + 14, nameStr, {
+            var nameStr = (unit.name || '?').substring(0, 8);
+            var nameText = scene.add.text(cx, cy + 16, nameStr, {
                 fontFamily: '"Press Start 2P", monospace',
-                fontSize: '5px',
+                fontSize: '6px',
                 color: '#ffd700'
             });
             nameText.setOrigin(0.5, 0.5);
@@ -594,9 +594,9 @@ const PhaserBattleScene = new Phaser.Class({
             // HP bar mini
             var hpPct = unit.hp / (unit.maxHp || 1);
             var barW = slot.w - 8;
-            var barH = 3;
+            var barH = 4;
             var barX = slot.x + 4;
-            var barY = slot.y + slot.h - 6;
+            var barY = slot.y + slot.h - 8;
 
             var hpBg = scene.add.graphics();
             hpBg.fillStyle(0x330000, 0.8);
@@ -612,7 +612,7 @@ const PhaserBattleScene = new Phaser.Class({
             // ATK badge
             var atkText = scene.add.text(slot.x + 4, slot.y + 3, '⚔' + (unit.atk || 0), {
                 fontFamily: '"Press Start 2P", monospace',
-                fontSize: '5px',
+                fontSize: '6px',
                 color: '#ff6644'
             });
             atkText.setOrigin(0, 0);
