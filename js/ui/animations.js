@@ -24,11 +24,9 @@ const BattleAnimations = {
     },
 
     _startLoop() {
-        if (this._raf) return;
-        const tick = () => {
-            this._raf = requestAnimationFrame(tick);
-        };
-        this._raf = requestAnimationFrame(tick);
+        // RAF loop removed — update() and renderOverlay() are called
+        // directly by renderer.js renderBattle() at 60fps already.
+        // Keeping this as a no-op for backward compat.
     },
 
     stop() {

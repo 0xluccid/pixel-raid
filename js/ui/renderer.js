@@ -399,8 +399,12 @@ const BattleRenderer = {
         const container = canvas.parentElement;
         const W = container ? Math.min(container.clientWidth, 600) : 600;
         const H = 400;
-        canvas.width = W;
-        canvas.height = H;
+
+        // Only resize canvas when dimensions actually change (avoids GPU reallocation)
+        if (canvas.width !== W || canvas.height !== H) {
+            canvas.width = W;
+            canvas.height = H;
+        }
 
         const ctx = canvas.getContext('2d');
 
@@ -436,54 +440,73 @@ const BattleRenderer = {
             BattleAnimations.renderOverlay(ctx, W, H);
         }
 
-        // Register click handler for zones
-        this._registerClickHandler(canvas, W, H);
+        // Register click handler once (not every render frame)
+        if (!canvas._clickRegistered) {
+            this._registerClickHandler(canvas);
+            canvas._clickRegistered = true;
+        }
     },
 
     // ===== BACKGROUND — Dark gradient with stone tile grid =====
+    _bgCache: null,
+    _bgCacheW: 0,
+    _bgCacheH: 0,
     _drawBackground(ctx, W, H) {
-        // Try stage background image first
+        // Cache background as offscreen canvas (avoids redrawing gradient+grid+vignette every frame)
+        if (this._bgCache && this._bgCacheW === W && this._bgCacheH === H) {
+            ctx.drawImage(this._bgCache, 0, 0);
+            return;
+        }
+        const offscreen = document.createElement('canvas');
+        offscreen.width = W;
+        offscreen.height = H;
+        const octx = offscreen.getContext('2d');
+
+        // Dark gradient base
+        const bgGrad = octx.createLinearGradient(0, 0, 0, H);
+        bgGrad.addColorStop(0, PR_COLORS.bgDark);
+        bgGrad.addColorStop(1, PR_COLORS.bgMid);
+        octx.fillStyle = bgGrad;
+        octx.fillRect(0, 0, W, H);
+
+        // Try to draw stage background with overlay
         const stage = GameState ? GameState.player.stage : 1;
         const bgSrc = getStageBackground(stage);
         const bgImg = _loadBgImage(bgSrc);
-
-        // Dark gradient base
-        const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
-        bgGrad.addColorStop(0, PR_COLORS.bgDark);
-        bgGrad.addColorStop(1, PR_COLORS.bgMid);
-        ctx.fillStyle = bgGrad;
-        ctx.fillRect(0, 0, W, H);
-
-        // Try to draw stage background with overlay
         if (bgImg.complete && bgImg.naturalWidth > 0 && !bgImg._failed) {
-            ctx.globalAlpha = 0.15;
-            ctx.drawImage(bgImg, 0, 0, W, H);
-            ctx.globalAlpha = 1;
+            octx.globalAlpha = 0.15;
+            octx.drawImage(bgImg, 0, 0, W, H);
+            octx.globalAlpha = 1;
         }
 
         // Stone tile grid pattern
-        ctx.strokeStyle = 'rgba(68,136,255,0.06)';
-        ctx.lineWidth = 1;
+        octx.strokeStyle = 'rgba(68,136,255,0.06)';
+        octx.lineWidth = 1;
         const gridSize = 25;
         for (let x = 0; x <= W; x += gridSize) {
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, H);
-            ctx.stroke();
+            octx.beginPath();
+            octx.moveTo(x, 0);
+            octx.lineTo(x, H);
+            octx.stroke();
         }
         for (let y = 0; y <= H; y += gridSize) {
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(W, y);
-            ctx.stroke();
+            octx.beginPath();
+            octx.moveTo(0, y);
+            octx.lineTo(W, y);
+            octx.stroke();
         }
 
         // Subtle vignette effect
-        const vignetteGrad = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.8);
+        const vignetteGrad = octx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.8);
         vignetteGrad.addColorStop(0, 'rgba(0,0,0,0)');
         vignetteGrad.addColorStop(1, 'rgba(0,0,0,0.4)');
-        ctx.fillStyle = vignetteGrad;
-        ctx.fillRect(0, 0, W, H);
+        octx.fillStyle = vignetteGrad;
+        octx.fillRect(0, 0, W, H);
+
+        this._bgCache = offscreen;
+        this._bgCacheW = W;
+        this._bgCacheH = H;
+        ctx.drawImage(offscreen, 0, 0);
     },
 
     // ===== INFO BAR — HP bar with gradient fill (green→yellow→red) =====
@@ -1141,12 +1164,14 @@ const BattleRenderer = {
     },
 
     // ===== CLICK HANDLING =====
-    _registerClickHandler(canvas, W, H) {
+    _registerClickHandler(canvas) {
         canvas.onclick = null;
 
         canvas.onclick = (e) => {
             if (!BattleEngine.isRunning) return;
             const rect = canvas.getBoundingClientRect();
+            const W = canvas.width;
+            const H = canvas.height;
             const scaleX = W / rect.width;
             const scaleY = H / rect.height;
             const cx = (e.clientX - rect.left) * scaleX;

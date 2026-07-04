@@ -491,5 +491,11 @@ const BattleEngine = {
         this._battleStepTimer = null;
         this.player = null;
         this.enemy = null;
+        // Clear event callbacks to prevent stale references
+        this.onPhaseChange = null;
+        this.onFieldUpdate = null;
+        this.onAttack = null;
+        this.onDraw = null;
+        this.onComplete = null;
     },
 };

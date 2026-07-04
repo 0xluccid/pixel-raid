@@ -16,6 +16,13 @@ var BattlePhaser = {
     init: function (containerId) {
         this._containerId = containerId || 'battle-canvas-container';
 
+        // Destroy old Phaser game if it exists (prevent memory leak on retry)
+        if (this._game) {
+            try { this._game.destroy(true, false); } catch (e) {}
+            this._game = null;
+            this._scene = null;
+        }
+
         var container = document.getElementById(this._containerId);
         if (!container) {
             console.error('BattlePhaser: container not found:', this._containerId);
@@ -37,8 +44,9 @@ var BattlePhaser = {
                 autoCenter: Phaser.Scale.CENTER_BOTH
             },
             render: {
-                pixelArt: false,
-                antialias: true
+                pixelArt: true,
+                antialias: false,
+                roundPixels: true
             },
             audio: { noAudio: true },
             banner: false
@@ -254,6 +262,18 @@ var BattlePhaser = {
 
             // Clean up bonus overlays
             this._removeBonusOverlays();
+
+            // Clear card hand content from previous battle
+            var cardHand = document.getElementById('card-hand-area');
+            if (cardHand) cardHand.innerHTML = '';
+
+            // Clear hero power area
+            var heroPower = document.getElementById('hero-power-area');
+            if (heroPower) heroPower.innerHTML = '';
+
+            // Remove phase bar from previous battle
+            var phaseBar = document.getElementById('battle-phase-bar');
+            if (phaseBar) phaseBar.remove();
 
             // Reset inline styles on battle elements (they stay in screen-battle DOM, not moved)
             var movedEls = ['#card-hand-area', '.battle-action-row', '.battle-info-strip', '.battle-controls'];
