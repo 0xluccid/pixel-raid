@@ -55,9 +55,8 @@ const UI = {
 
     // ===== BATTLE SCREEN =====
     renderBattleScreen() {
-        // Always re-enable start button when rendering battle screen
-        const startBtn = document.getElementById('btn-start-battle');
-        if (startBtn) startBtn.disabled = false;
+        // Update start button state (disabled if no deck)
+        this._updateStartButton();
 
         // Show deck preview when battle is not active
         this.renderBattleDeckPreview();
@@ -481,6 +480,11 @@ const UI = {
             this._updatePhaseBar(phase);
             this._updateActionButtons(phase);
 
+            // Tick hero power cooldowns at start of each turn (draw phase)
+            if (phase === 'draw' && typeof HeroPowers !== 'undefined') {
+                HeroPowers.tickCooldowns();
+            }
+
             // Show phase banner in Phaser
             const phaseNames = {
                 draw: 'DRAW', energy: 'ENERGY', play: 'PLAY',
@@ -690,6 +694,14 @@ const UI = {
             `;
             row.style.display = 'flex';
         } else if (phase === 'result') {
+            // Generate rewards ONCE so display matches what's actually applied
+            const stage = GameState.player.stage || 1;
+            const isWin = BattleEngine._checkWinLose() === 'player';
+            this._lastBattleIsWin = isWin;
+            this._lastBattleRewards = isWin
+                ? Rewards.generateWinRewards(stage)
+                : Rewards.generateLossRewards(stage);
+            this._lastBattleStage = stage;
             this._renderResultScreen();
             row.style.display = 'none';
         } else {
@@ -758,20 +770,20 @@ const UI = {
         overlay.style.display = 'flex';
         overlay.style.background = isWin ? 'rgba(0,0,0,0.7)' : 'rgba(40,0,0,0.75)';
 
-        const stage = GameState.player.stage || 1;
-        const goldReward = isWin ? (20 + stage * 10) : Math.floor((10 + stage * 5) / 2);
-        const xpReward = isWin ? (15 + stage * 5) : Math.floor((8 + stage * 3) / 2);
+        const stage = this._lastBattleStage || GameState.player.stage || 1;
+        const rewards = this._lastBattleRewards || { gold: 0, cards: [], heroExp: 0 };
+        const goldReward = rewards.gold;
+        const xpReward = rewards.heroExp || 0;
 
-        // Check for new card reward
+        // Card reward display from actual generated cards
         let cardReward = '';
-        if (isWin && Math.random() < 0.3) {
-            const pool = ['Fire Bolt', 'Ice Shard', 'Heal Wave', 'Shadow Strike'];
-            const card = pool[Math.floor(Math.random() * pool.length)];
+        if (rewards.cards && rewards.cards.length > 0) {
+            const card = rewards.cards[0];
             cardReward = `
                 <div class="result-reward-item">
                     <span class="result-reward-icon">🃏</span>
                     <span>New Card</span>
-                    <span class="result-reward-value">${card}</span>
+                    <span class="result-reward-value">${card.name} <span style="color:${card.rarity === 'rare' ? '#4488ff' : card.rarity === 'epic' ? '#bb44ff' : '#aaa'}">(${card.rarity})</span></span>
                 </div>`;
         }
 
@@ -827,13 +839,24 @@ const UI = {
         const heroClass = BattleEngine.player.heroCard.class || 'warrior';
         if (typeof HeroPowers === 'undefined') return;
 
+        // Pass a proper hero object with hp/maxHp for heal effects
+        const heroObj = Object.assign({}, BattleEngine.player.heroCard, {
+            hp: BattleEngine.player.heroHp,
+            maxHp: BattleEngine.player.heroMaxHp,
+        });
+
         const result = HeroPowers.usePower(
             heroClass,
-            BattleEngine.player.heroCard,
+            heroObj,
             BattleEngine.enemy.board,
             BattleEngine.player
         );
         if (!result) return;
+
+        // Sync hp back to BattleEngine
+        if (heroObj.hp !== BattleEngine.player.heroHp) {
+            BattleEngine.player.heroHp = heroObj.hp;
+        }
 
         // Log the power usage
         BattleEngine._log(`${result.powerIcon} ${result.powerName}: ${result.text}`);
@@ -893,9 +916,10 @@ const UI = {
         const stage = GameState.player.stage;
         const battleContainer = document.getElementById('battle-canvas-container');
 
+        const rewards = this._lastBattleRewards;
+
         if (type === 'win') {
-            // Generate and apply win rewards using Rewards system
-            const rewards = Rewards.generateWinRewards(stage);
+            // Apply pre-generated win rewards
             Rewards.applyWinRewards(rewards);
 
             // Stage progression
@@ -915,8 +939,7 @@ const UI = {
             // Show reward popup with new cards
             Rewards.showRewardPopup(true, rewards, stage);
         } else if (type === 'lose') {
-            // Generate and apply loss rewards
-            const rewards = Rewards.generateLossRewards(stage);
+            // Apply pre-generated loss rewards
             Rewards.applyLossRewards(rewards);
 
             // Bug #5: Clean up battle state after loss (no auto-next)

@@ -132,6 +132,15 @@ const HeroPowers = {
     },
 
     /**
+     * Tick cooldowns by 1 (call at start of each turn)
+     */
+    tickCooldowns() {
+        for (const key in this._cooldowns) {
+            if (this._cooldowns[key] > 0) this._cooldowns[key]--;
+        }
+    },
+
+    /**
      * Use the power
      */
     usePower(heroClass, hero, enemyBoard, player) {
@@ -146,15 +155,8 @@ const HeroPowers = {
         // Pay energy cost
         player.energy -= power.manaCost;
 
-        // Set cooldown
+        // Set cooldown (tickCooldowns handles decrement at turn start)
         this._cooldowns[heroClass] = power.cooldown;
-
-        // Reduce cooldowns for all classes
-        for (const key in this._cooldowns) {
-            if (this._cooldowns[key] > 0) this._cooldowns[key]--;
-        }
-        // Restore current class cooldown after reduction
-        this._cooldowns[heroClass] = power.cooldown - 1;
 
         return { ...result, powerName: power.name, powerIcon: power.icon };
     },
