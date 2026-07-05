@@ -586,7 +586,7 @@ body {
 }
 
 /* ===== SCREEN CONTAINER ===== */
-.screen {
+.screen:not(.battle-active) {
     padding: 20px !important;
 }
 
