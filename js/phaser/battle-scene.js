@@ -55,138 +55,341 @@ const PhaserBattleScene = new Phaser.Class({
         // It gets added to texture manager before create() runs
     },
 
+
     create: function () {
         var W = this.W;
         var H = this.H;
+        var scene = this;
 
-        // === BACKGROUND ARENA IMAGE ===
-        if (this.textures.exists('arena-bg')) {
-            var bg = this.add.image(W / 2, H / 2, 'arena-bg');
-            bg.setDisplaySize(W, H);
-            bg.setDepth(-10);
-        } else {
-            // Fallback: programmatic background
-            this.bgGraphics = this.add.graphics();
-            this._drawBackground();
+        // === LAYER 0: VOID BACKGROUND (#07071a) ===
+        var voidBg = this.add.graphics();
+        voidBg.setDepth(0);
+        voidBg.fillStyle(0x07071a, 1);
+        voidBg.fillRect(0, 0, W, H);
+
+        // === STAR PARTICLES (~40 tiny dots, fade in/out, drift down) ===
+        this.starParticles = [];
+        var starColors = [0x4ECDC4, 0xFFD700, 0x9B59B6];
+        for (var si = 0; si < 40; si++) {
+            var sColor = starColors[si % 3];
+            var sGfx = this.add.graphics();
+            sGfx.fillStyle(sColor, 1);
+            sGfx.fillRect(-1, -1, 2, 2);
+            sGfx.setPosition(Math.random() * W, Math.random() * H);
+            sGfx.setDepth(0);
+            sGfx.setAlpha(0.1 + Math.random() * 0.5);
+            this.starParticles.push({
+                gfx: sGfx,
+                speed: 0.15 + Math.random() * 0.4,
+                baseAlpha: 0.1 + Math.random() * 0.5,
+                fadeDir: Math.random() > 0.5 ? 1 : -1,
+                fadeSpeed: 0.003 + Math.random() * 0.008
+            });
         }
 
-        // === GRID OVERLAY (subtle, over the image) ===
+        // === LAYER 1: ARENA FLOOR ===
+        this.bgGraphics = this.add.graphics();
+        this.bgGraphics.setDepth(1);
+        this._drawBackground();
+
+        // === LAYER 2: MAGICAL CIRCLE (static parts) ===
         this.gridGraphics = this.add.graphics();
+        this.gridGraphics.setDepth(2);
         this._drawGrid();
 
-        // === HERO PANELS ===
-        this._createHeroPanel('player', false); // bottom
-        this._createHeroPanel('enemy', true);    // top
+        // === ZONE OUTLINES (depth 3) ===
+        var zones = this.add.graphics();
+        zones.setDepth(3);
+
+        // Monster Zone 1 (enemy): x=124, y=32, w=100, h=140 — red pulsing
+        this._enemyMZ1Gfx = this.add.graphics();
+        this._enemyMZ1Gfx.setDepth(3);
+        this._drawMZZone(this._enemyMZ1Gfx, 124, 32, 100, 140, 0xE94560, true);
+        // "M" label
+        this.add.text(174, 102, 'M', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '10px',
+            color: '#E94560',
+            fontStyle: 'bold'
+        }).setOrigin(0.5, 0.5).setDepth(3);
+
+        // Monster Zone 2 (enemy): x=228, y=32, w=100, h=140 — teal standby
+        zones.lineStyle(2, 0x4ECDC4, 0.5);
+        zones.strokeRect(228, 32, 100, 140);
+
+        // Monster Zone 1 (player): x=128, y=188, w=100, h=140 — teal pulse
+        zones.lineStyle(2, 0x4ECDC4, 0.7);
+        zones.strokeRect(128, 188, 100, 140);
+
+        // Monster Zone 2 (player): x=232, y=188, w=100, h=140 — teal standby
+        zones.lineStyle(2, 0x4ECDC4, 0.5);
+        zones.strokeRect(232, 188, 100, 140);
+
+        // Skill/Trap Zone 1 (enemy): x=362, y=136, w=96, h=65
+        zones.lineStyle(1, 0x9B59B6, 0.6);
+        zones.strokeRect(362, 136, 96, 65);
+
+        // Skill/Trap Zone 2 (player): x=366, y=204, w=96, h=68
+        zones.lineStyle(1, 0x9B59B6, 0.6);
+        zones.strokeRect(366, 204, 96, 68);
+
+        // GY + Field Slot (enemy): x=462, y=32, w=94, h=140
+        zones.lineStyle(1, 0x4ECDC4, 0.4);
+        zones.strokeRect(462, 32, 94, 140);
+        zones.lineStyle(1, 0x4ECDC4, 0.3);
+        zones.beginPath();
+        zones.moveTo(462, 102);
+        zones.lineTo(556, 102);
+        zones.strokePath();
+        zones.lineStyle(1, 0x4ECDC4, 0.2);
+        zones.strokeRect(467, 110, 84, 12);
+        zones.strokeRect(467, 124, 84, 12);
+        zones.strokeRect(467, 138, 84, 12);
+
+        // GY + Field Slot (player): x=466, y=188, w=94, h=140
+        zones.lineStyle(1, 0x4ECDC4, 0.4);
+        zones.strokeRect(466, 188, 94, 140);
+        zones.lineStyle(1, 0x4ECDC4, 0.3);
+        zones.beginPath();
+        zones.moveTo(466, 258);
+        zones.lineTo(560, 258);
+        zones.strokePath();
+        zones.lineStyle(1, 0x4ECDC4, 0.2);
+        zones.strokeRect(471, 266, 84, 12);
+        zones.strokeRect(471, 280, 84, 12);
+        zones.strokeRect(471, 294, 84, 12);
+
+        // === PHASE BAR (y=0, h=28, full width) ===
+        var phaseBar = this.add.graphics();
+        phaseBar.setDepth(4);
+        phaseBar.fillStyle(0x0a0a20, 1);
+        phaseBar.fillRect(0, 0, W, 28);
+        var tabLabels = ['DRAW', 'ENERGY', 'PLAY', 'ARRANGE', 'BATTLE', 'RESULT'];
+        for (var p = 0; p < tabLabels.length; p++) {
+            var tabX = 40 + p * 95;
+            phaseBar.lineStyle(1, 0x4ECDC4, 0.3);
+            phaseBar.strokeRect(tabX, 3, 88, 22);
+            this.add.text(tabX + 44, 14, tabLabels[p], {
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: '6px',
+                color: '#888899'
+            }).setOrigin(0.5, 0.5).setDepth(4);
+        }
+        this.add.text(14, 14, '⚙', {
+            fontSize: '12px',
+            color: '#666688'
+        }).setOrigin(0.5, 0.5).setDepth(4);
+        this.add.text(W - 30, 14, '◆', {
+            fontSize: '10px',
+            color: '#ffd700'
+        }).setOrigin(0.5, 0.5).setDepth(4);
+
+        // === CARD HAND ZONE BACKGROUND (y=340) ===
+        phaseBar.fillStyle(0x0a0a20, 1);
+        phaseBar.fillRect(0, 340, W, H - 340);
 
         // === CENTER DIVIDER ===
         this._createCenterDivider();
 
-        // === SKILL SLOTS (battlefield area) ===
+        // === HERO PANELS ===
+        this._createHeroPanel('player', false);
+        this._createHeroPanel('enemy', true);
+
+        // === SKILL SLOTS (board unit zones) ===
         this._createSkillSlots();
     },
 
-    // ===== BACKGROUND =====
+    _drawMZZone: function (gfx, x, y, w, h, color, cornerDots) {
+        gfx.lineStyle(2, color, 0.7);
+        gfx.strokeRect(x, y, w, h);
+        if (cornerDots) {
+            var dotSize = 4;
+            gfx.fillStyle(color, 0.8);
+            gfx.fillRect(x - dotSize / 2, y - dotSize / 2, dotSize, dotSize);
+            gfx.fillRect(x + w - dotSize / 2, y - dotSize / 2, dotSize, dotSize);
+            gfx.fillRect(x - dotSize / 2, y + h - dotSize / 2, dotSize, dotSize);
+            gfx.fillRect(x + w - dotSize / 2, y + h - dotSize / 2, dotSize, dotSize);
+        }
+    },
+
     _drawBackground: function () {
         var g = this.bgGraphics;
         var W = this.W;
-        var H = this.H;
         g.clear();
 
-        // Dark gradient: enemy side (top, blue) → player side (bottom, warm)
-        var steps = 20;
-        for (var i = 0; i < steps; i++) {
-            var t = i / steps;
-            var y = Math.floor(t * H);
-            var h = Math.ceil(H / steps) + 1;
+        // Arena floor: x=60, y=28, w=680, h=310 — #131328
+        g.fillStyle(0x131328, 1);
+        g.fillRect(60, 28, 680, 310);
 
-            var r = Math.floor(13 + t * (26 - 13));
-            var gv = Math.floor(13 + t * (13 - 13));
-            var b = Math.floor(43 + t * (13 - 43));
-            if (t < 0.5) {
-                b = Math.floor(43 + (t * 2) * (48 - 43));
-            } else {
-                r = Math.floor(16 + ((t - 0.5) * 2) * (26 - 16));
-                b = Math.floor(48 - ((t - 0.5) * 2) * (48 - 13));
-            }
-            var color = (r << 16) | (gv << 8) | b;
-            g.fillStyle(color, 1);
-            g.fillRect(0, y, W, h);
+        // Horizontal thin lines every ~63px (stone slab effect, #1a1a3a, opacity 0.3)
+        g.lineStyle(1, 0x1a1a3a, 0.3);
+        for (var ly = 91; ly < 338; ly += 63) {
+            g.beginPath();
+            g.moveTo(60, ly);
+            g.lineTo(740, ly);
+            g.strokePath();
         }
+
+        // Vertical thin lines at x=170, 340, 510 (column dividers)
+        g.lineStyle(1, 0x1a1a3a, 0.3);
+        g.beginPath();
+        g.moveTo(170, 28);
+        g.lineTo(170, 338);
+        g.strokePath();
+        g.beginPath();
+        g.moveTo(340, 28);
+        g.lineTo(340, 338);
+        g.strokePath();
+        g.beginPath();
+        g.moveTo(510, 28);
+        g.lineTo(510, 338);
+        g.strokePath();
+
+        // Random crack/retak paths for aged stone texture (2-3 cracks)
+        g.lineStyle(1, 0x1a1a3a, 0.4);
+        g.beginPath();
+        g.moveTo(200, 100);
+        g.lineTo(215, 115);
+        g.lineTo(210, 135);
+        g.lineTo(225, 150);
+        g.strokePath();
+        g.beginPath();
+        g.moveTo(450, 200);
+        g.lineTo(460, 215);
+        g.lineTo(455, 235);
+        g.lineTo(470, 250);
+        g.lineTo(465, 260);
+        g.strokePath();
+        g.beginPath();
+        g.moveTo(600, 80);
+        g.lineTo(615, 95);
+        g.lineTo(610, 110);
+        g.strokePath();
     },
 
     _drawGrid: function () {
         var g = this.gridGraphics;
-        var W = this.W;
-        var H = this.H;
         g.clear();
 
-        g.lineStyle(1, 0x4488ff, 0.04);
-        for (var gx = 0; gx < W; gx += 30) {
-            g.beginPath();
-            g.moveTo(gx, 0);
-            g.lineTo(gx, H);
-            g.strokePath();
-        }
-        for (var gy = 0; gy < H; gy += 30) {
-            g.beginPath();
-            g.moveTo(0, gy);
-            g.lineTo(W, gy);
-            g.strokePath();
+        var cx = 400;
+        var cy = 183;
+
+        // Outer ring: teal (#4ECDC4), radiusX=130, radiusY=80
+        g.lineStyle(1, 0x4ECDC4, 0.25);
+        g.strokeEllipse(cx, cy, 260, 160);
+
+        // Mid ring: gold (#FFD700), radiusX=90, radiusY=55
+        g.lineStyle(1, 0xFFD700, 0.2);
+        g.strokeEllipse(cx, cy, 180, 110);
+
+        // Inner ring: purple (#9B59B6), radiusX=50, radiusY=30 — separate for pulse
+        this._innerRing = this.add.graphics();
+        this._innerRing.setDepth(2);
+        this._innerRing.lineStyle(1, 0x9B59B6, 0.3);
+        this._innerRing.strokeEllipse(0, 0, 100, 60);
+        this._innerRing.setPosition(cx, cy);
+
+        // 4 spoke lines from center to cardinal directions (to outer ring)
+        g.lineStyle(1, 0x4ECDC4, 0.15);
+        g.beginPath();
+        g.moveTo(cx, cy);
+        g.lineTo(cx, cy - 80);
+        g.strokePath();
+        g.beginPath();
+        g.moveTo(cx, cy);
+        g.lineTo(cx, cy + 80);
+        g.strokePath();
+        g.beginPath();
+        g.moveTo(cx, cy);
+        g.lineTo(cx - 130, cy);
+        g.strokePath();
+        g.beginPath();
+        g.moveTo(cx, cy);
+        g.lineTo(cx + 130, cy);
+        g.strokePath();
+
+        // Rune dots 6x6px at each spoke endpoint (alternating teal/gold)
+        var runeColors = [0x4ECDC4, 0xFFD700, 0x4ECDC4, 0xFFD700];
+        var runePositions = [
+            { x: cx, y: cy - 80 },
+            { x: cx, y: cy + 80 },
+            { x: cx - 130, y: cy },
+            { x: cx + 130, y: cy }
+        ];
+        for (var r = 0; r < runePositions.length; r++) {
+            g.fillStyle(runeColors[r], 0.5);
+            g.fillRect(runePositions[r].x - 3, runePositions[r].y - 3, 6, 6);
         }
     },
 
-    // ===== HERO PANEL (Hero-as-Entity) =====
     _createHeroPanel: function (side, isTop) {
-        var W = this.W;
-        var H = this.H;
-        var panelW = 160;
-        var panelH = 120;
-        var panelX = side === 'player' ? 20 : W - panelW - 20;
-        var panelY = isTop ? 10 : H - panelH - 10;
+        var scene = this;
+        var panelW, panelH, panelX, panelY;
+
+        if (side === 'player') {
+            panelX = 560;
+            panelY = 188;
+            panelW = 120;
+            panelH = 150;
+        } else {
+            panelX = 0;
+            panelY = 28;
+            panelW = 120;
+            panelH = 152;
+        }
 
         var container = this.add.container(panelX, panelY);
+        container.setDepth(5);
 
-        // Panel background with glow
+        // Panel background
         var bg = this.add.graphics();
         bg.fillStyle(0x0a0a1e, 0.92);
         bg.fillRect(0, 0, panelW, panelH);
-        bg.lineStyle(2, side === 'player' ? 0xffd700 : 0x4488ff, 0.8);
-        bg.strokeRect(0, 0, panelW, panelH);
         container.add(bg);
 
-        // Outer glow (subtle pulsing)
+        // Border — enemy: red (#E94560), player: teal (#4ECDC4)
+        var borderColor = side === 'player' ? 0x4ECDC4 : 0xE94560;
+        var border = this.add.graphics();
+        border.lineStyle(2, borderColor, 0.8);
+        border.strokeRect(0, 0, panelW, panelH);
+        container.add(border);
+        if (side === 'enemy') {
+            this._enemyHeroBorder = border;
+        }
+
+        // Glow (subtle pulsing)
         var glow = this.add.graphics();
-        glow.lineStyle(4, side === 'player' ? 0xffd700 : 0x4488ff, 0.15);
+        glow.lineStyle(4, borderColor, 0.15);
         glow.strokeRect(-3, -3, panelW + 6, panelH + 6);
         container.add(glow);
         container.setData('glow', glow);
 
         // Class color strip at top
         var strip = this.add.graphics();
-        strip.fillStyle(side === 'player' ? 0xffd700 : 0x4488ff, 0.6);
+        strip.fillStyle(borderColor, 0.6);
         strip.fillRect(0, 0, panelW, 3);
         container.add(strip);
 
-        // Hero art area (placeholder)
+        // Hero art area
         var artBg = this.add.graphics();
         artBg.fillStyle(0x0f3460, 1);
-        artBg.fillRect(8, 10, panelW - 16, 40);
+        artBg.fillRect(10, 5, panelW - 20, 85);
         artBg.lineStyle(1, 0xc8a832, 0.5);
-        artBg.strokeRect(8, 10, panelW - 16, 40);
+        artBg.strokeRect(10, 5, panelW - 20, 85);
         container.add(artBg);
 
-        var spriteText = this.add.text(panelW / 2, 30, '⚔', {
+        var spriteText = this.add.text(panelW / 2, 48, '⚔', {
             fontSize: '20px',
-            color: side === 'player' ? 'rgba(255,215,0,0.3)' : 'rgba(68,136,255,0.3)'
+            color: side === 'player' ? 'rgba(78,205,196,0.3)' : 'rgba(233,69,96,0.3)'
         });
         spriteText.setOrigin(0.5, 0.5);
         container.add(spriteText);
         this.heroSprite[side] = spriteText;
 
         // Name text
-        var nameText = this.add.text(8, 56, 'Hero', {
+        var nameText = this.add.text(10, 93, 'Hero', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '8px',
+            fontSize: '7px',
             color: '#ffffff',
             fontStyle: 'bold'
         });
@@ -194,28 +397,28 @@ const PhaserBattleScene = new Phaser.Class({
         this.heroNameText[side] = nameText;
 
         // Class + Level
-        var classText = this.add.text(8, 66, '', {
+        var classText = this.add.text(10, 105, '', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '6px',
+            fontSize: '5px',
             color: '#aaaaaa'
         });
         container.add(classText);
         this.heroClassText[side] = classText;
 
-        var levelText = this.add.text(panelW - 8, 66, '', {
+        var levelText = this.add.text(panelW - 10, 105, '', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '6px',
+            fontSize: '5px',
             color: '#ffd700'
         });
         levelText.setOrigin(1, 0);
         container.add(levelText);
         this.heroLevelText[side] = levelText;
 
-        // HP bar background — thicker, more prominent
-        var hpBarX = 8;
-        var hpBarY = 80;
-        var hpBarW = panelW - 16;
-        var hpBarH = 18;
+        // HP bar
+        var hpBarX = 10;
+        var hpBarY = 115;
+        var hpBarW = panelW - 20;
+        var hpBarH = 14;
 
         var hpBg = this.add.graphics();
         hpBg.fillStyle(0x000000, 0.9);
@@ -224,7 +427,6 @@ const PhaserBattleScene = new Phaser.Class({
         hpBg.strokeRoundedRect(hpBarX, hpBarY, hpBarW, hpBarH, 3);
         container.add(hpBg);
 
-        // HP bar fill
         var hpFill = this.add.graphics();
         container.add(hpFill);
         this.heroHPBar[side] = {
@@ -235,10 +437,9 @@ const PhaserBattleScene = new Phaser.Class({
             h: hpBarH
         };
 
-        // HP text
         var hpText = this.add.text(hpBarX + hpBarW / 2, hpBarY + hpBarH / 2, 'HP 0 / 0', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '7px',
+            fontSize: '6px',
             color: '#ffffff',
             fontStyle: 'bold'
         });
@@ -246,18 +447,18 @@ const PhaserBattleScene = new Phaser.Class({
         container.add(hpText);
         this.heroHPText[side] = hpText;
 
-        // ATK / DEF stats
-        var statY = hpBarY + hpBarH + 4;
+        // ATK / DEF stats row
+        var statY = hpBarY + hpBarH + 3;
         var halfW = (hpBarW - 4) / 2;
 
         var atkBg = this.add.graphics();
-        atkBg.fillStyle(0xe94560, 0.5);
-        atkBg.fillRect(hpBarX, statY, halfW, 12);
+        atkBg.fillStyle(0xE94560, 0.5);
+        atkBg.fillRect(hpBarX, statY, halfW, 10);
         container.add(atkBg);
 
-        var atkText = this.add.text(hpBarX + 4, statY + 2, '⚔ 0', {
+        var atkText = this.add.text(hpBarX + 3, statY + 1, '⚔ 0', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '7px',
+            fontSize: '6px',
             color: '#ffffff',
             fontStyle: 'bold'
         });
@@ -265,12 +466,12 @@ const PhaserBattleScene = new Phaser.Class({
 
         var defBg = this.add.graphics();
         defBg.fillStyle(0x4488ff, 0.5);
-        defBg.fillRect(hpBarX + halfW + 4, statY, halfW, 12);
+        defBg.fillRect(hpBarX + halfW + 4, statY, halfW, 10);
         container.add(defBg);
 
-        var defText = this.add.text(hpBarX + halfW + 8, statY + 2, '🛡 0', {
+        var defText = this.add.text(hpBarX + halfW + 7, statY + 1, '🛡 0', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '7px',
+            fontSize: '6px',
             color: '#ffffff',
             fontStyle: 'bold'
         });
@@ -385,68 +586,94 @@ const PhaserBattleScene = new Phaser.Class({
         }
     },
 
-    // ===== CENTER DIVIDER =====
     _createCenterDivider: function () {
         var W = this.W;
-        var H = this.H;
-        var centerH = 30;
-        var y = (H - centerH) / 2;
+        var dividerY = 181;
 
-        var container = this.add.container(0, y);
+        // Gold line at y=181, full width, opacity 0.45
+        var line = this.add.graphics();
+        line.setDepth(3);
+        line.fillStyle(0xFFD700, 0.45);
+        line.fillRect(0, dividerY, W, 2);
 
-        var bg = this.add.graphics();
-        bg.fillStyle(0x000000, 0.95);
-        bg.fillRect(0, 0, W, centerH);
-        bg.fillStyle(0x0f0f23, 0.95);
-        bg.fillRect(0, Math.floor(centerH * 0.3), W, Math.floor(centerH * 0.4));
-        container.add(bg);
+        // Node dots 6x6px at intervals (alternating gold and teal)
+        var dotColors = [0xFFD700, 0x4ECDC4];
+        for (var d = 0; d < W; d += 60) {
+            var dotColor = dotColors[(d / 60) % 2 === 0 ? 0 : 1];
+            line.fillStyle(dotColor, 0.6);
+            line.fillRect(d + 30, dividerY - 2, 6, 6);
+        }
 
-        var accents = this.add.graphics();
-        accents.fillStyle(0xffd700, 0.5);
-        accents.fillRect(0, 0, W, 1);
-        accents.fillRect(0, centerH - 1, W, 1);
-        container.add(accents);
+        // VS Emblem: x=305, y=168, w=70, h=32
+        var vsContainer = this.add.container(305, 168);
+        vsContainer.setDepth(6);
 
-        this.vsText = this.add.text(W / 2, centerH / 2 + 1, 'VS', {
+        var vsBg = this.add.graphics();
+        vsBg.fillStyle(0x0a0a20, 0.95);
+        vsBg.fillRect(0, 0, 70, 32);
+        vsBg.lineStyle(2, 0xFFD700, 0.8);
+        vsBg.strokeRect(0, 0, 70, 32);
+        vsBg.lineStyle(1, 0x4ECDC4, 0.5);
+        vsBg.strokeRect(3, 3, 64, 26);
+        // Corner dots 4x4px
+        vsBg.fillStyle(0xFFD700, 0.7);
+        vsBg.fillRect(-2, -2, 4, 4);
+        vsBg.fillRect(68, -2, 4, 4);
+        vsBg.fillRect(-2, 30, 4, 4);
+        vsBg.fillRect(68, 30, 4, 4);
+        vsContainer.add(vsBg);
+
+        // "V" (gold)
+        this.vsText = this.add.text(18, 16, 'V', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '22px',
-            color: '#ffd700',
-            fontStyle: 'bold',
-            stroke: '#000000',
-            strokeThickness: 2,
+            fontSize: '14px',
+            color: '#FFD700',
+            fontStyle: 'bold'
         });
         this.vsText.setOrigin(0.5, 0.5);
-        this.vsText.setShadow(0, 0, '#ffd700', 16, true, true);
-        container.add(this.vsText);
+        vsContainer.add(this.vsText);
 
-        this.turnText = this.add.text(W / 2 - 50, centerH / 2 + 1, 'Turn 0', {
+        // "S" (teal)
+        var sText = this.add.text(52, 16, 'S', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '14px',
+            color: '#4ECDC4',
+            fontStyle: 'bold'
+        });
+        sText.setOrigin(0.5, 0.5);
+        vsContainer.add(sText);
+
+        // VS glow animation
+        this._vsEmblemGlow = this.add.graphics();
+        this._vsEmblemGlow.setDepth(5);
+        this._vsEmblemGlow.lineStyle(2, 0x4ECDC4, 0.3);
+        this._vsEmblemGlow.strokeRect(303, 166, 74, 36);
+
+        // Turn text (left of center on divider)
+        this.turnText = this.add.text(W / 2 - 80, dividerY + 1, 'Turn 0', {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '7px',
             color: 'rgba(255,255,255,0.6)'
         });
-        this.turnText.setOrigin(1, 0.5);
-        container.add(this.turnText);
+        this.turnText.setOrigin(0, 0.5);
+        this.turnText.setDepth(6);
 
-        this.phaseText = this.add.text(W / 2 + 50, centerH / 2 + 1, '', {
+        // Phase text (right of center on divider)
+        this.phaseText = this.add.text(W / 2 + 80, dividerY + 1, '', {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '7px',
-            color: 'rgba(68,204,136,0.8)'
+            color: 'rgba(78,205,196,0.8)'
         });
         this.phaseText.setOrigin(0, 0.5);
-        container.add(this.phaseText);
+        this.phaseText.setDepth(6);
 
-        // Decorative lines
-        var lines = this.add.graphics();
-        lines.lineStyle(1, 0xffd700, 0.2);
-        lines.beginPath();
-        lines.moveTo(20, centerH / 2 + 1);
-        lines.lineTo(W / 2 - 75, centerH / 2 + 1);
-        lines.strokePath();
-        lines.beginPath();
-        lines.moveTo(W / 2 + 75, centerH / 2 + 1);
-        lines.lineTo(W - 20, centerH / 2);
-        lines.strokePath();
-        container.add(lines);
+        // Energy Bar: x=470, y=176, w=84, h=14
+        var energyBar = this.add.graphics();
+        energyBar.setDepth(4);
+        energyBar.fillStyle(0xFFD700, 0.3);
+        energyBar.fillRect(470, 176, 84, 14);
+        energyBar.lineStyle(1, 0xFFD700, 0.5);
+        energyBar.strokeRect(470, 176, 84, 14);
     },
 
     updateCenterDivider: function (state) {
@@ -457,51 +684,46 @@ const PhaserBattleScene = new Phaser.Class({
         }
     },
 
-    // ===== SKILL SLOTS (battlefield center area) =====
     _createSkillSlots: function () {
-        // 5 slots on each side of center divider for board units
-        var W = this.W;
-        var H = this.H;
-        var slotW = 110;
-        var slotH = 85;
-        var slotGap = 8;
-        var totalW = slotW * 5 + slotGap * 4;
-        var startX = (W - totalW) / 2;
-        var centerY = H / 2;
+        // 2 monster zones per side for board units
+        // Player: MZ1 at x=128, y=188; MZ2 at x=232, y=188
+        // Enemy: MZ1 at x=124, y=32; MZ2 at x=228, y=32
+        var playerMZs = [
+            { x: 128, y: 188, w: 100, h: 140 },
+            { x: 232, y: 188, w: 100, h: 140 }
+        ];
+        var enemyMZs = [
+            { x: 124, y: 32, w: 100, h: 140 },
+            { x: 228, y: 32, w: 100, h: 140 }
+        ];
 
-        // Player board slots (just below center)
-        for (var i = 0; i < 5; i++) {
-            var sx = startX + i * (slotW + slotGap);
-            var sy = centerY + 18;
-            this._drawSkillSlot(sx, sy, slotW, slotH, 'player', i);
+        for (var i = 0; i < enemyMZs.length; i++) {
+            var mz = enemyMZs[i];
+            this._drawSkillSlot(mz.x, mz.y, mz.w, mz.h, 'enemy', i);
         }
-
-        // Enemy board slots (just above center)
-        for (var i = 0; i < 5; i++) {
-            var sx = startX + i * (slotW + slotGap);
-            var sy = centerY - 18 - slotH;
-            this._drawSkillSlot(sx, sy, slotW, slotH, 'enemy', i);
+        for (var i = 0; i < playerMZs.length; i++) {
+            var mz = playerMZs[i];
+            this._drawSkillSlot(mz.x, mz.y, mz.w, mz.h, 'player', i);
         }
     },
 
     _drawSkillSlot: function (x, y, w, h, side, index) {
         var container = this.add.container(x, y);
+        container.setDepth(3);
 
         var bg = this.add.graphics();
         bg.fillStyle(0x141432, 0.3);
         bg.fillRect(0, 0, w, h);
-        bg.lineStyle(1, side === 'player' ? 0xffd700 : 0x4488ff, 0.12);
+        bg.lineStyle(1, side === 'player' ? 0x4ECDC4 : 0xE94560, 0.15);
         bg.strokeRect(0, 0, w, h);
         container.add(bg);
 
         var icon = this.add.text(w / 2, h / 2, '✨', {
-            fontSize: '30px',
+            fontSize: '24px',
             color: 'rgba(155,89,182,0.15)'
         });
         icon.setOrigin(0.5, 0.5);
         container.add(icon);
-
-        container.setDepth(3);
 
         var slotData = {
             container: container,
@@ -522,7 +744,6 @@ const PhaserBattleScene = new Phaser.Class({
 
             var self = this;
 
-            // Hover highlight graphic
             var highlight = this.add.graphics();
             highlight.setDepth(4);
             highlight.setVisible(false);
@@ -1722,18 +1943,35 @@ const PhaserBattleScene = new Phaser.Class({
         });
     },
 
+
     // ===== UPDATE LOOP =====
     update: function (time, delta) {
-        // Glow pulse on hero panels
-        var pulseAlpha = 0.1 + Math.sin(time * 0.003) * 0.08;
-        ['player', 'enemy'].forEach(function(side) {
-            var panel = this.heroPanel[side];
-            if (panel && panel.container) {
-                var glow = panel.container.getData('glow');
-                if (glow) {
-                    glow.setAlpha(pulseAlpha);
+        // (a) Pulse magical circle inner ring
+        if (this._innerRing) {
+            var ringAlpha = 0.15 + Math.sin(time * 0.003) * 0.15;
+            this._innerRing.setAlpha(ringAlpha);
+        }
+
+        // (b) Pulse enemy hero panel border
+        if (this._enemyHeroBorder) {
+            var borderAlpha = 0.5 + Math.sin(time * 0.004) * 0.3;
+            this._enemyHeroBorder.setAlpha(borderAlpha);
+        }
+
+        // (c) Update star particles — drift down, fade in/out
+        if (this.starParticles) {
+            for (var i = 0; i < this.starParticles.length; i++) {
+                var star = this.starParticles[i];
+                star.gfx.y += star.speed;
+                if (star.gfx.y > this.H + 5) {
+                    star.gfx.y = -5;
+                    star.gfx.x = Math.random() * this.W;
                 }
+                var t = (time * 0.001 + i * 1.7) % (Math.PI * 2);
+                var alpha = 0.1 + Math.abs(Math.sin(t)) * 0.5;
+                star.gfx.setAlpha(alpha);
             }
-        }.bind(this));
+        }
     }
+
 });
