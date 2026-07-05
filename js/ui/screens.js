@@ -55,6 +55,36 @@ const UI = {
 
     // ===== BATTLE SCREEN =====
     renderBattleScreen() {
+        // LAYOUT FIX: Before battle, make screen fullscreen with scrollable preview + sticky controls
+        try {
+            if (typeof BattleEngine === 'undefined' || !BattleEngine.isRunning) {
+                const battleScreen = document.getElementById('screen-battle');
+                if (battleScreen) {
+                    battleScreen.style.cssText = 'display:flex !important;flex-direction:column;position:fixed !important;top:0;left:0;right:0;bottom:0;max-width:none !important;overflow:hidden;z-index:99;background:#0a0a1e;';
+                }
+                // Hide canvas wrap + canvas container
+                const canvasWrap = document.querySelector('#screen-battle .battle-canvas-wrap');
+                if (canvasWrap) canvasWrap.style.display = 'none';
+                const canvasContainer = document.getElementById('battle-canvas-container');
+                if (canvasContainer) canvasContainer.style.display = 'none';
+                // Hide hero power area
+                const heroPower = document.getElementById('hero-power-area');
+                if (heroPower) heroPower.style.display = 'none';
+                // Hide card hand when not in battle
+                const cardHandArea = document.getElementById('card-hand-area');
+                if (cardHandArea) cardHandArea.style.display = 'none';
+                // Make deck preview fill available space
+                const preview = document.getElementById('battle-deck-preview');
+                if (preview) preview.style.cssText = 'flex:1;overflow-y:auto;min-height:0;padding:16px;';
+                // Fix controls at bottom
+                const controls = document.querySelector('.battle-controls');
+                if (controls) controls.style.cssText = 'flex-shrink:0;padding:12px 16px;background:rgba(10,10,30,0.95);border-top:2px solid rgba(0,229,255,0.3);justify-content:center;z-index:10;';
+                // Hide nav bar inside battle screen
+                const nav = battleScreen ? battleScreen.querySelector('.game-nav') : null;
+                if (nav) nav.style.display = 'none';
+            }
+        } catch (e) { console.warn('Battle layout fix error:', e); }
+
         // Update start button state (disabled if no deck)
         this._updateStartButton();
 
@@ -92,30 +122,7 @@ const UI = {
             }
         }
 
-        // Hide canvas wrap and hero power when battle is not active
-        const canvasWrap = document.querySelector('#screen-battle .battle-canvas-wrap');
-        if (canvasWrap) canvasWrap.style.display = 'none';
-        const heroPower = document.getElementById('hero-power-area');
-        if (heroPower) heroPower.style.display = 'none';
-
-        // Before battle: make screen fill viewport, deck preview scrollable, controls fixed at bottom
-        if (typeof BattleEngine === 'undefined' || !BattleEngine.isRunning) {
-            const battleScreen = document.getElementById('screen-battle');
-            if (battleScreen) {
-                battleScreen.style.cssText = 'display:flex !important;flex-direction:column;position:fixed !important;top:0;left:0;right:0;bottom:0;max-width:none !important;overflow:hidden;z-index:99;background:#0a0a1e;';
-            }
-            const preview = document.getElementById('battle-deck-preview');
-            if (preview) {
-                preview.style.cssText = 'flex:1;overflow-y:auto;min-height:0;padding:16px;';
-            }
-            const controls = document.querySelector('.battle-controls');
-            if (controls) {
-                controls.style.cssText = 'flex-shrink:0;padding:12px 16px;background:rgba(10,10,30,0.95);border-top:2px solid rgba(0,229,255,0.3);justify-content:center;z-index:10;';
-            }
-            // Hide nav bar inside battle screen
-            const nav = battleScreen ? battleScreen.querySelector('.game-nav') : null;
-            if (nav) nav.style.display = 'none';
-        }
+        // (Layout fix moved to top of function)
 
         // NOTE: renderArenaPreview() removed — renderBattleDeckPreview() handles pre-battle display
     },
