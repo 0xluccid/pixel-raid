@@ -589,6 +589,10 @@ body {
 .screen:not(.battle-active) {
     padding: 20px !important;
 }
+/* Battle active must override all padding */
+#screen-battle.battle-active {
+    padding: 0 !important;
+}
 
 /* ===== SELECTION HOVER — colored glow ===== */
 .card:hover .card-name,
