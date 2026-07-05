@@ -605,7 +605,7 @@ const UI = {
         if (!bar) {
             bar = document.createElement('div');
             bar.id = 'battle-phase-bar';
-            bar.style.cssText = 'display:flex;justify-content:center;gap:4px;padding:6px 8px;background:rgba(10,10,26,0.95);border-bottom:1px solid rgba(255,215,0,0.2);';
+            bar.style.cssText = 'position:absolute;top:0;left:0;right:0;z-index:50;display:flex;justify-content:center;gap:4px;padding:6px 8px;background:rgba(10,10,26,0.95);border-bottom:1px solid rgba(255,215,0,0.2);';
             const container = document.getElementById('battle-canvas-container');
             if (container && container.parentElement) {
                 container.parentElement.insertBefore(bar, container);
