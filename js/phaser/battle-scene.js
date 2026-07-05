@@ -67,9 +67,9 @@ const PhaserBattleScene = new Phaser.Class({
         voidBg.fillStyle(0x07071a, 1);
         voidBg.fillRect(0, 0, W, H);
 
-        // === STAR PARTICLES (~40 tiny dots, fade in/out, drift down) ===
+        // === STAR PARTICLES (~40 neon dots, fade in/out, drift down) ===
         this.starParticles = [];
-        var starColors = [0x4ECDC4, 0xFFD700, 0x9B59B6];
+        var starColors = [0x00e5ff, 0xff44aa, 0xffcc00];
         for (var si = 0; si < 40; si++) {
             var sColor = starColors[si % 3];
             var sGfx = this.add.graphics();
@@ -87,132 +87,76 @@ const PhaserBattleScene = new Phaser.Class({
             });
         }
 
-        // === LAYER 1: ARENA FLOOR ===
+        // === LAYER 1: ARENA FLOOR (futuristic grid) ===
         this.bgGraphics = this.add.graphics();
         this.bgGraphics.setDepth(1);
         this._drawBackground();
 
-        // === LAYER 2: MAGICAL CIRCLE (static parts) ===
+        // === LAYER 2: GRID (5-slot layout) ===
         this.gridGraphics = this.add.graphics();
         this.gridGraphics.setDepth(2);
         this._drawGrid();
 
-        // === ZONE OUTLINES (depth 3) — scaled for HD 1280x720 ===
-        var zones = this.add.graphics();
-        zones.setDepth(3);
-        var SX = 1.6, SY = 1.44; // scale from 800x500 → 1280x720
-
-        // Monster Zone 1 (enemy) — red pulsing
-        this._enemyMZ1Gfx = this.add.graphics();
-        this._enemyMZ1Gfx.setDepth(3);
-        this._drawMZZone(this._enemyMZ1Gfx, 124*SX, 32*SY, 100*SX, 140*SY, 0xE94560, true);
-        // "M" label
-        this.add.text(174*SX, 102*SY, 'M', {
-            fontFamily: '"Press Start 2P", monospace',
-            fontSize: '14px',
-            color: '#E94560',
-            fontStyle: 'bold'
-        }).setOrigin(0.5, 0.5).setDepth(3);
-
-        // Monster Zone 2 (enemy) — teal standby
-        zones.lineStyle(2, 0x4ECDC4, 0.5);
-        zones.strokeRect(228*SX, 32*SY, 100*SX, 140*SY);
-
-        // Monster Zone 1 (player) — teal pulse
-        zones.lineStyle(2, 0x4ECDC4, 0.7);
-        zones.strokeRect(128*SX, 188*SY, 100*SX, 140*SY);
-
-        // Monster Zone 2 (player) — teal standby
-        zones.lineStyle(2, 0x4ECDC4, 0.5);
-        zones.strokeRect(232*SX, 188*SY, 100*SX, 140*SY);
-
-        // Skill/Trap Zone 1 (enemy)
-        zones.lineStyle(1, 0x9B59B6, 0.6);
-        zones.strokeRect(362*SX, 136*SY, 96*SX, 65*SY);
-
-        // Skill/Trap Zone 2 (player)
-        zones.lineStyle(1, 0x9B59B6, 0.6);
-        zones.strokeRect(366*SX, 204*SY, 96*SX, 68*SY);
-
-        // GY + Field Slot (enemy)
-        zones.lineStyle(1, 0x4ECDC4, 0.4);
-        zones.strokeRect(462*SX, 32*SY, 94*SX, 140*SY);
-        zones.lineStyle(1, 0x4ECDC4, 0.3);
-        zones.beginPath();
-        zones.moveTo(462*SX, 102*SY);
-        zones.lineTo(556*SX, 102*SY);
-        zones.strokePath();
-        zones.lineStyle(1, 0x4ECDC4, 0.2);
-        zones.strokeRect(467*SX, 110*SY, 84*SX, 12*SY);
-        zones.strokeRect(467*SX, 124*SY, 84*SX, 12*SY);
-        zones.strokeRect(467*SX, 138*SY, 84*SX, 12*SY);
-
-        // GY + Field Slot (player)
-        zones.lineStyle(1, 0x4ECDC4, 0.4);
-        zones.strokeRect(466*SX, 188*SY, 94*SX, 140*SY);
-        zones.lineStyle(1, 0x4ECDC4, 0.3);
-        zones.beginPath();
-        zones.moveTo(466*SX, 258*SY);
-        zones.lineTo(560*SX, 258*SY);
-        zones.strokePath();
-        zones.lineStyle(1, 0x4ECDC4, 0.2);
-        zones.strokeRect(471*SX, 266*SY, 84*SX, 12*SY);
-        zones.strokeRect(471*SX, 280*SY, 84*SX, 12*SY);
-        zones.strokeRect(471*SX, 294*SY, 84*SX, 12*SY);
-
-        // === PHASE BAR (top, h=40, full width) ===
+        // === PHASE BAR (top, h=36, full width) ===
         var phaseBar = this.add.graphics();
         phaseBar.setDepth(4);
         phaseBar.fillStyle(0x0a0a20, 1);
-        phaseBar.fillRect(0, 0, W, 40);
+        phaseBar.fillRect(0, 0, W, 36);
+        // Phase bar bottom border
+        phaseBar.lineStyle(1, 0x1a2a4a, 0.8);
+        phaseBar.beginPath();
+        phaseBar.moveTo(0, 36);
+        phaseBar.lineTo(W, 36);
+        phaseBar.strokePath();
         var tabLabels = ['DRAW', 'ENERGY', 'PLAY', 'ARRANGE', 'BATTLE', 'RESULT'];
-        var tabW = (W - 80) / tabLabels.length;
+        var tabW = (W - 160) / tabLabels.length;
         for (var p = 0; p < tabLabels.length; p++) {
-            var tabX = 40 + p * tabW;
-            phaseBar.lineStyle(1, 0x4ECDC4, 0.3);
-            phaseBar.strokeRect(tabX, 4, tabW - 4, 32);
-            this.add.text(tabX + (tabW - 4) / 2, 20, tabLabels[p], {
+            var tabX = 80 + p * tabW;
+            this.add.text(tabX + tabW / 2, 18, tabLabels[p], {
                 fontFamily: '"Press Start 2P", monospace',
                 fontSize: '9px',
-                color: '#888899'
+                color: '#556677'
             }).setOrigin(0.5, 0.5).setDepth(4);
         }
-        this.add.text(20, 20, '⚙', {
-            fontSize: '16px',
-            color: '#666688'
+        // Animation toggle (left)
+        this.add.text(24, 18, 'ON', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '8px',
+            color: '#00e5ff'
         }).setOrigin(0.5, 0.5).setDepth(4);
-        this.add.text(W - 30, 20, '◆', {
-            fontSize: '14px',
-            color: '#ffd700'
+        // Speed toggle (right)
+        this.add.text(W - 24, 18, '1x', {
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: '8px',
+            color: '#ffcc00'
         }).setOrigin(0.5, 0.5).setDepth(4);
 
         // === CARD HAND ZONE BACKGROUND (bottom 38%) ===
-        var handY = H * 0.62;
-        phaseBar.fillStyle(0x0a0a20, 1);
-        phaseBar.fillRect(0, handY, W, H - handY);
+        var handY = Math.round(H * 0.62);
+        var handBg = this.add.graphics();
+        handBg.setDepth(1);
+        handBg.fillStyle(0x0a0a20, 1);
+        handBg.fillRect(0, handY, W, H - handY);
+        // Gradient overlay
+        for (var gi = 0; gi < 8; gi++) {
+            handBg.fillStyle(0x07071a, gi * 0.03);
+            handBg.fillRect(0, handY + gi * 4, W, 4);
+        }
+        handBg.lineStyle(1, 0x1a2a4a, 0.6);
+        handBg.beginPath();
+        handBg.moveTo(0, handY);
+        handBg.lineTo(W, handY);
+        handBg.strokePath();
 
         // === CENTER DIVIDER ===
         this._createCenterDivider();
 
         // === HERO PANELS ===
-        this._createHeroPanel('player', false);
-        this._createHeroPanel('enemy', true);
+        this._createHeroPanel('player');
+        this._createHeroPanel('enemy');
 
-        // === SKILL SLOTS (board unit zones) ===
+        // === SKILL SLOTS (5-slot board grid) ===
         this._createSkillSlots();
-    },
-
-    _drawMZZone: function (gfx, x, y, w, h, color, cornerDots) {
-        gfx.lineStyle(2, color, 0.7);
-        gfx.strokeRect(x, y, w, h);
-        if (cornerDots) {
-            var dotSize = 4;
-            gfx.fillStyle(color, 0.8);
-            gfx.fillRect(x - dotSize / 2, y - dotSize / 2, dotSize, dotSize);
-            gfx.fillRect(x + w - dotSize / 2, y - dotSize / 2, dotSize, dotSize);
-            gfx.fillRect(x - dotSize / 2, y + h - dotSize / 2, dotSize, dotSize);
-            gfx.fillRect(x + w - dotSize / 2, y + h - dotSize / 2, dotSize, dotSize);
-        }
     },
 
     _drawBackground: function () {
@@ -221,23 +165,19 @@ const PhaserBattleScene = new Phaser.Class({
         var H = this.H;
         g.clear();
 
-        // Arena floor — scale to HD canvas (1280x720)
-        var floorX = W * 0.07;     // ~90
-        var floorY = H * 0.05;     // ~36
-        var floorW = W * 0.86;     // ~1100
-        var floorH = H * 0.62;     // ~446
-        g.fillStyle(0x131328, 1);
+        // Arena floor area — between panels, from phase bar to card hand zone
+        var floorX = 190;
+        var floorY = 36;
+        var floorW = W - 380;   // 1280 - 380 = 900
+        var floorH = Math.round(H * 0.62) - 36; // 446 - 36 = 410
+
+        // Dark grid background
+        g.fillStyle(0x0a0f20, 1);
         g.fillRect(floorX, floorY, floorW, floorH);
 
-        // Subtle gradient overlay for depth
-        for (var i = 0; i < 20; i++) {
-            g.fillStyle(0x0d0d20, 0.03);
-            g.fillRect(floorX, floorY + (floorH / 20) * i, floorW, floorH / 20);
-        }
-
-        // Horizontal thin lines (stone slab effect)
-        var lineSpacing = floorH / 7;
-        g.lineStyle(1, 0x1a1a3a, 0.3);
+        // Subtle horizontal grid lines
+        var lineSpacing = floorH / 10;
+        g.lineStyle(1, 0x1a2a4a, 0.25);
         for (var ly = floorY + lineSpacing; ly < floorY + floorH; ly += lineSpacing) {
             g.beginPath();
             g.moveTo(floorX, ly);
@@ -245,93 +185,106 @@ const PhaserBattleScene = new Phaser.Class({
             g.strokePath();
         }
 
-        // Vertical column dividers (4 columns)
-        var colW = floorW / 4;
-        g.lineStyle(1, 0x1a1a3a, 0.3);
-        for (var c = 1; c < 4; c++) {
-            var vx = floorX + colW * c;
+        // Subtle vertical grid lines
+        var colSpacing = floorW / 12;
+        g.lineStyle(1, 0x1a2a4a, 0.2);
+        for (var vx = floorX + colSpacing; vx < floorX + floorW; vx += colSpacing) {
             g.beginPath();
             g.moveTo(vx, floorY);
             g.lineTo(vx, floorY + floorH);
             g.strokePath();
         }
 
-        // Crack textures for aged stone feel
-        g.lineStyle(1, 0x1a1a3a, 0.4);
-        var cracks = [
-            [{ x: 0.25, y: 0.2 }, { x: 0.28, y: 0.28 }, { x: 0.27, y: 0.38 }, { x: 0.30, y: 0.45 }],
-            [{ x: 0.55, y: 0.45 }, { x: 0.57, y: 0.52 }, { x: 0.56, y: 0.62 }, { x: 0.59, y: 0.70 }],
-            [{ x: 0.75, y: 0.18 }, { x: 0.77, y: 0.25 }, { x: 0.76, y: 0.32 }]
-        ];
-        cracks.forEach(function(crack) {
-            g.beginPath();
-            g.moveTo(floorX + floorW * crack[0].x, floorY + floorH * crack[0].y);
-            for (var p = 1; p < crack.length; p++) {
-                g.lineTo(floorX + floorW * crack[p].x, floorY + floorH * crack[p].y);
-            }
-            g.strokePath();
-        });
+        // Energy border lines — top and bottom of arena
+        g.lineStyle(1, 0x00e5ff, 0.12);
+        g.beginPath();
+        g.moveTo(floorX, floorY);
+        g.lineTo(floorX + floorW, floorY);
+        g.strokePath();
+        g.beginPath();
+        g.moveTo(floorX, floorY + floorH);
+        g.lineTo(floorX + floorW, floorY + floorH);
+        g.strokePath();
     },
 
     _drawGrid: function () {
         var g = this.gridGraphics;
         g.clear();
 
-        var cx = this.W * 0.5;   // 640
-        var cy = this.H * 0.37;  // ~266
+        var W = this.W;
+        var H = this.H;
 
-        // Outer ring: teal — scaled for HD
-        g.lineStyle(2, 0x4ECDC4, 0.3);
-        g.strokeEllipse(cx, cy, 420, 260);
+        // 5-slot grid layout
+        var slotW = 138;
+        var slotH = 80;
+        var gap = 16;
+        var totalW = 5 * slotW + 4 * gap;  // 754
+        var startX = Math.round((W - totalW) / 2);  // 263
 
-        // Mid ring: gold
-        g.lineStyle(1.5, 0xFFD700, 0.25);
-        g.strokeEllipse(cx, cy, 290, 180);
+        var enemyRowY = 65;   // top row
+        var playerRowY = 300; // bottom row
 
-        // Inner ring: purple — separate for pulse animation
+        // Draw grid lines connecting slots
+        g.lineStyle(1, 0x1a2a4a, 0.3);
+
+        // Horizontal line through enemy row center
+        g.beginPath();
+        g.moveTo(startX - 20, enemyRowY + slotH / 2);
+        g.lineTo(startX + totalW + 20, enemyRowY + slotH / 2);
+        g.strokePath();
+
+        // Horizontal line through player row center
+        g.beginPath();
+        g.moveTo(startX - 20, playerRowY + slotH / 2);
+        g.lineTo(startX + totalW + 20, playerRowY + slotH / 2);
+        g.strokePath();
+
+        // Vertical connecting lines (energy lines) from enemy to player
+        g.lineStyle(1, 0x00e5ff, 0.06);
+        for (var v = 0; v < 5; v++) {
+            var vx = startX + v * (slotW + gap) + slotW / 2;
+            g.beginPath();
+            g.moveTo(vx, enemyRowY + slotH);
+            g.lineTo(vx, playerRowY);
+            g.strokePath();
+        }
+
+        // Center energy line (brighter)
+        g.lineStyle(1, 0x00e5ff, 0.12);
+        var cx = W / 2;
+        g.beginPath();
+        g.moveTo(cx, enemyRowY + slotH);
+        g.lineTo(cx, playerRowY);
+        g.strokePath();
+
+        // Horizontal divider line at VS center
+        var dividerY = Math.round((enemyRowY + slotH + playerRowY) / 2);
+        g.lineStyle(1, 0x1a2a4a, 0.4);
+        g.beginPath();
+        g.moveTo(startX - 40, dividerY);
+        g.lineTo(startX + totalW + 40, dividerY);
+        g.strokePath();
+
+        // Animated glow ring placeholder (pulsed in update)
         this._innerRing = this.add.graphics();
         this._innerRing.setDepth(2);
-        this._innerRing.lineStyle(2, 0x9B59B6, 0.35);
-        this._innerRing.strokeEllipse(0, 0, 160, 100);
-        this._innerRing.setPosition(cx, cy);
-
-        // 4 spoke lines from center to cardinal directions
-        g.lineStyle(1.5, 0x4ECDC4, 0.2);
-        var spokes = [
-            { dx: 0, dy: -130 },
-            { dx: 0, dy: 130 },
-            { dx: -210, dy: 0 },
-            { dx: 210, dy: 0 }
-        ];
-        spokes.forEach(function(s) {
-            g.beginPath();
-            g.moveTo(cx, cy);
-            g.lineTo(cx + s.dx, cy + s.dy);
-            g.strokePath();
-        });
-
-        // Rune dots at spoke endpoints (alternating teal/gold)
-        var runeColors = [0x4ECDC4, 0xFFD700, 0x4ECDC4, 0xFFD700];
-        for (var r = 0; r < spokes.length; r++) {
-            g.fillStyle(runeColors[r], 0.6);
-            g.fillRect(cx + spokes[r].x - 4, cy + spokes[r].y - 4, 8, 8);
-        }
+        this._innerRing.lineStyle(2, 0x00e5ff, 0.3);
+        this._innerRing.strokeEllipse(0, 0, 200, 100);
+        this._innerRing.setPosition(W / 2, dividerY);
     },
 
-    _createHeroPanel: function (side, isTop) {
+    _createHeroPanel: function (side) {
         var scene = this;
-        var panelW, panelH, panelX, panelY;
+        var panelW = 160;
+        var panelH = 260;
+        var panelX, panelY;
 
         if (side === 'player') {
-            panelX = this.W - 200;   // 1080
-            panelY = this.H * 0.25;  // ~180
-            panelW = 180;
-            panelH = 220;
+            panelX = 10;
+            panelY = 50;
         } else {
-            panelX = 20;
-            panelY = this.H * 0.05;  // ~36
-            panelW = 180;
-            panelH = 220;
+            panelX = this.W - 170;  // 1110
+            panelY = 50;
         }
 
         var container = this.add.container(panelX, panelY);
@@ -343,8 +296,8 @@ const PhaserBattleScene = new Phaser.Class({
         bg.fillRect(0, 0, panelW, panelH);
         container.add(bg);
 
-        // Border — enemy: red (#E94560), player: teal (#4ECDC4)
-        var borderColor = side === 'player' ? 0x4ECDC4 : 0xE94560;
+        // Border — player: cyan (#00e5ff), enemy: magenta (#ff44aa)
+        var borderColor = side === 'player' ? 0x00e5ff : 0xff44aa;
         var border = this.add.graphics();
         border.lineStyle(2, borderColor, 0.8);
         border.strokeRect(0, 0, panelW, panelH);
@@ -360,30 +313,31 @@ const PhaserBattleScene = new Phaser.Class({
         container.add(glow);
         container.setData('glow', glow);
 
-        // Class color strip at top
+        // Top color strip (3px solid neon)
         var strip = this.add.graphics();
-        strip.fillStyle(borderColor, 0.6);
+        strip.fillStyle(borderColor, 0.9);
         strip.fillRect(0, 0, panelW, 3);
         container.add(strip);
 
-        // Hero art area
+        // Hero art area — larger, centered
         var artBg = this.add.graphics();
-        artBg.fillStyle(0x0f3460, 1);
-        artBg.fillRect(12, 8, panelW - 24, 110);
-        artBg.lineStyle(1, 0xc8a832, 0.5);
-        artBg.strokeRect(12, 8, panelW - 24, 110);
+        artBg.fillStyle(0x0f1a30, 1);
+        artBg.fillRect(12, 10, panelW - 24, 120);
+        artBg.lineStyle(1, borderColor, 0.25);
+        artBg.strokeRect(12, 10, panelW - 24, 120);
         container.add(artBg);
 
-        var spriteText = this.add.text(panelW / 2, 62, '⚔', {
-            fontSize: '28px',
-            color: side === 'player' ? 'rgba(78,205,196,0.3)' : 'rgba(233,69,96,0.3)'
+        // Emoji sprite — centered, larger (36px)
+        var spriteText = this.add.text(panelW / 2, 70, '⚔', {
+            fontSize: '36px',
+            color: side === 'player' ? 'rgba(0,229,255,0.3)' : 'rgba(255,68,170,0.3)'
         });
         spriteText.setOrigin(0.5, 0.5);
         container.add(spriteText);
         this.heroSprite[side] = spriteText;
 
-        // Name text
-        var nameText = this.add.text(12, 124, 'Hero', {
+        // Name text — 10px Press Start 2P
+        var nameText = this.add.text(12, 138, 'Hero', {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '10px',
             color: '#ffffff',
@@ -392,8 +346,8 @@ const PhaserBattleScene = new Phaser.Class({
         container.add(nameText);
         this.heroNameText[side] = nameText;
 
-        // Class + Level
-        var classText = this.add.text(12, 138, '', {
+        // Class text — 8px, colored
+        var classText = this.add.text(12, 154, '', {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '8px',
             color: '#aaaaaa'
@@ -401,7 +355,8 @@ const PhaserBattleScene = new Phaser.Class({
         container.add(classText);
         this.heroClassText[side] = classText;
 
-        var levelText = this.add.text(panelW - 12, 138, '', {
+        // Level text — 8px gold, right-aligned
+        var levelText = this.add.text(panelW - 12, 154, '', {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '8px',
             color: '#ffd700'
@@ -410,9 +365,9 @@ const PhaserBattleScene = new Phaser.Class({
         container.add(levelText);
         this.heroLevelText[side] = levelText;
 
-        // HP bar
+        // HP bar — 18px height
         var hpBarX = 12;
-        var hpBarY = 150;
+        var hpBarY = 170;
         var hpBarW = panelW - 24;
         var hpBarH = 18;
 
@@ -443,13 +398,28 @@ const PhaserBattleScene = new Phaser.Class({
         container.add(hpText);
         this.heroHPText[side] = hpText;
 
-        // ATK / DEF stats row
-        var statY = hpBarY + hpBarH + 4;
+        // Energy bar — 12px height, gold fill
+        var enBarY = hpBarY + hpBarH + 4;
+        var enBarH = 12;
+        var enBg = this.add.graphics();
+        enBg.fillStyle(0x000000, 0.8);
+        enBg.fillRoundedRect(hpBarX, enBarY, hpBarW, enBarH, 2);
+        enBg.lineStyle(1, 0xffcc00, 0.3);
+        enBg.strokeRoundedRect(hpBarX, enBarY, hpBarW, enBarH, 2);
+        container.add(enBg);
+        var enFill = this.add.graphics();
+        enFill.fillStyle(0xffcc00, 0.6);
+        enFill.fillRoundedRect(hpBarX + 1, enBarY + 1, 0, enBarH - 2, 2);
+        container.add(enFill);
+        this['energyBar' + side] = { fill: enFill, x: hpBarX, y: enBarY, w: hpBarW, h: enBarH };
+
+        // ATK / DEF stat badges
+        var statY = enBarY + enBarH + 6;
         var halfW = (hpBarW - 4) / 2;
 
         var atkBg = this.add.graphics();
-        atkBg.fillStyle(0xE94560, 0.5);
-        atkBg.fillRect(hpBarX, statY, halfW, 14);
+        atkBg.fillStyle(0xff4444, 0.4);
+        atkBg.fillRoundedRect(hpBarX, statY, halfW, 14, 2);
         container.add(atkBg);
 
         var atkText = this.add.text(hpBarX + 4, statY + 2, '⚔ 0', {
@@ -461,8 +431,8 @@ const PhaserBattleScene = new Phaser.Class({
         container.add(atkText);
 
         var defBg = this.add.graphics();
-        defBg.fillStyle(0x4488ff, 0.5);
-        defBg.fillRect(hpBarX + halfW + 4, statY, halfW, 14);
+        defBg.fillStyle(0x4488ff, 0.4);
+        defBg.fillRoundedRect(hpBarX + halfW + 4, statY, halfW, 14, 2);
         container.add(defBg);
 
         var defText = this.add.text(hpBarX + halfW + 8, statY + 2, '🛡 0', {
@@ -585,69 +555,73 @@ const PhaserBattleScene = new Phaser.Class({
     _createCenterDivider: function () {
         var W = this.W;
         var H = this.H;
-        var dividerY = Math.round(H * 0.36); // ~260 for 720h
+        var dividerY = 190; // Center between enemy row (65+80=145) and player row (300)
 
-        // Gold line at center divider, full width
+        // Horizontal line at center
         var line = this.add.graphics();
         line.setDepth(3);
-        line.fillStyle(0xFFD700, 0.45);
-        line.fillRect(0, dividerY, W, 3);
+        line.lineStyle(1, 0x1a2a4a, 0.5);
+        line.beginPath();
+        line.moveTo(190, dividerY);
+        line.lineTo(W - 190, dividerY);
+        line.strokePath();
 
-        // Node dots at intervals (alternating gold and teal)
-        var dotColors = [0xFFD700, 0x4ECDC4];
-        for (var d = 0; d < W; d += 80) {
-            var dotColor = dotColors[(d / 80) % 2 === 0 ? 0 : 1];
-            line.fillStyle(dotColor, 0.6);
-            line.fillRect(d + 40, dividerY - 3, 8, 8);
-        }
-
-        // VS Emblem — centered
-        var vsW = 100, vsH = 44;
-        var vsX = W / 2 - vsW / 2;
-        var vsY = dividerY - vsH / 2 - 4;
-        var vsContainer = this.add.container(vsX, vsY);
+        // VS Emblem — diamond shape, centered
+        var vsSize = 36;
+        var vsContainer = this.add.container(W / 2, dividerY);
         vsContainer.setDepth(6);
 
+        // Diamond background
         var vsBg = this.add.graphics();
         vsBg.fillStyle(0x0a0a20, 0.95);
-        vsBg.fillRect(0, 0, vsW, vsH);
-        vsBg.lineStyle(2, 0xFFD700, 0.8);
-        vsBg.strokeRect(0, 0, vsW, vsH);
-        vsBg.lineStyle(1, 0x4ECDC4, 0.5);
-        vsBg.strokeRect(3, 3, vsW - 6, vsH - 6);
-        // Corner dots
-        vsBg.fillStyle(0xFFD700, 0.7);
-        vsBg.fillRect(-2, -2, 5, 5);
-        vsBg.fillRect(vsW - 3, -2, 5, 5);
-        vsBg.fillRect(-2, vsH - 3, 5, 5);
-        vsBg.fillRect(vsW - 3, vsH - 3, 5, 5);
+        vsBg.beginPath();
+        vsBg.moveTo(vsSize, 0);
+        vsBg.lineTo(0, vsSize / 2);
+        vsBg.lineTo(-vsSize, 0);
+        vsBg.lineTo(0, -vsSize / 2);
+        vsBg.closePath();
+        vsBg.fillPath();
+        vsBg.lineStyle(2, 0xffcc00, 0.8);
+        vsBg.beginPath();
+        vsBg.moveTo(vsSize, 0);
+        vsBg.lineTo(0, vsSize / 2);
+        vsBg.lineTo(-vsSize, 0);
+        vsBg.lineTo(0, -vsSize / 2);
+        vsBg.closePath();
+        vsBg.strokePath();
         vsContainer.add(vsBg);
 
         // "V" (gold)
-        this.vsText = this.add.text(vsW * 0.33, vsH / 2, 'V', {
+        this.vsText = this.add.text(-8, 0, 'V', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '18px',
-            color: '#FFD700',
+            fontSize: '14px',
+            color: '#ffcc00',
             fontStyle: 'bold'
         });
         this.vsText.setOrigin(0.5, 0.5);
         vsContainer.add(this.vsText);
 
-        // "S" (teal)
-        var sText = this.add.text(vsW * 0.67, vsH / 2, 'S', {
+        // "S" (cyan)
+        var sText = this.add.text(10, 0, 'S', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '18px',
-            color: '#4ECDC4',
+            fontSize: '14px',
+            color: '#00e5ff',
             fontStyle: 'bold'
         });
         sText.setOrigin(0.5, 0.5);
         vsContainer.add(sText);
 
-        // VS glow animation
+        // Animated glow ring around VS emblem
         this._vsEmblemGlow = this.add.graphics();
         this._vsEmblemGlow.setDepth(5);
-        this._vsEmblemGlow.lineStyle(2, 0x4ECDC4, 0.3);
-        this._vsEmblemGlow.strokeRect(vsX - 2, vsY - 2, vsW + 4, vsH + 4);
+        this._vsEmblemGlow.lineStyle(2, 0x00e5ff, 0.3);
+        this._vsEmblemGlow.strokeCircle(W / 2, dividerY, vsSize + 8);
+
+        // Outer glow ring (magenta pulse)
+        this._vsEmblemGlow2 = this.add.graphics();
+        this._vsEmblemGlow2.setDepth(5);
+        this._vsEmblemGlow2.lineStyle(1, 0xff44aa, 0.2);
+        this._vsEmblemGlow2.strokeCircle(W / 2, dividerY, vsSize + 16);
 
         // Turn text (left of center on divider)
         this.turnText = this.add.text(W / 2 - 120, dividerY + 1, 'Turn 0', {
@@ -662,18 +636,10 @@ const PhaserBattleScene = new Phaser.Class({
         this.phaseText = this.add.text(W / 2 + 120, dividerY + 1, '', {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '10px',
-            color: 'rgba(78,205,196,0.8)'
+            color: 'rgba(0,229,255,0.8)'
         });
         this.phaseText.setOrigin(0, 0.5);
         this.phaseText.setDepth(6);
-
-        // Energy Bar
-        var energyBar = this.add.graphics();
-        energyBar.setDepth(4);
-        energyBar.fillStyle(0xFFD700, 0.3);
-        energyBar.fillRect(W * 0.55, dividerY - 10, 120, 18);
-        energyBar.lineStyle(1, 0xFFD700, 0.5);
-        energyBar.strokeRect(W * 0.55, dividerY - 10, 120, 18);
     },
 
     updateCenterDivider: function (state) {
@@ -685,24 +651,26 @@ const PhaserBattleScene = new Phaser.Class({
     },
 
     _createSkillSlots: function () {
-        // 2 monster zones per side for board units — scaled for HD
-        var SX = 1.6, SY = 1.44;
-        var playerMZs = [
-            { x: 128*SX, y: 188*SY, w: 100*SX, h: 140*SY },
-            { x: 232*SX, y: 188*SY, w: 100*SX, h: 140*SY }
-        ];
-        var enemyMZs = [
-            { x: 124*SX, y: 32*SY, w: 100*SX, h: 140*SY },
-            { x: 228*SX, y: 32*SY, w: 100*SX, h: 140*SY }
-        ];
+        // 5 slots per side — player row bottom, enemy row top
+        var slotW = 138;
+        var slotH = 80;
+        var gap = 16;
+        var totalW = 5 * slotW + 4 * gap;
+        var startX = Math.round((this.W - totalW) / 2);
 
-        for (var i = 0; i < enemyMZs.length; i++) {
-            var mz = enemyMZs[i];
-            this._drawSkillSlot(mz.x, mz.y, mz.w, mz.h, 'enemy', i);
+        var enemyRowY = 65;
+        var playerRowY = 300;
+
+        // Enemy slots (top row) — indices 0-4
+        for (var i = 0; i < 5; i++) {
+            var sx = startX + i * (slotW + gap);
+            this._drawSkillSlot(sx, enemyRowY, slotW, slotH, 'enemy', i);
         }
-        for (var i = 0; i < playerMZs.length; i++) {
-            var mz = playerMZs[i];
-            this._drawSkillSlot(mz.x, mz.y, mz.w, mz.h, 'player', i);
+
+        // Player slots (bottom row) — indices 0-4
+        for (var i = 0; i < 5; i++) {
+            var sx = startX + i * (slotW + gap);
+            this._drawSkillSlot(sx, playerRowY, slotW, slotH, 'player', i);
         }
     },
 
@@ -710,19 +678,33 @@ const PhaserBattleScene = new Phaser.Class({
         var container = this.add.container(x, y);
         container.setDepth(3);
 
+        // Determine if this slot is "active" (first 2 slots match board size)
+        var isActive = index < 2;
+
         var bg = this.add.graphics();
-        bg.fillStyle(0x141432, 0.3);
-        bg.fillRect(0, 0, w, h);
-        bg.lineStyle(1, side === 'player' ? 0x4ECDC4 : 0xE94560, 0.15);
-        bg.strokeRect(0, 0, w, h);
+        if (isActive) {
+            bg.fillStyle(0x0f1932, 0.6);
+            bg.fillRect(0, 0, w, h);
+            bg.lineStyle(1, side === 'player' ? 0x00e5ff : 0xff44aa, 0.2);
+            bg.strokeRect(0, 0, w, h);
+        } else {
+            // Inactive/locked slot — dim
+            bg.fillStyle(0x0a0f1a, 0.3);
+            bg.fillRect(0, 0, w, h);
+            bg.lineStyle(1, 0x1a2a4a, 0.1);
+            bg.strokeRect(0, 0, w, h);
+        }
         container.add(bg);
 
-        var icon = this.add.text(w / 2, h / 2, '✨', {
-            fontSize: '24px',
-            color: 'rgba(155,89,182,0.15)'
-        });
-        icon.setOrigin(0.5, 0.5);
-        container.add(icon);
+        if (!isActive) {
+            // Lock icon for inactive slots
+            var lockIcon = this.add.text(w / 2, h / 2, '🔒', {
+                fontSize: '14px'
+            });
+            lockIcon.setOrigin(0.5, 0.5);
+            lockIcon.setAlpha(0.2);
+            container.add(lockIcon);
+        }
 
         var slotData = {
             container: container,
@@ -736,7 +718,7 @@ const PhaserBattleScene = new Phaser.Class({
         };
 
         // Interactive hover — player slots only during play/arrange
-        if (side === 'player') {
+        if (side === 'player' && isActive) {
             var hitArea = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0xffffff, 0);
             hitArea.setInteractive({ useHandCursor: true });
             hitArea.setDepth(5);
@@ -1945,30 +1927,39 @@ const PhaserBattleScene = new Phaser.Class({
 
     // ===== UPDATE LOOP =====
     update: function (time, delta) {
-        // (a) Pulse magical circle inner ring
         if (this._innerRing) {
-            var ringAlpha = 0.15 + Math.sin(time * 0.003) * 0.15;
-            this._innerRing.setAlpha(ringAlpha);
+            var innerScale = 1 + Math.sin(time * 0.003) * 0.08;
+            this._innerRing.setScale(innerScale);
+            this._innerRing.setAlpha(0.2 + Math.sin(time * 0.004) * 0.15);
         }
 
-        // (b) Pulse enemy hero panel border
         if (this._enemyHeroBorder) {
-            var borderAlpha = 0.5 + Math.sin(time * 0.004) * 0.3;
+            var borderAlpha = 0.6 + Math.sin(time * 0.005) * 0.2;
             this._enemyHeroBorder.setAlpha(borderAlpha);
         }
 
-        // (c) Update star particles — drift down, fade in/out
+        // VS emblem glow pulse
+        if (this._vsEmblemGlow) {
+            var glowAlpha = 0.2 + Math.sin(time * 0.004) * 0.15;
+            this._vsEmblemGlow.setAlpha(glowAlpha);
+        }
+        if (this._vsEmblemGlow2) {
+            var glow2Alpha = 0.1 + Math.sin(time * 0.003 + 1) * 0.1;
+            this._vsEmblemGlow2.setAlpha(glow2Alpha);
+        }
+
+        // Star particles
         if (this.starParticles) {
             for (var i = 0; i < this.starParticles.length; i++) {
-                var star = this.starParticles[i];
-                star.gfx.y += star.speed;
-                if (star.gfx.y > this.H + 5) {
-                    star.gfx.y = -5;
-                    star.gfx.x = Math.random() * this.W;
+                var p = this.starParticles[i];
+                p.gfx.y += p.speed;
+                if (p.gfx.y > this.H + 5) {
+                    p.gfx.y = -5;
+                    p.gfx.x = Math.random() * this.W;
                 }
-                var t = (time * 0.001 + i * 1.7) % (Math.PI * 2);
-                var alpha = 0.1 + Math.abs(Math.sin(t)) * 0.5;
-                star.gfx.setAlpha(alpha);
+                p.alpha = Math.max(0.1, Math.min(0.8, p.alpha + p.fadeDir * p.fadeSpeed));
+                p.fadeDir = (p.alpha >= 0.8 || p.alpha <= 0.1) ? -p.fadeDir : p.fadeDir;
+                p.gfx.setAlpha(p.alpha);
             }
         }
     }
