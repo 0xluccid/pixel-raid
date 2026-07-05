@@ -30,7 +30,13 @@ const UI = {
         this.currentScreen = name;
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        
+
+        // If navigating away from battle, remove battle-active (fullscreen overlay)
+        if (name !== 'battle') {
+            const battleScreen = document.getElementById('screen-battle');
+            if (battleScreen) battleScreen.classList.remove('battle-active');
+        }
+
         const screen = document.getElementById(`screen-${name}`);
         const btn = document.querySelector(`[data-screen="${name}"]`);
         if (screen) screen.classList.add('active');
