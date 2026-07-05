@@ -137,7 +137,7 @@ const BattleEngine = {
 
         // Auto advance to play phase after brief delay
         this._phaseTimer = setTimeout(() => {
-            this._setPhase('play');
+            try { this._setPhase('play'); } catch (e) { console.warn('Phase transition error:', e); }
             this._notifyFieldUpdate();
         }, 400);
     },

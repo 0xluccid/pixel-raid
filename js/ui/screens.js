@@ -480,12 +480,12 @@ const UI = {
 
         // Wire up BattleEngine event handlers
         BattleEngine.onPhaseChange = (phase) => {
-            this._updatePhaseBar(phase);
-            this._updateActionButtons(phase);
+            try { this._updatePhaseBar(phase); } catch (e) {}
+            try { this._updateActionButtons(phase); } catch (e) {}
 
             // Tick hero power cooldowns at start of each turn (draw phase)
             if (phase === 'draw' && typeof HeroPowers !== 'undefined') {
-                HeroPowers.tickCooldowns();
+                try { HeroPowers.tickCooldowns(); } catch (e) {}
             }
 
             // Show phase banner in Phaser
@@ -494,12 +494,16 @@ const UI = {
                 arrange: 'ARRANGE', battle: 'BATTLE', result: 'RESULT'
             };
             if (['play', 'arrange', 'battle', 'result'].includes(phase)) {
-                BattlePhaser.showPhaseBanner(phaseNames[phase] || phase.toUpperCase(), true);
+                try {
+                    BattlePhaser.showPhaseBanner(phaseNames[phase] || phase.toUpperCase(), true);
+                } catch (e) { console.warn('showPhaseBanner error:', e); }
             }
 
             // Update Phaser hero panels
             if (BattleEngine.player && BattleEngine.enemy) {
-                BattlePhaser.renderField(BattleEngine.player, BattleEngine.enemy);
+                try {
+                    BattlePhaser.renderField(BattleEngine.player, BattleEngine.enemy);
+                } catch (e) { console.warn('renderField error:', e); }
             }
         };
 
@@ -509,16 +513,25 @@ const UI = {
         BattleEngine.onFieldUpdate = () => {
             // Detect deaths BEFORE re-rendering (compare prev vs current)
             if (this._prevFieldState && this._prevFieldState.player.length) {
-                this._detectAndAnimateDeaths();
+                try { this._detectAndAnimateDeaths(); } catch (e) { console.warn('Death anim error:', e); }
             }
 
-            BattlePhaser.renderField(BattleEngine.player, BattleEngine.enemy);
+            // Phaser render — wrapped in try-catch so cards always render even if Phaser fails
+            try {
+                BattlePhaser.renderField(BattleEngine.player, BattleEngine.enemy);
+            } catch (e) {
+                console.warn('BattlePhaser.renderField error:', e);
+            }
 
             // Always re-render card hand during active battle phases
             if (typeof CardHand !== 'undefined' && BattleEngine.player) {
                 const activePhases = ['draw', 'energy', 'play', 'arrange'];
                 if (activePhases.includes(BattleEngine.currentPhase)) {
-                    CardHand.renderHand(BattleEngine.player.hand, BattleEngine.player.energy);
+                    try {
+                        CardHand.renderHand(BattleEngine.player.hand, BattleEngine.player.energy);
+                    } catch (e) {
+                        console.warn('CardHand.renderHand error:', e);
+                    }
                 }
             }
 
