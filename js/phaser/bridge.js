@@ -40,7 +40,7 @@ var BattlePhaser = {
             backgroundColor: '#0a0a1a',
             scene: PhaserBattleScene,
             scale: {
-                mode: Phaser.Scale.FIT,
+                mode: Phaser.Scale.RESIZE,
                 autoCenter: Phaser.Scale.CENTER_BOTH
             },
             render: {
@@ -312,6 +312,7 @@ var BattlePhaser = {
 
             if (this._game) {
                 this._game.scale.resize(800, 500);
+                this._game.scale.setGameSize(800, 500);
             }
 
             if (onComplete) onComplete();
