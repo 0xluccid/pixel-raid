@@ -456,23 +456,28 @@ const UI = {
         // Stop any previous battle
         BattleEngine.stop();
 
-        // Clear any leftover inline display styles from previous battle cleanup
+        // Clear ALL leftover inline display styles from pre-battle layout
         // (inline styles override CSS, so battle-active rules wouldn't take effect)
-        var resetEls = ['#card-hand-area', '#battle-canvas-container', '.battle-action-row', '.battle-info-strip'];
+        var resetEls = ['#card-hand-area', '#battle-canvas-container', '.battle-canvas-wrap', '.battle-action-row', '.battle-info-strip', '#battle-phase-bar'];
         for (var i = 0; i < resetEls.length; i++) {
             var el = document.querySelector(resetEls[i]);
             if (el) { el.style.cssText = ''; el.removeAttribute('style'); }
         }
 
-        // Show battle canvas container
-        const battleContainer = document.getElementById('battle-canvas-container');
-        if (battleContainer) battleContainer.style.display = 'block';
-
         // Go fullscreen for battle
         document.getElementById('screen-battle').classList.add('battle-active');
 
-        // Init Phaser renderer and activate bridge
-        BattlePhaser.init('battle-canvas-container');
+        // Show battle canvas container AND wrap — must be visible BEFORE Phaser.init
+        const battleContainer = document.getElementById('battle-canvas-container');
+        if (battleContainer) { battleContainer.style.display = 'block'; }
+        const battleWrap = document.querySelector('#screen-battle .battle-canvas-wrap');
+        if (battleWrap) { battleWrap.style.display = 'block'; }
+
+        // Init Phaser after layout is computed (RESIZE mode needs parent dimensions)
+        const _doInitPhaser = () => {
+            BattlePhaser.init('battle-canvas-container');
+        };
+        requestAnimationFrame(() => requestAnimationFrame(_doInitPhaser));
 
         // Init card hand renderer
         if (typeof CardHand !== 'undefined') {
