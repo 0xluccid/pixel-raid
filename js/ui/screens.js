@@ -64,8 +64,7 @@ const UI = {
                 }
                 // Hide canvas wrap + canvas container
                 const canvasWrap = document.querySelector('#screen-battle .battle-canvas-wrap');
-                console.log('DEBUG: canvasWrap found:', !!canvasWrap, 'setting display:none');
-                if (canvasWrap) { canvasWrap.style.display = 'none'; console.log('DEBUG: canvasWrap.hidden, style:', canvasWrap.style.cssText); }
+                if (canvasWrap) canvasWrap.style.display = 'none';
                 const canvasContainer = document.getElementById('battle-canvas-container');
                 if (canvasContainer) canvasContainer.style.display = 'none';
                 // Hide hero power area
