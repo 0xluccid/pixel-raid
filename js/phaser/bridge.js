@@ -327,9 +327,20 @@ var BattlePhaser = {
         if (canvas) {
             canvas.style.width = '100%';
             canvas.style.height = '100%';
-            canvas.style.objectFit = 'contain';
+            canvas.style.objectFit = 'fill';
             canvas.style.display = 'block';
-            canvas.style.margin = '0 auto';
+            canvas.style.margin = '0';
+        }
+        // Scale camera to fill viewport
+        if (this._scene && this._scene.cameras && this._scene.cameras.main) {
+            var cam = this._scene.cameras.main;
+            var W = this._scene.W || 800;
+            var H = this._scene.H || 500;
+            var zoomX = cam.width / W;
+            var zoomY = cam.height / H;
+            var zoom = Math.max(zoomX, zoomY);
+            cam.setZoom(zoom);
+            cam.centerOn(W / 2, H / 2);
         }
     },
 
