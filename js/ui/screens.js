@@ -92,6 +92,12 @@ const UI = {
             }
         }
 
+        // Hide canvas wrap and hero power when battle is not active
+        const canvasWrap = document.querySelector('#screen-battle .battle-canvas-wrap');
+        if (canvasWrap) canvasWrap.style.display = 'none';
+        const heroPower = document.getElementById('hero-power-area');
+        if (heroPower) heroPower.style.display = 'none';
+
         // Before battle: make screen fill viewport, deck preview scrollable, controls fixed at bottom
         if (typeof BattleEngine === 'undefined' || !BattleEngine.isRunning) {
             const battleScreen = document.getElementById('screen-battle');
