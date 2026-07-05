@@ -18,30 +18,39 @@
     <style>
         /* ========== RETRO RPG UI — OVERHAUL ========== */
         :root {
-            --bg: #0f0f23;
-            --bg-card: #1a1a2e;
-            --bg-panel: rgba(26,26,46,0.95);
-            --bg-dark: #0f0f23;
-            --gold: #ffd700;
-            --gold-dark: #b8920e;
-            --gold-dim: rgba(255,215,0,0.12);
+            --bg: #0d0d24;
+            --bg-card: #1a1a32;
+            --bg-panel: rgba(22,22,50,0.95);
+            --bg-dark: #0d0d20;
+            --gold: #ffd940;
+            --gold-dark: #c9a020;
+            --gold-dim: rgba(255,217,64,0.12);
             --text: #f0f0f0;
             --text-dim: #aaaaaa;
-            --green-accent: #00ff88;
-            --green-glow: rgba(0,255,136,0.25);
-            --red: #e94560;
-            --red-glow: rgba(233,69,96,0.3);
-            --rarity-common: #aaaaaa;
-            --panel: #1a1a2e;
-            --bg-surface: #16162a;
-            --gold-light: #ffe066;
+            --green-accent: #22ff99;
+            --green-glow: rgba(34,255,153,0.3);
+            --red: #ff4466;
+            --red-glow: rgba(255,68,102,0.35);
+            --panel: #1a1a32;
+            --bg-surface: #14142c;
+            --gold-light: #ffe566;
             --text-main: #f0f0f0;
-            --rarity-rare: #4488ff;
-            --rarity-epic: #9b59b6;
-            --rarity-legendary: #ff6b35;
-            --rarity-mythic: #e94560;
-            --border-pixel: rgba(255,215,0,0.25);
+            --rarity-common: #aaaaaa;
+            --rarity-rare: #5599ff;
+            --rarity-epic: #b066e0;
+            --rarity-legendary: #ff8844;
+            --rarity-mythic: #ff4466;
+            --border-pixel: rgba(255,217,64,0.35);
             --shadow-pixel: 3px 3px 0 rgba(0,0,0,0.6);
+            /* Element colors */
+            --elem-fire: #ff5533;
+            --elem-water: #33aaff;
+            --elem-nature: #44dd55;
+            --elem-lightning: #ffdd33;
+            --elem-shadow: #aa44dd;
+            /* Accent colors */
+            --accent-cyan: #00e5ff;
+            --accent-pink: #ff44aa;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -49,7 +58,7 @@
             font-family: 'Silkscreen', 'Inter', sans-serif;
             background: var(--bg);
             background-image:
-                radial-gradient(ellipse at 50% 0%, rgba(255,215,0,0.04) 0%, transparent 50%);
+                radial-gradient(ellipse at 50% 0%, rgba(255,217,64,0.06) 0%, transparent 50%);
             color: var(--text);
             min-height: 100vh;
             overflow-x: hidden;
@@ -302,12 +311,12 @@
         #battle-countdown.active { display: flex; }
         .countdown-number {
             font-family: 'Press Start 2P', monospace; font-size: 64px;
-            color: #ffd700; text-shadow: 0 0 30px rgba(255,215,0,0.8), 0 0 60px rgba(255,215,0,0.4);
+            color: var(--gold); text-shadow: 0 0 30px rgba(255,217,64,0.8), 0 0 60px rgba(255,217,64,0.4);
             animation: countPulse 0.8s ease-out;
         }
         .countdown-fight {
             font-family: 'Press Start 2P', monospace; font-size: 48px;
-            color: #ff4444; text-shadow: 0 0 30px rgba(255,68,68,0.8), 0 4px 0 #aa0000;
+            color: var(--red); text-shadow: 0 0 30px rgba(255,68,102,0.8), 0 4px 0 #880022;
             animation: fightSlam 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         @keyframes countPulse {
@@ -372,7 +381,7 @@
         .result-reward-item:nth-child(3) { animation-delay: 0.6s; }
         .result-reward-item:nth-child(4) { animation-delay: 0.8s; }
         .result-reward-icon { font-size: 14px; }
-        .result-reward-value { color: #ffd700; font-weight: bold; margin-left: auto; }
+        .result-reward-value { color: var(--gold); font-weight: bold; margin-left: auto; }
         .result-mission { font-size: 8px; color: rgba(255,255,255,0.5); margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); }
         .result-buttons { display: flex; gap: 8px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
         @keyframes resultSlideIn {
@@ -412,20 +421,20 @@
         .hp-fill.hp-critical { background: var(--red); }
         .hp-text { font-size: 8px; color: var(--text-dim); font-family: 'Silkscreen', monospace; }
         .hero-stats-line { font-size: 7px; color: var(--text-dim); margin-top: 2px; }
-        .shield-badge { font-size: 8px; color: #4488ff; }
+        .shield-badge { font-size: 8px; color: var(--elem-water); }
 
         /* Pixel Raid Battle Layout */
         .battle-info-strip {
             display: flex; justify-content: space-between; align-items: center;
             padding: 6px 12px;
-            background: rgba(15,15,35,0.9);
+            background: rgba(13,13,36,0.9);
             border-top: 1px solid rgba(255,215,0,0.2);
             border-bottom: 1px solid rgba(255,215,0,0.2);
             margin-top: 2px;
         }
         .info-strip-left, .info-strip-right { display: flex; gap: 12px; align-items: center; }
-        .battle-turn-text { font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--gold); letter-spacing: 1px; }
-        .battle-phase-text { font-size: 8px; color: var(--green-accent); font-weight: bold; }
+        .battle-turn-text { font-family: 'Press Start 2P', monospace; font-size: 8px; color: var(--gold-light); letter-spacing: 1px; }
+        .battle-phase-text { font-size: 8px; color: var(--accent-cyan); font-weight: bold; }
         .deck-info, .graveyard-info { font-size: 7px; color: var(--text-dim); }
 
         .card-hand-area {
@@ -511,8 +520,8 @@
             font-size: 8px;
             font-family: 'Press Start 2P', monospace;
         }
-        .hand-card .card-stats-bar .stat-atk { color: #ff6644; }
-        .hand-card .card-stats-bar .stat-def { color: #4488ff; }
+        .hand-card .card-stats-bar .stat-atk { color: var(--elem-fire); }
+        .hand-card .card-stats-bar .stat-def { color: var(--elem-water); }
         .hand-card .card-effect-text {
             font-size: 8px;
             color: #bbddbb;
@@ -638,10 +647,10 @@
         @keyframes overlayIn { from{opacity:0} to{opacity:1} }
         .log-win { color: #44cc44; }
         .log-lose { color: #ff4444; }
-        .log-damage { color: #ff6b35; }
+        .log-damage { color: var(--elem-fire); }
         .log-heal { color: #44cc44; }
-        .log-skill { color: #9b59b6; }
-        .log-drop { color: var(--gold); }
+        .log-skill { color: var(--elem-shadow); }
+        .log-drop { color: var(--gold-light); }
 
         /* Turn order bar */
         .turn-order-bar {
@@ -675,13 +684,13 @@
         }
         .enemy-info-header { font-family: 'Press Start 2P'; font-size: 12px; color: var(--gold); margin-bottom: 10px; text-align: center; }
         .enemy-info-stats { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
-        .enemy-info-skill { color: #9b59b6; font-size: 9px; text-align: center; padding: 4px; background: rgba(155,89,182,0.1); border-radius: 4px; }
+        .enemy-info-skill { color: var(--elem-shadow); font-size: 9px; text-align: center; padding: 4px; background: rgba(170,68,221,0.12); border-radius: 4px; }
         .enemy-info-close { position: absolute; top: 8px; right: 10px; cursor: pointer; color: var(--text-dim); font-size: 14px; }
         .enemy-info-close:hover { color: var(--text); }
 
         .enemy-info-panel {
             position: fixed; z-index: 999;
-            background: rgba(20,16,30,0.95); border: 1px solid var(--gold);
+            background: rgba(20,16,30,0.95); border: 1px solid var(--gold-light);
             border-radius: 8px; padding: 10px 12px; min-width: 160px;
             pointer-events: none; box-shadow: 0 4px 20px rgba(0,0,0,0.6);
             font-family: 'Press Start 2P'; animation: fadeIn 0.2s ease;
@@ -760,8 +769,8 @@
         .battle-overlay-text {
             font-family: 'Press Start 2P';
             font-size: 28px;
-            color: #ffd700;
-            text-shadow: 0 0 20px rgba(255,215,0,0.8), 2px 2px 0 #000;
+            color: var(--gold);
+            text-shadow: 0 0 20px rgba(255,217,64,0.8), 2px 2px 0 #000;
             animation: overlayPulse 1.5s ease-in-out forwards;
         }
         @keyframes overlayPulse {
@@ -771,9 +780,9 @@
             80% { opacity: 1; }
             100% { opacity: 0; transform: scale(1.1); }
         }
-        .battle-overlay-wave { color: #88ccff; text-shadow: 0 0 15px rgba(136,204,255,0.8), 2px 2px 0 #000; }
-        .battle-overlay-clear { color: #ffd700; font-size: 32px; text-shadow: 0 0 30px rgba(255,215,0,1), 2px 2px 0 #000; }
-        .battle-overlay-defeat { color: #ff4444; text-shadow: 0 0 20px rgba(255,68,68,0.8), 2px 2px 0 #000; }
+        .battle-overlay-wave { color: var(--elem-water); text-shadow: 0 0 15px rgba(51,170,255,0.8), 2px 2px 0 #000; }
+        .battle-overlay-clear { color: var(--gold-light); font-size: 32px; text-shadow: 0 0 30px rgba(255,229,102,1), 2px 2px 0 #000; }
+        .battle-overlay-defeat { color: var(--red); text-shadow: 0 0 20px rgba(255,68,102,0.8), 2px 2px 0 #000; }
 
         /* Stage clear / Defeat modals */
         .battle-result-modal {
@@ -785,11 +794,11 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .battle-result-content {
             background: linear-gradient(180deg, #1a1a2e, #0f0f23);
-            border: 3px solid var(--gold);
+            border: 3px solid var(--gold-light);
             padding: 32px;
             text-align: center;
             max-width: 360px;
-            box-shadow: var(--shadow-pixel), 0 0 40px rgba(255,215,0,0.15);
+            box-shadow: var(--shadow-pixel), 0 0 40px rgba(255,217,64,0.15);
             animation: resultPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         @keyframes resultPop {
@@ -813,8 +822,8 @@
             position: absolute;
             font-family: 'Press Start 2P';
             font-size: 10px;
-            color: #ffd700;
-            text-shadow: 1px 1px 0 #000, 0 0 8px rgba(255,215,0,0.6);
+            color: var(--gold);
+            text-shadow: 1px 1px 0 #000, 0 0 8px rgba(255,217,64,0.6);
             pointer-events: none;
             z-index: 55;
             animation: skillPop 2s ease-out forwards;
@@ -856,11 +865,11 @@
         }
         .hero-detail.show { display: block; }
         .hero-detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-        .hero-detail-name { font-family: 'Press Start 2P'; font-size: 11px; color: var(--gold); }
+        .hero-detail-name { font-family: 'Press Start 2P'; font-size: 11px; color: var(--gold-light); }
         .hero-detail-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; font-size: 10px; margin-bottom: 12px; }
         .stat-row { display: flex; justify-content: space-between; padding: 4px 8px; background: rgba(255,215,0,0.04); border: 1px solid rgba(255,215,0,0.08); }
         .stat-label { color: var(--text-dim); }
-        .stat-value { color: var(--gold); font-weight: 700; }
+        .stat-value { color: var(--gold-light); font-weight: 700; }
         .hero-detail-skill { background: rgba(155,89,182,0.08); border: 1px solid rgba(155,89,182,0.2); padding: 8px 12px; margin-bottom: 12px; }
         .hero-detail-actions { display: flex; gap: 8px; }
 
@@ -894,8 +903,8 @@
         .fg-sprite { image-rendering: pixelated; }
         .fg-hero-name { font-family: 'Press Start 2P'; font-size: 8px; margin-top: 2px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 72px; }
         .fg-hero-stats { font-size: 9px; color: var(--text-dim); display: flex; gap: 6px; }
-        .fg-stat-hp { color: #44cc44; }
-        .fg-stat-atk { color: #ff6644; }
+        .fg-stat-hp { color: var(--green-accent); }
+        .fg-stat-atk { color: var(--elem-fire); }
         .fg-remove-btn {
             position: absolute; top: 1px; right: 1px;
             font-size: 7px; color: #ff4444; cursor: pointer;
