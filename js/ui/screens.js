@@ -68,11 +68,8 @@ const UI = {
         // LAYOUT FIX: Before battle, make screen fullscreen with scrollable preview + sticky controls
         try {
             if (typeof BattleEngine === 'undefined' || !BattleEngine.isRunning) {
-                const battleScreen = document.getElementById('screen-battle');
-                if (battleScreen) {
-                    // Use CSS class instead of inline styles so navigation can clear them
-                    battleScreen.classList.add('battle-active');
-                }
+                // Do NOT add battle-active here — that class is ONLY for during battle
+                // battle-active hides deck preview, controls, etc. which we need in the menu
                 // Hide canvas wrap + canvas container
                 const canvasWrap = document.querySelector('#screen-battle .battle-canvas-wrap');
                 if (canvasWrap) canvasWrap.style.display = 'none';
