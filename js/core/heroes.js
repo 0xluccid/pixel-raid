@@ -62,7 +62,7 @@ const CARD_TEMPLATES = [
     { name: "Queen's Guard",    cls: 'warrior', type: 'tank', element: 'water',
       image: 'assets/heroes/queens_guard.png',  hp: 140, atk: 14, def: 26, spd: 7,  crit: 5,
       lore: 'Sworn to protect the crown with his life, the Queen\'s Guard stands as an immovable wall. His spear has never failed to hold the line.',
-      skill: { name: 'Royal Guard', type: 'shield', val: 35, chance: 0.3 } },
+      skill: { name: 'Royal Guard', type: 'heal', val: 25, chance: 0.3 } },
 
     // ===== MAGES =====
     { name: 'Arch Mage',        cls: 'mage', type: 'mage', element: 'lightning',
@@ -112,11 +112,11 @@ const CARD_TEMPLATES = [
     { name: 'Golem',            cls: 'healer', type: 'tank', element: 'nature',
       image: 'assets/heroes/golem.png',  hp: 130, atk: 14, def: 22, spd: 6,  crit: 5,
       lore: 'An ancient construct powered by a life crystal. The Golem absorbs damage meant for allies, channeling stored energy into protective shields.',
-      skill: { name: 'Stone Guard', type: 'shield', val: 30, chance: 0.3 } },
+      skill: { name: 'Stone Guard', type: 'heal', val: 20, chance: 0.3 } },
     { name: 'Stone Golem',      cls: 'healer', type: 'tank', element: 'nature',
       image: 'assets/heroes/stone_golem.png',  hp: 140, atk: 12, def: 24, spd: 5,  crit: 5,
       lore: 'A massive guardian carved from enchanted bedrock. Its runic core pulses with ancient protective magic, shielding all who stand behind it.',
-      skill: { name: 'Runic Shield', type: 'shield', val: 40, chance: 0.25 } },
+      skill: { name: 'Runic Blessing', type: 'heal', val: 30, chance: 0.25 } },
 
     // ===== ASSASSINS =====
     { name: 'Slime Lord',       cls: 'assassin', type: 'assassin', element: 'nature',
@@ -309,10 +309,10 @@ const SKILL_CARD_TEMPLATES = [
     { id: 'lightning', name: 'Lightning', type: 'attack', rarity: 'rare', manaCost: 3, effect: { type: 'damage', value: 40, target: 'enemy' }, description: 'Deal 40 damage to enemy', pixelColor: '#ffff44' },
     { id: 'shadow_bolt', name: 'Shadow Bolt', type: 'attack', rarity: 'rare', manaCost: 2, effect: { type: 'damage', value: 30, target: 'enemy', bonus: { type: 'assassin', mult: 1.5 } }, description: 'Deal 30 dmg. 1.5x if hero is Assassin', pixelColor: '#8844aa' },
     { id: 'meteor', name: 'Meteor', type: 'attack', rarity: 'epic', manaCost: 5, effect: { type: 'damage', value: 65, target: 'enemy' }, description: 'Deal 65 massive damage', pixelColor: '#ff2200' },
-    { id: 'shield_up', name: 'Shield Up', type: 'defense', rarity: 'common', manaCost: 1, effect: { type: 'shield', value: 20, target: 'self', duration: 2 }, description: 'Gain 20 shield for 2 turns', pixelColor: '#4488ff' },
-    { id: 'iron_wall', name: 'Iron Wall', type: 'defense', rarity: 'rare', manaCost: 3, effect: { type: 'shield', value: 50, target: 'self', duration: 2 }, description: 'Gain 50 shield for 2 turns', pixelColor: '#6688cc' },
-    { id: 'mana_shield', name: 'Mana Shield', type: 'defense', rarity: 'rare', manaCost: 2, effect: { type: 'shield', value: 35, target: 'self', duration: 3 }, description: 'Gain 35 shield for 3 turns', pixelColor: '#4444ff' },
-    { id: 'divine_protection', name: 'Divine Guard', type: 'defense', rarity: 'epic', manaCost: 4, effect: { type: 'shield', value: 80, target: 'self', duration: 1 }, description: 'Gain 80 massive shield for 1 turn', pixelColor: '#ffdd44' },
+
+
+
+
     { id: 'battle_cry', name: 'Battle Cry', type: 'buff', rarity: 'common', manaCost: 1, effect: { type: 'buff', stat: 'atk', value: 0.25, target: 'self', duration: 3 }, description: '+25% ATK for 3 turns', pixelColor: '#ff8844' },
     { id: 'haste', name: 'Haste', type: 'buff', rarity: 'common', manaCost: 1, effect: { type: 'buff', stat: 'spd', value: 0.30, target: 'self', duration: 2 }, description: '+30% SPD for 2 turns', pixelColor: '#44ddff' },
     { id: 'focus', name: 'Focus', type: 'buff', rarity: 'rare', manaCost: 2, effect: { type: 'buff', stat: 'crit', value: 20, target: 'self', duration: 3, flat: true }, description: '+20 flat CRIT for 3 turns', pixelColor: '#44ffaa' },
