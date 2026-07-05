@@ -92,6 +92,25 @@ const UI = {
             }
         }
 
+        // Before battle: make screen fill viewport, deck preview scrollable, controls fixed at bottom
+        if (typeof BattleEngine === 'undefined' || !BattleEngine.isRunning) {
+            const battleScreen = document.getElementById('screen-battle');
+            if (battleScreen) {
+                battleScreen.style.cssText = 'display:flex !important;flex-direction:column;position:fixed !important;top:0;left:0;right:0;bottom:0;max-width:none !important;overflow:hidden;z-index:99;background:#0a0a1e;';
+            }
+            const preview = document.getElementById('battle-deck-preview');
+            if (preview) {
+                preview.style.cssText = 'flex:1;overflow-y:auto;min-height:0;padding:16px;';
+            }
+            const controls = document.querySelector('.battle-controls');
+            if (controls) {
+                controls.style.cssText = 'flex-shrink:0;padding:12px 16px;background:rgba(10,10,30,0.95);border-top:2px solid rgba(0,229,255,0.3);justify-content:center;z-index:10;';
+            }
+            // Hide nav bar inside battle screen
+            const nav = battleScreen ? battleScreen.querySelector('.game-nav') : null;
+            if (nav) nav.style.display = 'none';
+        }
+
         // NOTE: renderArenaPreview() removed — renderBattleDeckPreview() handles pre-battle display
     },
 
