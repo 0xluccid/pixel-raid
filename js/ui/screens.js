@@ -70,7 +70,8 @@ const UI = {
             if (typeof BattleEngine === 'undefined' || !BattleEngine.isRunning) {
                 const battleScreen = document.getElementById('screen-battle');
                 if (battleScreen) {
-                    battleScreen.style.cssText = 'display:flex !important;flex-direction:column;position:fixed !important;top:0;left:0;right:0;bottom:0;max-width:none !important;overflow:hidden;z-index:99;background:#0a0a1e;';
+                    // Use CSS class instead of inline styles so navigation can clear them
+                    battleScreen.classList.add('battle-active');
                 }
                 // Hide canvas wrap + canvas container
                 const canvasWrap = document.querySelector('#screen-battle .battle-canvas-wrap');
