@@ -11,9 +11,9 @@ const PhaserBattleScene = new Phaser.Class({
     initialize: function PhaserBattleScene() {
         Phaser.Scene.call(this, { key: 'PhaserBattleScene' });
 
-        // Layout constants
-        this.W = 800;
-        this.H = 500;
+        // Layout constants (HD — match bridge.js W/H)
+        this.W = 1280;
+        this.H = 720;
 
         // Game object refs
         this.bgGraphics = null;
@@ -97,96 +97,99 @@ const PhaserBattleScene = new Phaser.Class({
         this.gridGraphics.setDepth(2);
         this._drawGrid();
 
-        // === ZONE OUTLINES (depth 3) ===
+        // === ZONE OUTLINES (depth 3) — scaled for HD 1280x720 ===
         var zones = this.add.graphics();
         zones.setDepth(3);
+        var SX = 1.6, SY = 1.44; // scale from 800x500 → 1280x720
 
-        // Monster Zone 1 (enemy): x=124, y=32, w=100, h=140 — red pulsing
+        // Monster Zone 1 (enemy) — red pulsing
         this._enemyMZ1Gfx = this.add.graphics();
         this._enemyMZ1Gfx.setDepth(3);
-        this._drawMZZone(this._enemyMZ1Gfx, 124, 32, 100, 140, 0xE94560, true);
+        this._drawMZZone(this._enemyMZ1Gfx, 124*SX, 32*SY, 100*SX, 140*SY, 0xE94560, true);
         // "M" label
-        this.add.text(174, 102, 'M', {
+        this.add.text(174*SX, 102*SY, 'M', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '10px',
+            fontSize: '14px',
             color: '#E94560',
             fontStyle: 'bold'
         }).setOrigin(0.5, 0.5).setDepth(3);
 
-        // Monster Zone 2 (enemy): x=228, y=32, w=100, h=140 — teal standby
+        // Monster Zone 2 (enemy) — teal standby
         zones.lineStyle(2, 0x4ECDC4, 0.5);
-        zones.strokeRect(228, 32, 100, 140);
+        zones.strokeRect(228*SX, 32*SY, 100*SX, 140*SY);
 
-        // Monster Zone 1 (player): x=128, y=188, w=100, h=140 — teal pulse
+        // Monster Zone 1 (player) — teal pulse
         zones.lineStyle(2, 0x4ECDC4, 0.7);
-        zones.strokeRect(128, 188, 100, 140);
+        zones.strokeRect(128*SX, 188*SY, 100*SX, 140*SY);
 
-        // Monster Zone 2 (player): x=232, y=188, w=100, h=140 — teal standby
+        // Monster Zone 2 (player) — teal standby
         zones.lineStyle(2, 0x4ECDC4, 0.5);
-        zones.strokeRect(232, 188, 100, 140);
+        zones.strokeRect(232*SX, 188*SY, 100*SX, 140*SY);
 
-        // Skill/Trap Zone 1 (enemy): x=362, y=136, w=96, h=65
+        // Skill/Trap Zone 1 (enemy)
         zones.lineStyle(1, 0x9B59B6, 0.6);
-        zones.strokeRect(362, 136, 96, 65);
+        zones.strokeRect(362*SX, 136*SY, 96*SX, 65*SY);
 
-        // Skill/Trap Zone 2 (player): x=366, y=204, w=96, h=68
+        // Skill/Trap Zone 2 (player)
         zones.lineStyle(1, 0x9B59B6, 0.6);
-        zones.strokeRect(366, 204, 96, 68);
+        zones.strokeRect(366*SX, 204*SY, 96*SX, 68*SY);
 
-        // GY + Field Slot (enemy): x=462, y=32, w=94, h=140
+        // GY + Field Slot (enemy)
         zones.lineStyle(1, 0x4ECDC4, 0.4);
-        zones.strokeRect(462, 32, 94, 140);
+        zones.strokeRect(462*SX, 32*SY, 94*SX, 140*SY);
         zones.lineStyle(1, 0x4ECDC4, 0.3);
         zones.beginPath();
-        zones.moveTo(462, 102);
-        zones.lineTo(556, 102);
+        zones.moveTo(462*SX, 102*SY);
+        zones.lineTo(556*SX, 102*SY);
         zones.strokePath();
         zones.lineStyle(1, 0x4ECDC4, 0.2);
-        zones.strokeRect(467, 110, 84, 12);
-        zones.strokeRect(467, 124, 84, 12);
-        zones.strokeRect(467, 138, 84, 12);
+        zones.strokeRect(467*SX, 110*SY, 84*SX, 12*SY);
+        zones.strokeRect(467*SX, 124*SY, 84*SX, 12*SY);
+        zones.strokeRect(467*SX, 138*SY, 84*SX, 12*SY);
 
-        // GY + Field Slot (player): x=466, y=188, w=94, h=140
+        // GY + Field Slot (player)
         zones.lineStyle(1, 0x4ECDC4, 0.4);
-        zones.strokeRect(466, 188, 94, 140);
+        zones.strokeRect(466*SX, 188*SY, 94*SX, 140*SY);
         zones.lineStyle(1, 0x4ECDC4, 0.3);
         zones.beginPath();
-        zones.moveTo(466, 258);
-        zones.lineTo(560, 258);
+        zones.moveTo(466*SX, 258*SY);
+        zones.lineTo(560*SX, 258*SY);
         zones.strokePath();
         zones.lineStyle(1, 0x4ECDC4, 0.2);
-        zones.strokeRect(471, 266, 84, 12);
-        zones.strokeRect(471, 280, 84, 12);
-        zones.strokeRect(471, 294, 84, 12);
+        zones.strokeRect(471*SX, 266*SY, 84*SX, 12*SY);
+        zones.strokeRect(471*SX, 280*SY, 84*SX, 12*SY);
+        zones.strokeRect(471*SX, 294*SY, 84*SX, 12*SY);
 
-        // === PHASE BAR (y=0, h=28, full width) ===
+        // === PHASE BAR (top, h=40, full width) ===
         var phaseBar = this.add.graphics();
         phaseBar.setDepth(4);
         phaseBar.fillStyle(0x0a0a20, 1);
-        phaseBar.fillRect(0, 0, W, 28);
+        phaseBar.fillRect(0, 0, W, 40);
         var tabLabels = ['DRAW', 'ENERGY', 'PLAY', 'ARRANGE', 'BATTLE', 'RESULT'];
+        var tabW = (W - 80) / tabLabels.length;
         for (var p = 0; p < tabLabels.length; p++) {
-            var tabX = 40 + p * 95;
+            var tabX = 40 + p * tabW;
             phaseBar.lineStyle(1, 0x4ECDC4, 0.3);
-            phaseBar.strokeRect(tabX, 3, 88, 22);
-            this.add.text(tabX + 44, 14, tabLabels[p], {
+            phaseBar.strokeRect(tabX, 4, tabW - 4, 32);
+            this.add.text(tabX + (tabW - 4) / 2, 20, tabLabels[p], {
                 fontFamily: '"Press Start 2P", monospace',
-                fontSize: '6px',
+                fontSize: '9px',
                 color: '#888899'
             }).setOrigin(0.5, 0.5).setDepth(4);
         }
-        this.add.text(14, 14, '⚙', {
-            fontSize: '12px',
+        this.add.text(20, 20, '⚙', {
+            fontSize: '16px',
             color: '#666688'
         }).setOrigin(0.5, 0.5).setDepth(4);
-        this.add.text(W - 30, 14, '◆', {
-            fontSize: '10px',
+        this.add.text(W - 30, 20, '◆', {
+            fontSize: '14px',
             color: '#ffd700'
         }).setOrigin(0.5, 0.5).setDepth(4);
 
-        // === CARD HAND ZONE BACKGROUND (y=340) ===
+        // === CARD HAND ZONE BACKGROUND (bottom 38%) ===
+        var handY = H * 0.62;
         phaseBar.fillStyle(0x0a0a20, 1);
-        phaseBar.fillRect(0, 340, W, H - 340);
+        phaseBar.fillRect(0, handY, W, H - handY);
 
         // === CENTER DIVIDER ===
         this._createCenterDivider();
@@ -215,110 +218,103 @@ const PhaserBattleScene = new Phaser.Class({
     _drawBackground: function () {
         var g = this.bgGraphics;
         var W = this.W;
+        var H = this.H;
         g.clear();
 
-        // Arena floor: x=60, y=28, w=680, h=310 — #131328
+        // Arena floor — scale to HD canvas (1280x720)
+        var floorX = W * 0.07;     // ~90
+        var floorY = H * 0.05;     // ~36
+        var floorW = W * 0.86;     // ~1100
+        var floorH = H * 0.62;     // ~446
         g.fillStyle(0x131328, 1);
-        g.fillRect(60, 28, 680, 310);
+        g.fillRect(floorX, floorY, floorW, floorH);
 
-        // Horizontal thin lines every ~63px (stone slab effect, #1a1a3a, opacity 0.3)
+        // Subtle gradient overlay for depth
+        for (var i = 0; i < 20; i++) {
+            g.fillStyle(0x0d0d20, 0.03);
+            g.fillRect(floorX, floorY + (floorH / 20) * i, floorW, floorH / 20);
+        }
+
+        // Horizontal thin lines (stone slab effect)
+        var lineSpacing = floorH / 7;
         g.lineStyle(1, 0x1a1a3a, 0.3);
-        for (var ly = 91; ly < 338; ly += 63) {
+        for (var ly = floorY + lineSpacing; ly < floorY + floorH; ly += lineSpacing) {
             g.beginPath();
-            g.moveTo(60, ly);
-            g.lineTo(740, ly);
+            g.moveTo(floorX, ly);
+            g.lineTo(floorX + floorW, ly);
             g.strokePath();
         }
 
-        // Vertical thin lines at x=170, 340, 510 (column dividers)
+        // Vertical column dividers (4 columns)
+        var colW = floorW / 4;
         g.lineStyle(1, 0x1a1a3a, 0.3);
-        g.beginPath();
-        g.moveTo(170, 28);
-        g.lineTo(170, 338);
-        g.strokePath();
-        g.beginPath();
-        g.moveTo(340, 28);
-        g.lineTo(340, 338);
-        g.strokePath();
-        g.beginPath();
-        g.moveTo(510, 28);
-        g.lineTo(510, 338);
-        g.strokePath();
+        for (var c = 1; c < 4; c++) {
+            var vx = floorX + colW * c;
+            g.beginPath();
+            g.moveTo(vx, floorY);
+            g.lineTo(vx, floorY + floorH);
+            g.strokePath();
+        }
 
-        // Random crack/retak paths for aged stone texture (2-3 cracks)
+        // Crack textures for aged stone feel
         g.lineStyle(1, 0x1a1a3a, 0.4);
-        g.beginPath();
-        g.moveTo(200, 100);
-        g.lineTo(215, 115);
-        g.lineTo(210, 135);
-        g.lineTo(225, 150);
-        g.strokePath();
-        g.beginPath();
-        g.moveTo(450, 200);
-        g.lineTo(460, 215);
-        g.lineTo(455, 235);
-        g.lineTo(470, 250);
-        g.lineTo(465, 260);
-        g.strokePath();
-        g.beginPath();
-        g.moveTo(600, 80);
-        g.lineTo(615, 95);
-        g.lineTo(610, 110);
-        g.strokePath();
+        var cracks = [
+            [{ x: 0.25, y: 0.2 }, { x: 0.28, y: 0.28 }, { x: 0.27, y: 0.38 }, { x: 0.30, y: 0.45 }],
+            [{ x: 0.55, y: 0.45 }, { x: 0.57, y: 0.52 }, { x: 0.56, y: 0.62 }, { x: 0.59, y: 0.70 }],
+            [{ x: 0.75, y: 0.18 }, { x: 0.77, y: 0.25 }, { x: 0.76, y: 0.32 }]
+        ];
+        cracks.forEach(function(crack) {
+            g.beginPath();
+            g.moveTo(floorX + floorW * crack[0].x, floorY + floorH * crack[0].y);
+            for (var p = 1; p < crack.length; p++) {
+                g.lineTo(floorX + floorW * crack[p].x, floorY + floorH * crack[p].y);
+            }
+            g.strokePath();
+        });
     },
 
     _drawGrid: function () {
         var g = this.gridGraphics;
         g.clear();
 
-        var cx = 400;
-        var cy = 183;
+        var cx = this.W * 0.5;   // 640
+        var cy = this.H * 0.37;  // ~266
 
-        // Outer ring: teal (#4ECDC4), radiusX=130, radiusY=80
-        g.lineStyle(1, 0x4ECDC4, 0.25);
-        g.strokeEllipse(cx, cy, 260, 160);
+        // Outer ring: teal — scaled for HD
+        g.lineStyle(2, 0x4ECDC4, 0.3);
+        g.strokeEllipse(cx, cy, 420, 260);
 
-        // Mid ring: gold (#FFD700), radiusX=90, radiusY=55
-        g.lineStyle(1, 0xFFD700, 0.2);
-        g.strokeEllipse(cx, cy, 180, 110);
+        // Mid ring: gold
+        g.lineStyle(1.5, 0xFFD700, 0.25);
+        g.strokeEllipse(cx, cy, 290, 180);
 
-        // Inner ring: purple (#9B59B6), radiusX=50, radiusY=30 — separate for pulse
+        // Inner ring: purple — separate for pulse animation
         this._innerRing = this.add.graphics();
         this._innerRing.setDepth(2);
-        this._innerRing.lineStyle(1, 0x9B59B6, 0.3);
-        this._innerRing.strokeEllipse(0, 0, 100, 60);
+        this._innerRing.lineStyle(2, 0x9B59B6, 0.35);
+        this._innerRing.strokeEllipse(0, 0, 160, 100);
         this._innerRing.setPosition(cx, cy);
 
-        // 4 spoke lines from center to cardinal directions (to outer ring)
-        g.lineStyle(1, 0x4ECDC4, 0.15);
-        g.beginPath();
-        g.moveTo(cx, cy);
-        g.lineTo(cx, cy - 80);
-        g.strokePath();
-        g.beginPath();
-        g.moveTo(cx, cy);
-        g.lineTo(cx, cy + 80);
-        g.strokePath();
-        g.beginPath();
-        g.moveTo(cx, cy);
-        g.lineTo(cx - 130, cy);
-        g.strokePath();
-        g.beginPath();
-        g.moveTo(cx, cy);
-        g.lineTo(cx + 130, cy);
-        g.strokePath();
-
-        // Rune dots 6x6px at each spoke endpoint (alternating teal/gold)
-        var runeColors = [0x4ECDC4, 0xFFD700, 0x4ECDC4, 0xFFD700];
-        var runePositions = [
-            { x: cx, y: cy - 80 },
-            { x: cx, y: cy + 80 },
-            { x: cx - 130, y: cy },
-            { x: cx + 130, y: cy }
+        // 4 spoke lines from center to cardinal directions
+        g.lineStyle(1.5, 0x4ECDC4, 0.2);
+        var spokes = [
+            { dx: 0, dy: -130 },
+            { dx: 0, dy: 130 },
+            { dx: -210, dy: 0 },
+            { dx: 210, dy: 0 }
         ];
-        for (var r = 0; r < runePositions.length; r++) {
-            g.fillStyle(runeColors[r], 0.5);
-            g.fillRect(runePositions[r].x - 3, runePositions[r].y - 3, 6, 6);
+        spokes.forEach(function(s) {
+            g.beginPath();
+            g.moveTo(cx, cy);
+            g.lineTo(cx + s.dx, cy + s.dy);
+            g.strokePath();
+        });
+
+        // Rune dots at spoke endpoints (alternating teal/gold)
+        var runeColors = [0x4ECDC4, 0xFFD700, 0x4ECDC4, 0xFFD700];
+        for (var r = 0; r < spokes.length; r++) {
+            g.fillStyle(runeColors[r], 0.6);
+            g.fillRect(cx + spokes[r].x - 4, cy + spokes[r].y - 4, 8, 8);
         }
     },
 
@@ -327,15 +323,15 @@ const PhaserBattleScene = new Phaser.Class({
         var panelW, panelH, panelX, panelY;
 
         if (side === 'player') {
-            panelX = 560;
-            panelY = 188;
-            panelW = 120;
-            panelH = 150;
+            panelX = this.W - 200;   // 1080
+            panelY = this.H * 0.25;  // ~180
+            panelW = 180;
+            panelH = 220;
         } else {
-            panelX = 0;
-            panelY = 28;
-            panelW = 120;
-            panelH = 152;
+            panelX = 20;
+            panelY = this.H * 0.05;  // ~36
+            panelW = 180;
+            panelH = 220;
         }
 
         var container = this.add.container(panelX, panelY);
@@ -373,13 +369,13 @@ const PhaserBattleScene = new Phaser.Class({
         // Hero art area
         var artBg = this.add.graphics();
         artBg.fillStyle(0x0f3460, 1);
-        artBg.fillRect(10, 5, panelW - 20, 85);
+        artBg.fillRect(12, 8, panelW - 24, 110);
         artBg.lineStyle(1, 0xc8a832, 0.5);
-        artBg.strokeRect(10, 5, panelW - 20, 85);
+        artBg.strokeRect(12, 8, panelW - 24, 110);
         container.add(artBg);
 
-        var spriteText = this.add.text(panelW / 2, 48, '⚔', {
-            fontSize: '20px',
+        var spriteText = this.add.text(panelW / 2, 62, '⚔', {
+            fontSize: '28px',
             color: side === 'player' ? 'rgba(78,205,196,0.3)' : 'rgba(233,69,96,0.3)'
         });
         spriteText.setOrigin(0.5, 0.5);
@@ -387,9 +383,9 @@ const PhaserBattleScene = new Phaser.Class({
         this.heroSprite[side] = spriteText;
 
         // Name text
-        var nameText = this.add.text(10, 93, 'Hero', {
+        var nameText = this.add.text(12, 124, 'Hero', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '7px',
+            fontSize: '10px',
             color: '#ffffff',
             fontStyle: 'bold'
         });
@@ -397,17 +393,17 @@ const PhaserBattleScene = new Phaser.Class({
         this.heroNameText[side] = nameText;
 
         // Class + Level
-        var classText = this.add.text(10, 105, '', {
+        var classText = this.add.text(12, 138, '', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '5px',
+            fontSize: '8px',
             color: '#aaaaaa'
         });
         container.add(classText);
         this.heroClassText[side] = classText;
 
-        var levelText = this.add.text(panelW - 10, 105, '', {
+        var levelText = this.add.text(panelW - 12, 138, '', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '5px',
+            fontSize: '8px',
             color: '#ffd700'
         });
         levelText.setOrigin(1, 0);
@@ -415,10 +411,10 @@ const PhaserBattleScene = new Phaser.Class({
         this.heroLevelText[side] = levelText;
 
         // HP bar
-        var hpBarX = 10;
-        var hpBarY = 115;
-        var hpBarW = panelW - 20;
-        var hpBarH = 14;
+        var hpBarX = 12;
+        var hpBarY = 150;
+        var hpBarW = panelW - 24;
+        var hpBarH = 18;
 
         var hpBg = this.add.graphics();
         hpBg.fillStyle(0x000000, 0.9);
@@ -439,7 +435,7 @@ const PhaserBattleScene = new Phaser.Class({
 
         var hpText = this.add.text(hpBarX + hpBarW / 2, hpBarY + hpBarH / 2, 'HP 0 / 0', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '6px',
+            fontSize: '9px',
             color: '#ffffff',
             fontStyle: 'bold'
         });
@@ -448,17 +444,17 @@ const PhaserBattleScene = new Phaser.Class({
         this.heroHPText[side] = hpText;
 
         // ATK / DEF stats row
-        var statY = hpBarY + hpBarH + 3;
+        var statY = hpBarY + hpBarH + 4;
         var halfW = (hpBarW - 4) / 2;
 
         var atkBg = this.add.graphics();
         atkBg.fillStyle(0xE94560, 0.5);
-        atkBg.fillRect(hpBarX, statY, halfW, 10);
+        atkBg.fillRect(hpBarX, statY, halfW, 14);
         container.add(atkBg);
 
-        var atkText = this.add.text(hpBarX + 3, statY + 1, '⚔ 0', {
+        var atkText = this.add.text(hpBarX + 4, statY + 2, '⚔ 0', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '6px',
+            fontSize: '8px',
             color: '#ffffff',
             fontStyle: 'bold'
         });
@@ -466,12 +462,12 @@ const PhaserBattleScene = new Phaser.Class({
 
         var defBg = this.add.graphics();
         defBg.fillStyle(0x4488ff, 0.5);
-        defBg.fillRect(hpBarX + halfW + 4, statY, halfW, 10);
+        defBg.fillRect(hpBarX + halfW + 4, statY, halfW, 14);
         container.add(defBg);
 
-        var defText = this.add.text(hpBarX + halfW + 7, statY + 1, '🛡 0', {
+        var defText = this.add.text(hpBarX + halfW + 8, statY + 2, '🛡 0', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '6px',
+            fontSize: '8px',
             color: '#ffffff',
             fontStyle: 'bold'
         });
@@ -588,45 +584,49 @@ const PhaserBattleScene = new Phaser.Class({
 
     _createCenterDivider: function () {
         var W = this.W;
-        var dividerY = 181;
+        var H = this.H;
+        var dividerY = Math.round(H * 0.36); // ~260 for 720h
 
-        // Gold line at y=181, full width, opacity 0.45
+        // Gold line at center divider, full width
         var line = this.add.graphics();
         line.setDepth(3);
         line.fillStyle(0xFFD700, 0.45);
-        line.fillRect(0, dividerY, W, 2);
+        line.fillRect(0, dividerY, W, 3);
 
-        // Node dots 6x6px at intervals (alternating gold and teal)
+        // Node dots at intervals (alternating gold and teal)
         var dotColors = [0xFFD700, 0x4ECDC4];
-        for (var d = 0; d < W; d += 60) {
-            var dotColor = dotColors[(d / 60) % 2 === 0 ? 0 : 1];
+        for (var d = 0; d < W; d += 80) {
+            var dotColor = dotColors[(d / 80) % 2 === 0 ? 0 : 1];
             line.fillStyle(dotColor, 0.6);
-            line.fillRect(d + 30, dividerY - 2, 6, 6);
+            line.fillRect(d + 40, dividerY - 3, 8, 8);
         }
 
-        // VS Emblem: x=305, y=168, w=70, h=32
-        var vsContainer = this.add.container(305, 168);
+        // VS Emblem — centered
+        var vsW = 100, vsH = 44;
+        var vsX = W / 2 - vsW / 2;
+        var vsY = dividerY - vsH / 2 - 4;
+        var vsContainer = this.add.container(vsX, vsY);
         vsContainer.setDepth(6);
 
         var vsBg = this.add.graphics();
         vsBg.fillStyle(0x0a0a20, 0.95);
-        vsBg.fillRect(0, 0, 70, 32);
+        vsBg.fillRect(0, 0, vsW, vsH);
         vsBg.lineStyle(2, 0xFFD700, 0.8);
-        vsBg.strokeRect(0, 0, 70, 32);
+        vsBg.strokeRect(0, 0, vsW, vsH);
         vsBg.lineStyle(1, 0x4ECDC4, 0.5);
-        vsBg.strokeRect(3, 3, 64, 26);
-        // Corner dots 4x4px
+        vsBg.strokeRect(3, 3, vsW - 6, vsH - 6);
+        // Corner dots
         vsBg.fillStyle(0xFFD700, 0.7);
-        vsBg.fillRect(-2, -2, 4, 4);
-        vsBg.fillRect(68, -2, 4, 4);
-        vsBg.fillRect(-2, 30, 4, 4);
-        vsBg.fillRect(68, 30, 4, 4);
+        vsBg.fillRect(-2, -2, 5, 5);
+        vsBg.fillRect(vsW - 3, -2, 5, 5);
+        vsBg.fillRect(-2, vsH - 3, 5, 5);
+        vsBg.fillRect(vsW - 3, vsH - 3, 5, 5);
         vsContainer.add(vsBg);
 
         // "V" (gold)
-        this.vsText = this.add.text(18, 16, 'V', {
+        this.vsText = this.add.text(vsW * 0.33, vsH / 2, 'V', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '14px',
+            fontSize: '18px',
             color: '#FFD700',
             fontStyle: 'bold'
         });
@@ -634,9 +634,9 @@ const PhaserBattleScene = new Phaser.Class({
         vsContainer.add(this.vsText);
 
         // "S" (teal)
-        var sText = this.add.text(52, 16, 'S', {
+        var sText = this.add.text(vsW * 0.67, vsH / 2, 'S', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '14px',
+            fontSize: '18px',
             color: '#4ECDC4',
             fontStyle: 'bold'
         });
@@ -647,33 +647,33 @@ const PhaserBattleScene = new Phaser.Class({
         this._vsEmblemGlow = this.add.graphics();
         this._vsEmblemGlow.setDepth(5);
         this._vsEmblemGlow.lineStyle(2, 0x4ECDC4, 0.3);
-        this._vsEmblemGlow.strokeRect(303, 166, 74, 36);
+        this._vsEmblemGlow.strokeRect(vsX - 2, vsY - 2, vsW + 4, vsH + 4);
 
         // Turn text (left of center on divider)
-        this.turnText = this.add.text(W / 2 - 80, dividerY + 1, 'Turn 0', {
+        this.turnText = this.add.text(W / 2 - 120, dividerY + 1, 'Turn 0', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '7px',
+            fontSize: '10px',
             color: 'rgba(255,255,255,0.6)'
         });
         this.turnText.setOrigin(0, 0.5);
         this.turnText.setDepth(6);
 
         // Phase text (right of center on divider)
-        this.phaseText = this.add.text(W / 2 + 80, dividerY + 1, '', {
+        this.phaseText = this.add.text(W / 2 + 120, dividerY + 1, '', {
             fontFamily: '"Press Start 2P", monospace',
-            fontSize: '7px',
+            fontSize: '10px',
             color: 'rgba(78,205,196,0.8)'
         });
         this.phaseText.setOrigin(0, 0.5);
         this.phaseText.setDepth(6);
 
-        // Energy Bar: x=470, y=176, w=84, h=14
+        // Energy Bar
         var energyBar = this.add.graphics();
         energyBar.setDepth(4);
         energyBar.fillStyle(0xFFD700, 0.3);
-        energyBar.fillRect(470, 176, 84, 14);
+        energyBar.fillRect(W * 0.55, dividerY - 10, 120, 18);
         energyBar.lineStyle(1, 0xFFD700, 0.5);
-        energyBar.strokeRect(470, 176, 84, 14);
+        energyBar.strokeRect(W * 0.55, dividerY - 10, 120, 18);
     },
 
     updateCenterDivider: function (state) {
@@ -685,16 +685,15 @@ const PhaserBattleScene = new Phaser.Class({
     },
 
     _createSkillSlots: function () {
-        // 2 monster zones per side for board units
-        // Player: MZ1 at x=128, y=188; MZ2 at x=232, y=188
-        // Enemy: MZ1 at x=124, y=32; MZ2 at x=228, y=32
+        // 2 monster zones per side for board units — scaled for HD
+        var SX = 1.6, SY = 1.44;
         var playerMZs = [
-            { x: 128, y: 188, w: 100, h: 140 },
-            { x: 232, y: 188, w: 100, h: 140 }
+            { x: 128*SX, y: 188*SY, w: 100*SX, h: 140*SY },
+            { x: 232*SX, y: 188*SY, w: 100*SX, h: 140*SY }
         ];
         var enemyMZs = [
-            { x: 124, y: 32, w: 100, h: 140 },
-            { x: 228, y: 32, w: 100, h: 140 }
+            { x: 124*SX, y: 32*SY, w: 100*SX, h: 140*SY },
+            { x: 228*SX, y: 32*SY, w: 100*SX, h: 140*SY }
         ];
 
         for (var i = 0; i < enemyMZs.length; i++) {
@@ -789,8 +788,8 @@ const PhaserBattleScene = new Phaser.Class({
         var canvas = document.getElementById('battle-canvas-container');
         if (!canvas) return;
         var rect = canvas.getBoundingClientRect();
-        var scaleX = rect.width / 800;
-        var scaleY = rect.height / 500;
+        var scaleX = rect.width / this.W;
+        var scaleY = rect.height / this.H;
 
         if (!this._tooltipEl) {
             this._tooltipEl = document.createElement('div');
@@ -879,8 +878,8 @@ const PhaserBattleScene = new Phaser.Class({
 
             // Unit emoji sprite
             var emoji = unit.emoji || '⚔️';
-            var unitText = scene.add.text(cx, cy - 8, emoji, {
-                fontSize: '38px'
+            var unitText = scene.add.text(cx, cy - 10, emoji, {
+                fontSize: '48px'
             });
             unitText.setOrigin(0.5, 0.5);
             scene._boardUnitTexts[side].push(unitText);
@@ -947,9 +946,9 @@ const PhaserBattleScene = new Phaser.Class({
 
             // Unit name (truncated)
             var nameStr = (unit.name || '?').substring(0, 10);
-            var nameText = scene.add.text(cx, cy + 20, nameStr, {
+            var nameText = scene.add.text(cx, cy + 24, nameStr, {
                 fontFamily: '"Press Start 2P", monospace',
-                fontSize: '8px',
+                fontSize: '9px',
                 color: '#ffd700'
             });
             nameText.setOrigin(0.5, 0.5);
@@ -957,10 +956,10 @@ const PhaserBattleScene = new Phaser.Class({
 
             // HP bar mini
             var hpPct = unit.hp / (unit.maxHp || 1);
-            var barW = slot.w - 12;
-            var barH = 7;
-            var barX = slot.x + 6;
-            var barY = slot.y + slot.h - 12;
+            var barW = slot.w - 16;
+            var barH = 10;
+            var barX = slot.x + 8;
+            var barY = slot.y + slot.h - 16;
 
             var hpBg = scene.add.graphics();
             hpBg.fillStyle(0x330000, 0.8);
@@ -974,9 +973,9 @@ const PhaserBattleScene = new Phaser.Class({
             scene._boardUnitTexts[side].push(hpFill);
 
             // ATK badge
-            var atkText = scene.add.text(slot.x + 6, slot.y + 4, '⚔' + (unit.atk || 0), {
+            var atkText = scene.add.text(slot.x + 8, slot.y + 6, '⚔' + (unit.atk || 0), {
                 fontFamily: '"Press Start 2P", monospace',
-                fontSize: '8px',
+                fontSize: '9px',
                 color: '#ff6644'
             });
             atkText.setOrigin(0, 0);

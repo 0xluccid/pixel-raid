@@ -244,9 +244,19 @@
             overflow: hidden;
         }
         #screen-battle.battle-active #battle-deck-preview,
-        #screen-battle.battle-active .battle-controls,
-        #screen-battle.battle-active .battle-action-row,
-        #screen-battle.battle-active .hero-power-area { display: none !important; }
+        #screen-battle.battle-active .battle-controls { display: none !important; }
+        /* Action row: visible during battle for phase buttons */
+        #screen-battle.battle-active .battle-action-row {
+            display: flex !important; justify-content: center; align-items: center;
+            gap: 8px; padding: 8px 12px; flex-shrink: 0;
+            background: rgba(10,10,26,0.95); border-top: 1px solid rgba(255,215,0,0.3);
+            z-index: 60; min-height: 44px;
+        }
+        /* Hero power button area */
+        #screen-battle.battle-active .hero-power-area {
+            display: flex !important; justify-content: center; align-items: center;
+            padding: 4px 8px; flex-shrink: 0;
+        }
         /* Arena: flex-grow to fill all space above cards */
         #screen-battle.battle-active .battle-canvas-wrap { 
             position: relative; flex: 1 1 0; overflow: hidden;

@@ -29,8 +29,8 @@ var BattlePhaser = {
             return;
         }
 
-        var W = 800;
-        var H = 500;
+        var W = 1280;
+        var H = 720;
 
         var config = {
             type: Phaser.AUTO,
@@ -44,9 +44,9 @@ var BattlePhaser = {
                 autoCenter: Phaser.Scale.CENTER_BOTH
             },
             render: {
-                pixelArt: true,
-                antialias: false,
-                roundPixels: true
+                pixelArt: false,
+                antialias: true,
+                roundPixels: false
             },
             audio: { noAudio: true },
             banner: false
