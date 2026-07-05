@@ -143,26 +143,31 @@ var BattlePhaser = {
             hideEls[i].style.display = 'none';
         }
 
-        // Resize
+        // Resize with retry to handle layout timing
         var self = this;
         requestAnimationFrame(function () {
             self._resizeToViewport();
+            // Retry after 100ms in case layout wasn't computed yet
+            setTimeout(function () { self._resizeToViewport(); }, 100);
+            setTimeout(function () { self._resizeToViewport(); }, 300);
         });
 
+        // Keep canvas edge-to-edge on window resize
+        this._resizeHandler = function () { self._resizeToViewport(); };
+        window.addEventListener('resize', this._resizeHandler);
+
+        // Style canvas to fill container edge-to-edge (NO objectFit — causes letterboxing)
         var styleCanvas = function () {
-            // Target the canvas inside battle-canvas-container specifically
             var c = document.querySelector('#battle-canvas-container canvas') || (self._game && self._game.canvas);
             if (c) {
                 c.style.width = '100%';
                 c.style.height = '100%';
                 c.style.display = 'block';
-                c.style.objectFit = 'contain';
-                c.style.margin = '0 auto';
+                c.style.margin = '0';
             }
         };
         setTimeout(styleCanvas, 50);
         setTimeout(styleCanvas, 200);
-        setTimeout(styleCanvas, 500);
 
         // Position bonus overlay labels (HTML, not Phaser — more reliable)
         this._createBonusOverlays();
@@ -241,6 +246,12 @@ var BattlePhaser = {
         if (!this._scene) { if (onComplete) onComplete(); return; }
         this._transitioning = true;
 
+        // Remove window resize handler
+        if (this._resizeHandler) {
+            window.removeEventListener('resize', this._resizeHandler);
+            this._resizeHandler = null;
+        }
+
         this._scene.showTransition('exit', function () {
             this._active = false;
             this._transitioning = false;
@@ -307,33 +318,36 @@ var BattlePhaser = {
     // ===== RESIZE =====
     _resizeToViewport: function () {
         if (!this._game) return;
-        // Target the canvas inside battle-canvas-container specifically
-        var canvas = document.querySelector('#battle-canvas-container canvas') || this._game.canvas;
         var container = document.getElementById(this._containerId);
+        var canvas = document.querySelector('#battle-canvas-container canvas') || this._game.canvas;
+
+        // Force canvas to fill container edge-to-edge — NO objectFit
         if (canvas) {
             canvas.style.width = '100%';
             canvas.style.height = '100%';
-            canvas.style.objectFit = 'contain';
             canvas.style.display = 'block';
-            canvas.style.margin = '0 auto';
+            canvas.style.margin = '0';
         }
-        // Resize Phaser to match the actual container dimensions
+
+        // Resize Phaser engine to match the container's actual pixel dimensions
         if (container && container.offsetWidth > 0 && container.offsetHeight > 0) {
             var cW = container.offsetWidth;
             var cH = container.offsetHeight;
             this._game.scale.resize(cW, cH);
             this._game.scale.setGameSize(cW, cH);
-        }
-        // Scale camera to fill the new canvas size
-        if (this._scene && this._scene.cameras && this._scene.cameras.main) {
-            var cam = this._scene.cameras.main;
-            var W = this._scene.W || 800;
-            var H = this._scene.H || 500;
-            var zoomX = cam.width / W;
-            var zoomY = cam.height / H;
-            var zoom = Math.min(zoomX, zoomY); // Use min to fit within bounds
-            cam.setZoom(zoom);
-            cam.centerOn(W / 2, H / 2);
+
+            // Set camera to FILL mode (use max zoom to cover entire canvas)
+            if (this._scene && this._scene.cameras && this._scene.cameras.main) {
+                var cam = this._scene.cameras.main;
+                var W = this._scene.W || 1280;
+                var H = this._scene.H || 720;
+                var zoomX = cW / W;
+                var zoomY = cH / H;
+                // Use MAX zoom to fill — no black bars, content may crop at edges
+                var zoom = Math.max(zoomX, zoomY);
+                cam.setZoom(zoom);
+                cam.centerOn(W / 2, H / 2);
+            }
         }
     },
 
