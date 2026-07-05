@@ -16,12 +16,17 @@
     --el-shadow: #9933ff;
     --el-shadow-glow: rgba(153, 51, 255, 0.3);
     --el-gold: #ffd700;
+    --accent-cyan: #00e5ff;
+    --accent-cyan-glow: rgba(0, 229, 255, 0.3);
+    --accent-pink: #ff44aa;
+    --accent-pink-glow: rgba(255, 68, 170, 0.3);
     --panel-bg: rgba(20, 20, 40, 0.8);
     --panel-border: rgba(255, 255, 255, 0.1);
     --panel-inner: rgba(255, 255, 255, 0.03);
     --text-primary: #e8e8f0;
     --text-dim: #8888aa;
-    --bg-body: #0f0f23;
+    --bg-body: #07071a;
+    --bg-void: #07071a;
 }
 
 /* ===== BODY BACKGROUND ===== */
@@ -31,7 +36,7 @@ body {
 
 /* ===== PIXEL BORDER — clean 2px ===== */
 .pixel-border {
-    background: rgba(15, 15, 35, 0.9);
+    background: rgba(12, 12, 30, 0.9);
     border: 2px solid var(--panel-border);
     border-radius: 4px;
     position: relative;
@@ -40,20 +45,22 @@ body {
 /* ===== RPG PANEL — modern dark ===== */
 .rpg-panel {
     background: var(--panel-bg);
-    border: 2px solid var(--panel-border);
+    border: 2px solid rgba(0, 229, 255, 0.15);
     border-radius: 6px;
     padding: 16px;
     position: relative;
     backdrop-filter: blur(8px);
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.03), inset 0 0 30px rgba(0, 0, 0, 0.2);
 }
 .rpg-panel::before {
     content: '►';
     position: absolute;
     top: 8px;
     left: 8px;
-    color: var(--el-gold);
+    color: var(--accent-cyan);
     font-size: 10px;
     animation: cursor-blink 1s ease infinite;
+    text-shadow: 0 0 6px var(--accent-cyan-glow);
 }
 @keyframes cursor-blink {
     50% { opacity: 0; }
@@ -61,9 +68,9 @@ body {
 
 /* ===== GAME HEADER — colorful gradient ===== */
 .game-header {
-    background: linear-gradient(135deg, #1a1a3e 0%, #0f0f23 50%, #1a1a3e 100%) !important;
-    border-bottom: 3px solid var(--el-gold) !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+    background: linear-gradient(135deg, #12123a 0%, #07071a 50%, #12123a 100%) !important;
+    border-bottom: 3px solid var(--accent-cyan) !important;
+    box-shadow: 0 4px 24px rgba(0, 229, 255, 0.15), 0 0 60px rgba(0, 229, 255, 0.05) !important;
     padding: 12px 20px 10px !important;
     position: relative;
 }
@@ -74,13 +81,13 @@ body {
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(90deg, var(--el-fire), var(--el-water), var(--el-nature), var(--el-lightning), var(--el-shadow));
+    background: linear-gradient(90deg, var(--el-fire), var(--accent-pink), var(--el-shadow), var(--accent-cyan), var(--el-nature), var(--el-lightning));
 }
 
 /* ===== NAV BUTTONS — each tab its own color ===== */
 .nav-btn {
     font-family: 'Press Start 2P', monospace !important;
-    background: rgba(20, 20, 50, 0.6) !important;
+    background: rgba(12, 12, 35, 0.6) !important;
     border: 2px solid rgba(255, 255, 255, 0.1) !important;
     border-bottom: none !important;
     padding: 10px 20px !important;
@@ -90,7 +97,7 @@ body {
     border-radius: 6px 6px 0 0;
 }
 .nav-btn:hover {
-    background: rgba(30, 30, 70, 0.8) !important;
+    background: rgba(25, 25, 60, 0.8) !important;
     transform: translateY(-2px) !important;
 }
 
@@ -99,8 +106,8 @@ body {
 .nav-btn[data-tab="battle"].active {
     border-color: var(--el-fire) !important;
     color: var(--el-fire) !important;
-    background: rgba(255, 51, 51, 0.08) !important;
-    box-shadow: 0 -2px 12px var(--el-fire-glow) !important;
+    background: rgba(255, 51, 51, 0.1) !important;
+    box-shadow: 0 -2px 16px var(--el-fire-glow), 0 0 8px var(--el-fire-glow) !important;
 }
 
 /* Heroes tab — Water blue */
@@ -108,8 +115,8 @@ body {
 .nav-btn[data-tab="heroes"].active {
     border-color: var(--el-water) !important;
     color: var(--el-water) !important;
-    background: rgba(51, 102, 255, 0.08) !important;
-    box-shadow: 0 -2px 12px var(--el-water-glow) !important;
+    background: rgba(51, 102, 255, 0.1) !important;
+    box-shadow: 0 -2px 16px var(--el-water-glow), 0 0 8px var(--el-water-glow) !important;
 }
 
 /* Strategy tab — Shadow purple */
@@ -117,8 +124,8 @@ body {
 .nav-btn[data-tab="strategy"].active {
     border-color: var(--el-shadow) !important;
     color: var(--el-shadow) !important;
-    background: rgba(153, 51, 255, 0.08) !important;
-    box-shadow: 0 -2px 12px var(--el-shadow-glow) !important;
+    background: rgba(153, 51, 255, 0.1) !important;
+    box-shadow: 0 -2px 16px var(--el-shadow-glow), 0 0 8px var(--el-shadow-glow) !important;
 }
 
 /* Inventory tab — Nature green */
@@ -126,8 +133,8 @@ body {
 .nav-btn[data-tab="inventory"].active {
     border-color: var(--el-nature) !important;
     color: var(--el-nature) !important;
-    background: rgba(51, 204, 51, 0.08) !important;
-    box-shadow: 0 -2px 12px var(--el-nature-glow) !important;
+    background: rgba(51, 204, 51, 0.1) !important;
+    box-shadow: 0 -2px 16px var(--el-nature-glow), 0 0 8px var(--el-nature-glow) !important;
 }
 
 /* Shop tab — Lightning gold */
@@ -135,17 +142,17 @@ body {
 .nav-btn[data-tab="shop"].active {
     border-color: var(--el-lightning) !important;
     color: var(--el-lightning) !important;
-    background: rgba(255, 204, 0, 0.08) !important;
-    box-shadow: 0 -2px 12px var(--el-lightning-glow) !important;
+    background: rgba(255, 204, 0, 0.1) !important;
+    box-shadow: 0 -2px 16px var(--el-lightning-glow), 0 0 8px var(--el-lightning-glow) !important;
 }
 
 /* Market tab — Cyan */
 .nav-btn[data-tab="market"]:hover,
 .nav-btn[data-tab="market"].active {
-    border-color: #00e5ff !important;
-    color: #00e5ff !important;
-    background: rgba(0, 229, 255, 0.08) !important;
-    box-shadow: 0 -2px 12px rgba(0, 229, 255, 0.3) !important;
+    border-color: var(--accent-cyan) !important;
+    color: var(--accent-cyan) !important;
+    background: rgba(0, 229, 255, 0.1) !important;
+    box-shadow: 0 -2px 16px var(--accent-cyan-glow), 0 0 8px var(--accent-cyan-glow) !important;
 }
 
 .nav-btn.active {
@@ -159,7 +166,7 @@ body {
 
 /* ===== CARDS — element-colored ===== */
 .card {
-    background: linear-gradient(180deg, rgba(25, 25, 55, 0.9), rgba(15, 15, 40, 0.95)) !important;
+    background: linear-gradient(180deg, rgba(18, 18, 48, 0.9), rgba(10, 10, 30, 0.95)) !important;
     border: 2px solid var(--panel-border) !important;
     border-radius: 8px !important;
     box-shadow:
@@ -182,25 +189,25 @@ body {
     opacity: 0.6;
 }
 
-/* Element-specific card colors */
-.card[data-element="fire"] { border-color: rgba(255, 51, 51, 0.4) !important; color: var(--el-fire); }
-.card[data-element="water"] { border-color: rgba(51, 102, 255, 0.4) !important; color: var(--el-water); }
-.card[data-element="nature"] { border-color: rgba(51, 204, 51, 0.4) !important; color: var(--el-nature); }
-.card[data-element="lightning"] { border-color: rgba(255, 204, 0, 0.4) !important; color: var(--el-lightning); }
-.card[data-element="shadow"] { border-color: rgba(153, 51, 255, 0.4) !important; color: var(--el-shadow); }
+/* Element-specific card colors — neon border glow */
+.card[data-element="fire"] { border-color: rgba(255, 51, 51, 0.5) !important; color: var(--el-fire); box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.02), 0 0 8px rgba(255, 51, 51, 0.15) !important; }
+.card[data-element="water"] { border-color: rgba(51, 102, 255, 0.5) !important; color: var(--el-water); box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.02), 0 0 8px rgba(51, 102, 255, 0.15) !important; }
+.card[data-element="nature"] { border-color: rgba(51, 204, 51, 0.5) !important; color: var(--el-nature); box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.02), 0 0 8px rgba(51, 204, 51, 0.15) !important; }
+.card[data-element="lightning"] { border-color: rgba(255, 204, 0, 0.5) !important; color: var(--el-lightning); box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.02), 0 0 8px rgba(255, 204, 0, 0.15) !important; }
+.card[data-element="shadow"] { border-color: rgba(153, 51, 255, 0.5) !important; color: var(--el-shadow); box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3), inset 0 0 20px rgba(255, 255, 255, 0.02), 0 0 8px rgba(153, 51, 255, 0.15) !important; }
 
-.card[data-element="fire"]:hover { box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.3), 0 0 20px var(--el-fire-glow) !important; }
-.card[data-element="water"]:hover { box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.3), 0 0 20px var(--el-water-glow) !important; }
-.card[data-element="nature"]:hover { box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.3), 0 0 20px var(--el-nature-glow) !important; }
-.card[data-element="lightning"]:hover { box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.3), 0 0 20px var(--el-lightning-glow) !important; }
-.card[data-element="shadow"]:hover { box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.3), 0 0 20px var(--el-shadow-glow) !important; }
+.card[data-element="fire"]:hover { box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.3), 0 0 24px var(--el-fire-glow), 0 0 48px rgba(255, 51, 51, 0.1) !important; }
+.card[data-element="water"]:hover { box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.3), 0 0 24px var(--el-water-glow), 0 0 48px rgba(51, 102, 255, 0.1) !important; }
+.card[data-element="nature"]:hover { box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.3), 0 0 24px var(--el-nature-glow), 0 0 48px rgba(51, 204, 51, 0.1) !important; }
+.card[data-element="lightning"]:hover { box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.3), 0 0 24px var(--el-lightning-glow), 0 0 48px rgba(255, 204, 0, 0.1) !important; }
+.card[data-element="shadow"]:hover { box-shadow: 4px 6px 0 rgba(0, 0, 0, 0.3), 0 0 24px var(--el-shadow-glow), 0 0 48px rgba(153, 51, 255, 0.1) !important; }
 
 /* Generic card hover (no element) */
 .card:hover {
     transform: translateY(-4px) !important;
     box-shadow:
         6px 8px 0 rgba(0, 0, 0, 0.4),
-        0 0 16px rgba(255, 255, 255, 0.05) !important;
+        0 0 20px rgba(0, 229, 255, 0.08) !important;
 }
 .card:active {
     transform: translateY(-1px) scale(0.98) !important;
@@ -211,8 +218,8 @@ body {
 .card.common { border-color: rgba(150, 150, 170, 0.5) !important; color: #99aacc; }
 .card.rare { border-color: rgba(68, 136, 255, 0.5) !important; color: #4488ff; }
 .card.epic { border-color: rgba(155, 89, 182, 0.5) !important; color: #9b59b6; }
-.card.legendary { border-color: rgba(255, 165, 0, 0.5) !important; color: #ffa500; }
-.card.mythic { border-color: rgba(233, 69, 96, 0.5) !important; color: #e94560; }
+.card.legendary { border-color: rgba(255, 165, 0, 0.6) !important; color: #ffa500; }
+.card.mythic { border-color: rgba(233, 69, 96, 0.6) !important; color: #e94560; }
 
 /* Card rarity glow — pulsing effect */
 .card.legendary::after,
@@ -228,6 +235,74 @@ body {
 @keyframes rarity-pulse {
     0%, 100% { opacity: 0; }
     50% { opacity: 0.5; }
+}
+
+/* ===== CARD HAND ZONE ===== */
+.card-hand {
+    background: linear-gradient(180deg, rgba(7, 7, 26, 0.95), rgba(12, 12, 35, 0.98));
+    border-top: 2px solid rgba(0, 229, 255, 0.2);
+    position: relative;
+}
+.card-hand::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-pink), var(--accent-cyan), transparent);
+    opacity: 0.6;
+}
+
+/* Battle active card hand container — neon glow zone */
+.battle-active #card-hand-container {
+    background: linear-gradient(180deg, rgba(7, 7, 26, 0.95), rgba(12, 12, 35, 0.98));
+    border-top: 2px solid rgba(0, 229, 255, 0.25);
+    box-shadow: 0 -4px 30px rgba(0, 229, 255, 0.06), inset 0 1px 0 rgba(0, 229, 255, 0.1);
+    position: relative;
+}
+.battle-active #card-hand-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 5%, var(--accent-cyan) 30%, var(--accent-pink) 50%, var(--accent-cyan) 70%, transparent 95%);
+    opacity: 0.7;
+}
+
+/* ===== PHASE BAR ===== */
+.phase-bar {
+    display: flex;
+    gap: 4px;
+    padding: 6px 10px;
+    background: rgba(7, 7, 26, 0.95);
+    border: 1px solid rgba(0, 229, 255, 0.12);
+    border-radius: 6px;
+    box-shadow: 0 0 12px rgba(0, 229, 255, 0.03);
+}
+.phase-tab {
+    font-family: 'Press Start 2P', monospace !important;
+    font-size: 7px !important;
+    padding: 6px 14px !important;
+    background: rgba(15, 15, 40, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 4px !important;
+    color: var(--text-dim) !important;
+    transition: all 0.2s ease;
+}
+.phase-tab.active {
+    background: rgba(0, 229, 255, 0.12) !important;
+    border-color: var(--accent-cyan) !important;
+    color: var(--accent-cyan) !important;
+    box-shadow: 0 0 12px var(--accent-cyan-glow), 0 0 24px rgba(0, 229, 255, 0.08) !important;
+    text-shadow: 0 0 8px var(--accent-cyan-glow);
+}
+.phase-tab:hover:not(.active) {
+    background: rgba(25, 25, 60, 0.7) !important;
+    border-color: rgba(0, 229, 255, 0.2) !important;
+    color: var(--text-primary) !important;
 }
 
 /* ===== BUTTONS ===== */
@@ -276,27 +351,28 @@ body {
 }
 
 .btn-secondary {
-    background: rgba(25, 25, 60, 0.8) !important;
-    color: var(--el-gold) !important;
-    border: 2px solid var(--el-gold) !important;
+    background: rgba(18, 18, 50, 0.8) !important;
+    color: var(--accent-cyan) !important;
+    border: 2px solid var(--accent-cyan) !important;
     border-radius: 4px !important;
-    box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3) !important;
+    box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3), 0 0 8px rgba(0, 229, 255, 0.08) !important;
 }
 .btn-secondary:hover {
-    background: rgba(35, 35, 80, 0.9) !important;
-    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.4), 0 0 12px var(--el-lightning-glow) !important;
+    background: rgba(25, 25, 65, 0.9) !important;
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.4), 0 0 16px var(--accent-cyan-glow) !important;
     transform: translateY(-1px) !important;
 }
 
 /* ===== BATTLE CANVAS — clean frame ===== */
 .battle-canvas-wrap {
     position: relative;
-    border: 3px solid rgba(255, 255, 255, 0.15) !important;
+    border: 2px solid rgba(0, 229, 255, 0.2) !important;
     border-radius: 8px !important;
-    background: #080818;
+    background: #050514;
     box-shadow:
         inset 0 0 40px rgba(0, 0, 0, 0.5),
-        0 0 0 1px rgba(255, 255, 255, 0.05),
+        0 0 0 1px rgba(0, 229, 255, 0.05),
+        0 0 20px rgba(0, 229, 255, 0.04),
         0 8px 32px rgba(0, 0, 0, 0.5) !important;
     overflow: hidden;
 }
@@ -310,8 +386,8 @@ body {
 /* ===== PROGRESS BARS — colorful fills ===== */
 .progress-bar {
     height: 12px !important;
-    background: rgba(10, 10, 30, 0.9) !important;
-    border: 2px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgba(7, 7, 20, 0.9) !important;
+    border: 2px solid rgba(0, 229, 255, 0.1) !important;
     border-radius: 4px !important;
     overflow: hidden;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
@@ -326,26 +402,30 @@ body {
 /* HP bar — green */
 .hp-bar .progress-fill {
     background: linear-gradient(90deg, #33cc33, #66ff66) !important;
+    box-shadow: 0 0 8px rgba(51, 204, 51, 0.3);
 }
 
 /* MP bar — blue */
 .mp-bar .progress-fill {
     background: linear-gradient(90deg, #3366ff, #66aaff) !important;
+    box-shadow: 0 0 8px rgba(51, 102, 255, 0.3);
 }
 
 /* XP bar — purple */
 .xp-bar .progress-fill {
     background: linear-gradient(90deg, #9933ff, #cc66ff) !important;
+    box-shadow: 0 0 8px rgba(153, 51, 255, 0.3);
 }
 
 /* ===== HERO DETAIL PANEL ===== */
 .hero-detail {
-    background: linear-gradient(145deg, rgba(20, 20, 50, 0.9), rgba(12, 12, 35, 0.95)) !important;
-    border: 2px solid rgba(255, 255, 255, 0.1) !important;
+    background: linear-gradient(145deg, rgba(14, 14, 40, 0.9), rgba(8, 8, 26, 0.95)) !important;
+    border: 2px solid rgba(0, 229, 255, 0.2) !important;
     border-radius: 8px !important;
     box-shadow:
         4px 4px 0 rgba(0, 0, 0, 0.3),
-        inset 0 0 30px rgba(255, 255, 255, 0.02) !important;
+        inset 0 0 30px rgba(255, 255, 255, 0.02),
+        0 0 16px rgba(0, 229, 255, 0.04) !important;
     position: relative;
     overflow: hidden;
 }
@@ -359,22 +439,22 @@ body {
     height: 4px;
     background: linear-gradient(90deg, var(--el-fire), var(--el-water), var(--el-nature), var(--el-lightning), var(--el-shadow));
 }
-.hero-detail[data-element="fire"] { border-color: rgba(255, 51, 51, 0.3) !important; }
+.hero-detail[data-element="fire"] { border-color: rgba(255, 51, 51, 0.4) !important; box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3), inset 0 0 30px rgba(255, 255, 255, 0.02), 0 0 16px rgba(255, 51, 51, 0.08) !important; }
 .hero-detail[data-element="fire"]::before { background: var(--el-fire); }
-.hero-detail[data-element="water"] { border-color: rgba(51, 102, 255, 0.3) !important; }
+.hero-detail[data-element="water"] { border-color: rgba(51, 102, 255, 0.4) !important; box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3), inset 0 0 30px rgba(255, 255, 255, 0.02), 0 0 16px rgba(51, 102, 255, 0.08) !important; }
 .hero-detail[data-element="water"]::before { background: var(--el-water); }
-.hero-detail[data-element="nature"] { border-color: rgba(51, 204, 51, 0.3) !important; }
+.hero-detail[data-element="nature"] { border-color: rgba(51, 204, 51, 0.4) !important; box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3), inset 0 0 30px rgba(255, 255, 255, 0.02), 0 0 16px rgba(51, 204, 51, 0.08) !important; }
 .hero-detail[data-element="nature"]::before { background: var(--el-nature); }
-.hero-detail[data-element="lightning"] { border-color: rgba(255, 204, 0, 0.3) !important; }
+.hero-detail[data-element="lightning"] { border-color: rgba(255, 204, 0, 0.4) !important; box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3), inset 0 0 30px rgba(255, 255, 255, 0.02), 0 0 16px rgba(255, 204, 0, 0.08) !important; }
 .hero-detail[data-element="lightning"]::before { background: var(--el-lightning); }
-.hero-detail[data-element="shadow"] { border-color: rgba(153, 51, 255, 0.3) !important; }
+.hero-detail[data-element="shadow"] { border-color: rgba(153, 51, 255, 0.4) !important; box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3), inset 0 0 30px rgba(255, 255, 255, 0.02), 0 0 16px rgba(153, 51, 255, 0.08) !important; }
 .hero-detail[data-element="shadow"]::before { background: var(--el-shadow); }
 
 /* ===== STAT ROWS ===== */
 .stat-row {
-    background: rgba(15, 15, 40, 0.7) !important;
+    background: rgba(10, 10, 30, 0.7) !important;
     border: 1px solid rgba(255, 255, 255, 0.06) !important;
-    border-left: 3px solid var(--el-gold) !important;
+    border-left: 3px solid var(--accent-gold) !important;
     border-radius: 4px !important;
     padding: 6px 10px !important;
     font-family: 'Press Start 2P', monospace;
@@ -393,57 +473,58 @@ body {
 }
 .stat-value {
     color: var(--text-primary) !important;
-    text-shadow: 0 0 6px rgba(255, 255, 255, 0.1);
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
 }
 
 /* ===== FORMATION GRID ===== */
 .grid-cell {
-    background: rgba(15, 15, 40, 0.6) !important;
-    border: 2px dashed rgba(255, 255, 255, 0.12) !important;
+    background: rgba(10, 10, 30, 0.6) !important;
+    border: 2px dashed rgba(0, 229, 255, 0.1) !important;
     border-radius: 6px !important;
     box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.2) !important;
     transition: all 0.2s ease !important;
 }
 .grid-cell.occupied {
     border-style: solid !important;
-    border-color: rgba(255, 215, 0, 0.4) !important;
+    border-color: rgba(0, 229, 255, 0.35) !important;
     box-shadow:
-        inset 0 0 15px rgba(255, 215, 0, 0.03),
-        0 0 8px rgba(255, 215, 0, 0.08) !important;
+        inset 0 0 15px rgba(0, 229, 255, 0.04),
+        0 0 10px rgba(0, 229, 255, 0.08) !important;
 }
 .grid-cell.drag-over {
-    background: rgba(255, 215, 0, 0.1) !important;
-    border-color: var(--el-gold) !important;
+    background: rgba(0, 229, 255, 0.08) !important;
+    border-color: var(--accent-cyan) !important;
     box-shadow:
-        inset 0 0 20px rgba(255, 215, 0, 0.08),
-        0 0 16px rgba(255, 215, 0, 0.15) !important;
+        inset 0 0 20px rgba(0, 229, 255, 0.08),
+        0 0 16px rgba(0, 229, 255, 0.15) !important;
 }
 
 /* ===== SYNERGY TAGS ===== */
 .synergy-tag {
     font-family: 'Press Start 2P', monospace !important;
     font-size: 7px !important;
-    background: rgba(20, 20, 55, 0.8) !important;
-    border: 2px solid rgba(255, 255, 255, 0.15) !important;
+    background: rgba(14, 14, 45, 0.8) !important;
+    border: 2px solid rgba(0, 229, 255, 0.15) !important;
     border-radius: 4px !important;
     padding: 6px 12px !important;
     box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2) !important;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
-.synergy-tag[data-element="fire"] { border-color: rgba(255, 51, 51, 0.5) !important; color: var(--el-fire); }
-.synergy-tag[data-element="water"] { border-color: rgba(51, 102, 255, 0.5) !important; color: var(--el-water); }
-.synergy-tag[data-element="nature"] { border-color: rgba(51, 204, 51, 0.5) !important; color: var(--el-nature); }
-.synergy-tag[data-element="lightning"] { border-color: rgba(255, 204, 0, 0.5) !important; color: var(--el-lightning); }
-.synergy-tag[data-element="shadow"] { border-color: rgba(153, 51, 255, 0.5) !important; color: var(--el-shadow); }
+.synergy-tag[data-element="fire"] { border-color: rgba(255, 51, 51, 0.5) !important; color: var(--el-fire); box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2), 0 0 6px rgba(255, 51, 51, 0.1) !important; }
+.synergy-tag[data-element="water"] { border-color: rgba(51, 102, 255, 0.5) !important; color: var(--el-water); box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2), 0 0 6px rgba(51, 102, 255, 0.1) !important; }
+.synergy-tag[data-element="nature"] { border-color: rgba(51, 204, 51, 0.5) !important; color: var(--el-nature); box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2), 0 0 6px rgba(51, 204, 51, 0.1) !important; }
+.synergy-tag[data-element="lightning"] { border-color: rgba(255, 204, 0, 0.5) !important; color: var(--el-lightning); box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2), 0 0 6px rgba(255, 204, 0, 0.1) !important; }
+.synergy-tag[data-element="shadow"] { border-color: rgba(153, 51, 255, 0.5) !important; color: var(--el-shadow); box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2), 0 0 6px rgba(153, 51, 255, 0.1) !important; }
 
 /* ===== MODAL / DIALOG ===== */
 .battle-result-modal .battle-result-content {
-    background: linear-gradient(180deg, rgba(20, 20, 50, 0.98), rgba(12, 12, 30, 0.98)) !important;
-    border: 3px solid var(--el-gold) !important;
+    background: linear-gradient(180deg, rgba(14, 14, 40, 0.98), rgba(8, 8, 24, 0.98)) !important;
+    border: 3px solid var(--accent-gold) !important;
     border-radius: 10px !important;
     box-shadow:
         0 0 0 3px rgba(0, 0, 0, 0.5),
+        0 0 24px rgba(255, 215, 0, 0.1),
         0 12px 40px rgba(0, 0, 0, 0.7) !important;
     position: relative;
 }
@@ -453,7 +534,7 @@ body {
     top: -14px;
     left: 50%;
     transform: translateX(-50%);
-    background: var(--el-gold);
+    background: var(--accent-gold);
     color: #1a1a00;
     width: 28px;
     height: 28px;
@@ -462,9 +543,10 @@ body {
     justify-content: center;
     font-size: 16px;
     border-radius: 50%;
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.3);
 }
 .battle-result-title {
-    text-shadow: 2px 2px 0 #000, 0 0 10px rgba(255, 215, 0, 0.4) !important;
+    text-shadow: 2px 2px 0 #000, 0 0 12px rgba(255, 215, 0, 0.4) !important;
 }
 
 /* ===== PACK OPENING ===== */
@@ -473,21 +555,22 @@ body {
 }
 #pack-box {
     border-radius: 10px !important;
-    border: 3px solid var(--el-gold) !important;
+    border: 3px solid var(--accent-gold) !important;
     box-shadow:
         0 0 40px rgba(255, 215, 0, 0.2),
+        0 0 80px rgba(0, 229, 255, 0.06),
         inset 0 0 30px rgba(255, 215, 0, 0.05) !important;
 }
 
 /* ===== LOADING SCREEN ===== */
 #loading-screen {
-    background: #080818 !important;
+    background: var(--bg-void) !important;
     font-family: 'Press Start 2P', monospace;
 }
 #loading-screen .loading-text {
-    color: var(--el-nature);
+    color: var(--accent-cyan);
     font-size: 10px;
-    text-shadow: 0 0 8px var(--el-nature-glow);
+    text-shadow: 0 0 8px var(--accent-cyan-glow);
     animation: terminal-type 0.05s ease infinite;
 }
 @keyframes terminal-type {
@@ -499,8 +582,8 @@ body {
 .shop-tab {
     font-family: 'Press Start 2P', monospace !important;
     font-size: 7px !important;
-    background: rgba(20, 20, 55, 0.6) !important;
-    border: 2px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgba(14, 14, 45, 0.6) !important;
+    border: 2px solid rgba(0, 229, 255, 0.1) !important;
     border-radius: 4px !important;
     padding: 8px 16px !important;
     box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2) !important;
@@ -510,26 +593,27 @@ body {
 }
 .inv-tab.active,
 .shop-tab.active {
-    background: rgba(255, 215, 0, 0.1) !important;
-    border-color: rgba(255, 215, 0, 0.4) !important;
-    color: var(--el-gold) !important;
-    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2), 0 0 10px var(--el-lightning-glow) !important;
+    background: rgba(0, 229, 255, 0.08) !important;
+    border-color: rgba(0, 229, 255, 0.4) !important;
+    color: var(--accent-cyan) !important;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2), 0 0 10px var(--accent-cyan-glow) !important;
+    text-shadow: 0 0 6px var(--accent-cyan-glow);
 }
 
-/* ===== SCROLLBAR — clean ===== */
+/* ===== SCROLLBAR — neon accent ===== */
 ::-webkit-scrollbar {
     width: 10px !important;
 }
 ::-webkit-scrollbar-track {
-    background: rgba(10, 10, 25, 0.8) !important;
+    background: rgba(7, 7, 20, 0.8) !important;
 }
 ::-webkit-scrollbar-thumb {
-    background: rgba(60, 60, 100, 0.8) !important;
+    background: rgba(0, 229, 255, 0.2) !important;
     border-radius: 5px !important;
-    border: 2px solid rgba(10, 10, 25, 0.8);
+    border: 2px solid rgba(7, 7, 20, 0.8);
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(80, 80, 130, 0.9) !important;
+    background: rgba(0, 229, 255, 0.35) !important;
 }
 
 /* ===== FLOATING DAMAGE NUMBERS ===== */
@@ -558,30 +642,31 @@ body {
     border: 2px solid #8B5E00 !important;
     border-radius: 12px !important;
     padding: 3px 10px !important;
-    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3) !important;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3), 0 0 8px rgba(255, 215, 0, 0.15) !important;
     text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) !important;
 }
 
 /* ===== BENCH CARDS ===== */
 .bench-card {
-    background: rgba(20, 20, 50, 0.7) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    background: rgba(14, 14, 40, 0.7) !important;
+    border: 1px solid rgba(0, 229, 255, 0.08) !important;
     border-radius: 6px !important;
     box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2) !important;
     transition: all 0.2s ease;
 }
 .bench-card:hover {
-    border-color: rgba(255, 215, 0, 0.3) !important;
-    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2), 0 0 10px rgba(255, 215, 0, 0.08) !important;
+    border-color: rgba(0, 229, 255, 0.3) !important;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2), 0 0 12px rgba(0, 229, 255, 0.1) !important;
 }
 
 /* ===== TUTORIAL OVERLAY ===== */
 .tutorial-tooltip {
-    background: linear-gradient(180deg, rgba(20, 20, 50, 0.98), rgba(12, 12, 30, 0.98)) !important;
-    border: 3px solid var(--el-gold) !important;
+    background: linear-gradient(180deg, rgba(14, 14, 40, 0.98), rgba(8, 8, 24, 0.98)) !important;
+    border: 3px solid var(--accent-cyan) !important;
     border-radius: 8px !important;
     box-shadow:
         0 0 0 3px rgba(0, 0, 0, 0.5),
+        0 0 20px rgba(0, 229, 255, 0.08),
         0 12px 40px rgba(0, 0, 0, 0.7) !important;
 }
 
@@ -597,7 +682,7 @@ body {
 /* ===== SELECTION HOVER — colored glow ===== */
 .card:hover .card-name,
 .hero-detail:hover .hero-detail-name {
-    text-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
 }
 
 /* ===== AMBIENT ANIMATIONS ===== */
@@ -621,15 +706,15 @@ body {
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
 }
 .game-header .value {
-    color: var(--el-gold);
-    text-shadow: 0 0 6px var(--el-lightning-glow) !important;
+    color: var(--accent-cyan);
+    text-shadow: 0 0 8px var(--accent-cyan-glow) !important;
 }
 
 /* ===== SPEED CONTROLS ===== */
 .speed-btn {
     font-family: 'Press Start 2P', monospace !important;
-    background: rgba(20, 20, 55, 0.6) !important;
-    border: 2px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgba(14, 14, 45, 0.6) !important;
+    border: 2px solid rgba(0, 229, 255, 0.1) !important;
     border-radius: 4px !important;
     box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2) !important;
     padding: 6px 12px !important;
@@ -639,12 +724,13 @@ body {
     background: linear-gradient(180deg, #ffd700, #cc9900) !important;
     color: #1a1a00 !important;
     border-color: #8B5E00 !important;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.2), 0 0 10px rgba(255, 215, 0, 0.15) !important;
 }
 
 /* ===== CARD STAT BARS ===== */
 .card-stat-bar-bg {
-    background: rgba(10, 10, 25, 0.8) !important;
-    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    background: rgba(7, 7, 20, 0.8) !important;
+    border: 1px solid rgba(0, 229, 255, 0.06) !important;
     height: 6px !important;
     border-radius: 3px !important;
 }
@@ -676,9 +762,10 @@ body {
     font-family: 'Press Start 2P', monospace;
     font-size: 7px;
     line-height: 2;
-    background: rgba(8, 8, 24, 0.9);
-    border: 2px solid rgba(255, 255, 255, 0.08);
+    background: rgba(5, 5, 18, 0.9);
+    border: 2px solid rgba(0, 229, 255, 0.1);
     border-radius: 6px;
     padding: 8px;
-    color: var(--el-nature);
+    color: var(--accent-cyan);
+    box-shadow: 0 0 12px rgba(0, 229, 255, 0.03);
 }
