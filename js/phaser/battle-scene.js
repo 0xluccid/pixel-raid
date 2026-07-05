@@ -104,40 +104,7 @@ const PhaserBattleScene = new Phaser.Class({
         this.gridGraphics.setDepth(2);
         this._drawGrid();
 
-        // === THIN PHASE BAR (24px at very top) ===
-        var phaseBar = this.add.graphics();
-        phaseBar.setDepth(10);
-        phaseBar.fillStyle(0x060614, 1);
-        phaseBar.fillRect(0, 0, W, 24);
-        phaseBar.lineStyle(1, 0x00e5ff, 0.3);
-        phaseBar.beginPath();
-        phaseBar.moveTo(0, 24);
-        phaseBar.lineTo(W, 24);
-        phaseBar.strokePath();
-
-        // Minimal phase labels
-        var tabLabels = ['DRAW', 'ENERGY', 'PLAY', 'ARRANGE', 'BATTLE', 'RESULT'];
-        var tabW = (W - 160) / tabLabels.length;
-        for (var p = 0; p < tabLabels.length; p++) {
-            var tabX = 80 + p * tabW;
-            this.add.text(tabX + tabW / 2, 12, tabLabels[p], {
-                fontFamily: '"Press Start 2P", monospace',
-                fontSize: '7px',
-                color: '#2a4060'
-            }).setOrigin(0.5, 0.5).setDepth(10);
-        }
-        // Animation toggle (left)
-        this.add.text(20, 12, 'ON', {
-            fontFamily: '"Press Start 2P", monospace',
-            fontSize: '7px',
-            color: '#00e5ff'
-        }).setOrigin(0.5, 0.5).setDepth(10);
-        // Speed toggle (right)
-        this.add.text(W - 20, 12, '1x', {
-            fontFamily: '"Press Start 2P", monospace',
-            fontSize: '7px',
-            color: '#ffcc00'
-        }).setOrigin(0.5, 0.5).setDepth(10);
+        // Phase bar is handled by DOM overlay (#battle-phase-bar)
 
         // === CENTER DIVIDER (VS emblem — large, at top zone) ===
         this._createCenterDivider();
