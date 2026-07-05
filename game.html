@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js?v=fix32"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js?v=fix33"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
     <title>PIXEL RAID — Play</title>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -247,27 +247,35 @@
         #screen-battle.battle-active .battle-controls,
         #screen-battle.battle-active .battle-action-row,
         #screen-battle.battle-active .hero-power-area { display: none !important; }
+        /* Arena: flex-grow to fill all space above cards */
         #screen-battle.battle-active .battle-canvas-wrap { 
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            flex: none; overflow: hidden; border: none !important; border-radius: 0 !important; box-shadow: none !important; 
+            position: relative; flex: 1 1 0; overflow: hidden;
+            border: none !important; border-radius: 0 !important; box-shadow: none !important;
+            min-height: 0;
         }
         #screen-battle.battle-active .battle-canvas-wrap::before,
         #screen-battle.battle-active .battle-canvas-wrap::after { display: none !important; }
         #screen-battle.battle-active #battle-canvas-container { 
             width: 100%; height: 100%; display: block; overflow: hidden; 
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+            position: relative; 
         }
         #screen-battle.battle-active #battle-canvas-container canvas { 
-            width: 100% !important; height: 100% !important; object-fit: fill !important; 
+            width: 100% !important; height: 100% !important; object-fit: contain !important;
+            display: block; margin: 0 auto;
         }
+        /* Card hand: fixed bottom strip, 4 cards tight, no gaps */
         #screen-battle.battle-active #card-hand-area { 
-            position: absolute; bottom: 0; left: 0; right: 0; z-index: 50; 
-            display: flex; flex-wrap: wrap; justify-content: center; align-items: center; 
-            gap: 6px; padding: 8px 12px; overflow-y: auto; max-height: 130px; 
-            background: linear-gradient(0deg, rgba(7,7,26,0.95) 0%, rgba(7,7,26,0.8) 70%, transparent 100%); 
-            backdrop-filter: blur(4px); 
+            position: relative; flex: 0 0 auto; z-index: 50; 
+            display: flex; justify-content: stretch; align-items: stretch;
+            gap: 0; padding: 6px 8px; overflow: hidden; max-height: none; height: 28vh; min-height: 140px;
+            background: #0a0a1e;
+            border-top: 2px solid rgba(255,215,0,0.3);
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.6);
         }
-        #screen-battle.battle-active .battle-card { flex: 0 1 calc(25% - 12px); max-width: 160px; min-height: 120px; }
+        #screen-battle.battle-active .battle-card { 
+            flex: 1 1 0; max-width: none; min-width: 0;
+            height: 100%; margin: 0 3px; border-radius: 6px;
+        }
         .battle-canvas-wrap { position: relative; overflow: hidden; }
         #battle-canvas-container {
             width: 100%; height: 100%; display: none; margin: 0;
@@ -1219,7 +1227,7 @@
             box-shadow: 0 0 12px rgba(68,255,136,0.3) !important;
         }
     </style>
-    <link rel="stylesheet" href="css/retro-ui.css?v=fix32">
+    <link rel="stylesheet" href="css/retro-ui.css?v=fix33">
 </head>
 <body>
     <!-- Loading Screen -->
@@ -1438,39 +1446,39 @@
     </div>
 
     <!-- ====== SCRIPTS (load order matters!) ====== -->
-    <script src="js/core/sound.js?v=fix32"></script>
-    <script src="js/core/heroes.js?v=fix32"></script>
+    <script src="js/core/sound.js?v=fix33"></script>
+    <script src="js/core/heroes.js?v=fix33"></script>
     <!-- cards.js MERGED into heroes.js (Sprint 1 cleanup) -->
-    <script src="js/core/deck.js?v=fix32"></script>
-    <script src="js/core/items.js?v=fix32"></script>
-    <script src="js/core/game.js?v=fix32"></script>
-    <script src="js/data/pixel-art.js?v=fix32"></script>
-    <script src="js/core/units.js?v=fix32"></script>
-    <script src="js/systems/position-bonuses.js?v=fix32"></script>
-    <script src="js/systems/battle.js?v=fix32"></script>
-    <script src="js/systems/hero-powers.js?v=fix32"></script>
-    <script src="js/systems/economy.js?v=fix32"></script>
-    <script src="js/systems/rewards.js?v=fix32"></script>
-    <script src="js/systems/ai-deck-builder.js?v=fix32"></script>
-    <script src="js/systems/ai-coach.js?v=fix32"></script>
-    <script src="js/systems/demo-mode.js?v=fix32"></script>
-    <script src="js/systems/formation.js?v=fix32"></script>
-    <script src="js/ui/animations.js?v=fix32"></script>
-    <script src="js/ui/renderer.js?v=fix32"></script>
+    <script src="js/core/deck.js?v=fix33"></script>
+    <script src="js/core/items.js?v=fix33"></script>
+    <script src="js/core/game.js?v=fix33"></script>
+    <script src="js/data/pixel-art.js?v=fix33"></script>
+    <script src="js/core/units.js?v=fix33"></script>
+    <script src="js/systems/position-bonuses.js?v=fix33"></script>
+    <script src="js/systems/battle.js?v=fix33"></script>
+    <script src="js/systems/hero-powers.js?v=fix33"></script>
+    <script src="js/systems/economy.js?v=fix33"></script>
+    <script src="js/systems/rewards.js?v=fix33"></script>
+    <script src="js/systems/ai-deck-builder.js?v=fix33"></script>
+    <script src="js/systems/ai-coach.js?v=fix33"></script>
+    <script src="js/systems/demo-mode.js?v=fix33"></script>
+    <script src="js/systems/formation.js?v=fix33"></script>
+    <script src="js/ui/animations.js?v=fix33"></script>
+    <script src="js/ui/renderer.js?v=fix33"></script>
     <!-- battle-arena-scene.js REMOVED — using Phaser only -->
-    <script src="js/phaser/battle-scene.js?v=fix32"></script>
-    <script src="js/phaser/card-sprite.js?v=fix32"></script>
-    <script src="js/phaser/animations.js?v=fix32"></script>
-    <script src="js/phaser/bridge.js?v=fix32"></script>
-    <script src="js/ui/cardhand.js?v=fix32"></script>
-    <script src="js/ui/tutorial.js?v=fix32"></script>
-    <script src="js/ui/screens.js?v=fix32"></script>
-    <script src="js/systems/blockchain.js?v=fix32"></script>
-    <script src="js/systems/backend.js?v=fix32"></script>
+    <script src="js/phaser/battle-scene.js?v=fix33"></script>
+    <script src="js/phaser/card-sprite.js?v=fix33"></script>
+    <script src="js/phaser/animations.js?v=fix33"></script>
+    <script src="js/phaser/bridge.js?v=fix33"></script>
+    <script src="js/ui/cardhand.js?v=fix33"></script>
+    <script src="js/ui/tutorial.js?v=fix33"></script>
+    <script src="js/ui/screens.js?v=fix33"></script>
+    <script src="js/systems/blockchain.js?v=fix33"></script>
+    <script src="js/systems/backend.js?v=fix33"></script>
     <script>Backend.init();</script>
-    <script src="js/systems/renaiss.js?v=fix32"></script>
-    <script src="js/ui/market.js?v=fix32"></script>
-    <script src="js/main.js?v=fix32"></script>
+    <script src="js/systems/renaiss.js?v=fix33"></script>
+    <script src="js/ui/market.js?v=fix33"></script>
+    <script src="js/main.js?v=fix33"></script>
 </body>
 </html>
 <!-- cache bust 1782907647 -->

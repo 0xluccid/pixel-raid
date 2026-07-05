@@ -114,41 +114,26 @@ var BattlePhaser = {
         this._active = true;
         this._transitioning = true;
 
-        // Make container take top 50% of viewport (arena), cards go below
+        // Make container take full viewport (arena top, cards bottom)
         var container = document.getElementById(this._containerId);
         if (container) {
-            // Show the container (it was display:none in CSS)
             container.style.display = 'block';
             container.style.margin = '0';
             container.style.border = 'none';
             container.style.boxShadow = 'none';
             container.style.maxWidth = 'none';
 
-            // Position card hand in normal flow (NOT fixed — avoids stacking context issues on mobile)
+            // Reset card hand to normal flow — CSS handles layout via .battle-active
             var cardHand = document.getElementById('card-hand-area');
-            var actionRow = document.querySelector('.battle-action-row');
-            var infoStrip = document.querySelector('.battle-info-strip');
-            var els = [cardHand, actionRow, infoStrip];
-            for (var i = 0; i < els.length; i++) {
-                var el = els[i];
-                if (el) {
-                    el.style.display = '';
-                    // Reset any position:fixed from previous battle
-                    el.style.position = '';
-                    el.style.top = '';
-                    el.style.bottom = '';
-                    el.style.left = '';
-                    el.style.right = '';
-                    el.style.zIndex = '';
-                    el.style.height = '';
-                }
-            }
             if (cardHand) {
-                cardHand.style.background = 'rgba(10,10,30,0.92)';
-                cardHand.style.borderTop = '1px solid rgba(255,215,0,0.2)';
-                cardHand.style.overflowY = 'auto';
-                cardHand.style.flex = '1 1 0';
-                cardHand.style.minHeight = '0';
+                cardHand.style.display = '';
+                cardHand.style.position = '';
+                cardHand.style.top = '';
+                cardHand.style.bottom = '';
+                cardHand.style.left = '';
+                cardHand.style.right = '';
+                cardHand.style.zIndex = '';
+                // Don't override flex/height — CSS .battle-active rules handle it
             }
         }
 
@@ -324,21 +309,29 @@ var BattlePhaser = {
         if (!this._game) return;
         // Target the canvas inside battle-canvas-container specifically
         var canvas = document.querySelector('#battle-canvas-container canvas') || this._game.canvas;
+        var container = document.getElementById(this._containerId);
         if (canvas) {
             canvas.style.width = '100%';
             canvas.style.height = '100%';
-            canvas.style.objectFit = 'fill';
+            canvas.style.objectFit = 'contain';
             canvas.style.display = 'block';
-            canvas.style.margin = '0';
+            canvas.style.margin = '0 auto';
         }
-        // Scale camera to fill viewport
+        // Resize Phaser to match the actual container dimensions
+        if (container && container.offsetWidth > 0 && container.offsetHeight > 0) {
+            var cW = container.offsetWidth;
+            var cH = container.offsetHeight;
+            this._game.scale.resize(cW, cH);
+            this._game.scale.setGameSize(cW, cH);
+        }
+        // Scale camera to fill the new canvas size
         if (this._scene && this._scene.cameras && this._scene.cameras.main) {
             var cam = this._scene.cameras.main;
             var W = this._scene.W || 800;
             var H = this._scene.H || 500;
             var zoomX = cam.width / W;
             var zoomY = cam.height / H;
-            var zoom = Math.max(zoomX, zoomY);
+            var zoom = Math.min(zoomX, zoomY); // Use min to fit within bounds
             cam.setZoom(zoom);
             cam.centerOn(W / 2, H / 2);
         }

@@ -388,20 +388,20 @@ const CardHand = {
             /* ===== CARD HAND CONTAINER ===== */
             .card-hand-container {
                 display: flex;
-                gap: 8px;
-                justify-content: center;
-                align-items: flex-end;
-                padding: 8px 4px;
-                min-height: 140px;
+                gap: 4px;
+                justify-content: stretch;
+                align-items: stretch;
+                padding: 4px 6px;
+                height: 100%;
                 flex-wrap: nowrap;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
+                overflow-x: hidden;
             }
 
             /* ===== BASE CARD STYLES ===== */
             .battle-card {
-                width: 120px;
-                min-height: 170px;
+                flex: 1 1 0;
+                min-width: 0;
+                height: 100%;
                 background: linear-gradient(180deg, #1e1e3a 0%, #141428 100%);
                 border: 2px solid #555;
                 border-radius: 6px;
@@ -413,7 +413,6 @@ const CardHand = {
                 flex-direction: column;
                 font-family: 'Press Start 2P', monospace;
                 user-select: none;
-                flex-shrink: 0;
                 overflow: hidden;
             }
             .battle-card.hero-card {
@@ -509,7 +508,8 @@ const CardHand = {
             /* ===== ART WINDOW — 60% of card ===== */
             .tcg-art-window {
                 width: calc(100% - 6px);
-                height: 80px;
+                flex: 1 1 auto;
+                min-height: 60px;
                 margin: 3px;
                 border: 2px solid var(--el-glow, #c8a832);
                 border-radius: 3px;
@@ -690,20 +690,18 @@ const CardHand = {
             /* ===== MOBILE RESPONSIVE ===== */
             @media (max-width: 480px) {
                 .battle-card {
-                    width: 100px;
-                    min-height: 140px;
+                    flex: 1 1 0;
                 }
-                .tcg-art-window { height: 65px; }
+                .tcg-art-window { height: 55px; }
                 .card-art-icon { font-size: 22px; }
                 .tcg-name { font-size: 4px; max-width: 60px; }
                 .tcg-stat-row { font-size: 5px; }
             }
             @media (max-width: 380px) {
                 .battle-card {
-                    width: 85px;
-                    min-height: 120px;
+                    flex: 1 1 0;
                 }
-                .tcg-art-window { height: 55px; }
+                .tcg-art-window { height: 45px; }
                 .tcg-name { font-size: 3.5px; max-width: 50px; }
             }
         `;
