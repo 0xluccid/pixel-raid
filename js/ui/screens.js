@@ -545,6 +545,10 @@ const UI = {
                 } catch (e) { console.warn('showPhaseBanner error:', e); }
             }
 
+            // Re-render card hand when entering play phase (enables cards for clicking)
+            if (phase === 'play' && typeof CardHand !== 'undefined' && BattleEngine.player) {
+                try { CardHand.renderHand(BattleEngine.player.hand, BattleEngine.player.energy); } catch(e) {}
+            }
             // Update Phaser hero panels
             if (BattleEngine.player && BattleEngine.enemy) {
                 try {
