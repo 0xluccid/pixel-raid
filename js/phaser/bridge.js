@@ -328,18 +328,14 @@ var BattlePhaser = {
     // ===== RESIZE =====
     _resizeToViewport: function () {
         if (!this._game) return;
-        var container = document.getElementById(this._containerId);
-        var canvas = document.querySelector('#battle-canvas-container canvas') || this._game.canvas;
+        
+        // Let Phaser Scale.FIT handle canvas sizing — don't override
+        // Just ensure the game scales to fill the viewport
+        try {
+            this._game.scale.resize(window.innerWidth, window.innerHeight);
+        } catch (e) { /* ignore resize errors */ }
 
-        // With FIT mode, Phaser handles scaling — just ensure canvas fills container
-        if (canvas) {
-            canvas.style.width = '100%';
-            canvas.style.height = '100%';
-            canvas.style.display = 'block';
-            canvas.style.margin = '0';
-        }
-
-        // Center camera — Phaser FIT handles the rest
+        // Center camera
         if (this._scene && this._scene.cameras && this._scene.cameras.main) {
             var cam = this._scene.cameras.main;
             var W = this._scene.W || 1280;
