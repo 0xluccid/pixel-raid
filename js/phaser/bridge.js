@@ -67,6 +67,14 @@ var BattlePhaser = {
                     PhaserAnimations.init(self._scene);
                 }
                 console.log('BattlePhaser: Phaser scene ready');
+                // If enter() was called before scene was ready, trigger it now
+                // This fixes the race condition where init() via double-rAF
+                // and enter() retries don't sync up
+                if (!self._active && self._pendingEnter) {
+                    var p = self._pendingEnter;
+                    self._pendingEnter = null;
+                    self.enter(p.player, p.enemy, p.onComplete);
+                }
             } else {
                 setTimeout(checkScene, 100);
             }
@@ -106,6 +114,8 @@ var BattlePhaser = {
     // ===== LIFECYCLE =====
     enter: function (player, enemy, onComplete) {
         if (!this._scene) {
+            // Store pending enter params so checkScene() can trigger it after scene loads
+            this._pendingEnter = { player: player, enemy: enemy, onComplete: onComplete };
             var self = this;
             setTimeout(function () { self.enter(player, enemy, onComplete); }, 200);
             return;

@@ -6,9 +6,9 @@ const HeroPowers = {
     // Power definitions keyed by class
     POWERS: {
         warrior: {
-            id: 'shield_wall',
-            name: 'Shield Wall',
-            icon: '🛡️',
+            id: 'warrior_heal',
+            name: 'War Cry',
+            icon: '💚',
             description: 'Restore 20% max HP',
             manaCost: 2,
             cooldown: 3,
