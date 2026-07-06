@@ -118,10 +118,11 @@ const BattleEngine = {
         this._setPhase('draw');
         if (typeof Sound !== 'undefined') Sound.turnStart();
 
-        // Auto advance to energy phase after brief delay
+        // Auto advance to energy phase after brief delay (respect battle speed)
+        var speed = (typeof GameState !== 'undefined' && GameState.battleSpeed) || 1;
         this._phaseTimer = setTimeout(() => {
             this._enterEnergyPhase();
-        }, 600);
+        }, Math.round(600 / speed));
     },
 
     // ===== ENERGY PHASE =====
@@ -135,11 +136,12 @@ const BattleEngine = {
         this._setPhase('energy');
         if (typeof Sound !== 'undefined') Sound.energyGain();
 
-        // Auto advance to play phase after brief delay
+        // Auto advance to play phase after brief delay (respect battle speed)
+        var speed = (typeof GameState !== 'undefined' && GameState.battleSpeed) || 1;
         this._phaseTimer = setTimeout(() => {
             try { this._setPhase('play'); } catch (e) { console.warn('Phase transition error:', e); }
             this._notifyFieldUpdate();
-        }, 400);
+        }, Math.round(400 / speed));
     },
 
     // ===== PLAY PHASE — Player plays cards =====
@@ -163,9 +165,11 @@ const BattleEngine = {
             name: card.name,
             atk: card.atk,
             hp: card.hp,
-            maxHp: card.maxHp,
+            maxHp: card.maxHp || card.hp,
             cost: card.cost,
             type: card.type,
+            def: card.def || 0,
+            spd: card.spd || 0,
             pixelColor: card.pixelColor,
             emoji: card.emoji,
             slot: slotIndex,
@@ -228,6 +232,7 @@ const BattleEngine = {
     _enterBattlePhase() {
         // Enemy AI: play cards greedily
         this._enemyPlayCards();
+        this._notifyFieldUpdate(); // Immediately render enemy units
 
         this._setPhase('battle');
         this._log('⚔️ Auto Battle Phase!');
@@ -263,6 +268,7 @@ const BattleEngine = {
         if (!this.isRunning) return; // Guard against stale calls after stop()
         if (index >= attacks.length) {
             // All attacks done → check win/lose → result phase
+            var speed = (typeof GameState !== 'undefined' && GameState.battleSpeed) || 1;
             this._battleStepTimer = setTimeout(() => {
                 if (!this.isRunning) return; // Guard: stop() was called during attack sequence
                 this._cleanupDead();
@@ -283,7 +289,7 @@ const BattleEngine = {
 
                 // No winner yet → next turn
                 this._startTurn();
-            }, 400);
+            }, Math.round(400 / speed));
             return;
         }
 
@@ -344,10 +350,11 @@ const BattleEngine = {
 
         this._notifyFieldUpdate();
 
-        // Next attack after delay
+        // Next attack after delay (respect battle speed setting)
+        var speed = (typeof GameState !== 'undefined' && GameState.battleSpeed) || 1;
         this._battleStepTimer = setTimeout(() => {
             this._executeAttackSequence(attacks, index + 1);
-        }, 500);
+        }, Math.round(500 / speed));
     },
 
     // ===== CLEANUP =====
@@ -406,9 +413,11 @@ const BattleEngine = {
                 name: card.name,
                 atk: card.atk,
                 hp: card.hp,
-                maxHp: card.maxHp,
+                maxHp: card.maxHp || card.hp,
                 cost: card.cost,
                 type: card.type,
+                def: card.def || 0,
+                spd: card.spd || 0,
                 pixelColor: card.pixelColor,
                 emoji: card.emoji,
                 slot: emptySlot,

@@ -830,6 +830,12 @@ const PhaserBattleScene = new Phaser.Class({
         // Update center divider
         this.updateCenterDivider(state);
 
+        // Clean up arrange highlights ONCE before both renders
+        if (this._arrangeHighlights) {
+            this._arrangeHighlights.forEach(function (h) { if (h && h.destroy) h.destroy(); });
+            this._arrangeHighlights = [];
+        }
+
         // Render board units on the slots
         this._renderBoardUnits(player.board, 'player');
         this._renderBoardUnits(enemy.board, 'enemy');
@@ -853,11 +859,7 @@ const PhaserBattleScene = new Phaser.Class({
         }
         scene._boardUnitTexts[side] = [];
 
-        // Clean up arrange highlights
-        if (scene._arrangeHighlights) {
-            scene._arrangeHighlights.forEach(function (h) { if (h && h.destroy) h.destroy(); });
-            scene._arrangeHighlights = [];
-        }
+        // Note: arrange highlights are cleaned up in renderField() before _renderBoardUnits
 
         // Find slots belonging to this side
         var sideSlots = scene.skillSlots.filter(function (s) { return s.side === side; });
@@ -959,7 +961,7 @@ const PhaserBattleScene = new Phaser.Class({
             scene._boardUnitTexts[side].push(nameText);
 
             // HP bar mini
-            var hpPct = unit.hp / (unit.maxHp || 1);
+            var hpPct = (unit.hp || 0) / (unit.maxHp || unit.hp || 1);
             var barW = slot.w - 16;
             var barH = 10;
             var barX = slot.x + 8;
@@ -967,13 +969,13 @@ const PhaserBattleScene = new Phaser.Class({
 
             var hpBg = scene.add.graphics();
             hpBg.fillStyle(0x330000, 0.8);
-            hpBg.fillRect(barX, barY, barW, barH);
+            hpBg.fillRoundedRect(barX, barY, barW, barH, 2);
             scene._boardUnitTexts[side].push(hpBg);
 
             var hpFill = scene.add.graphics();
             var hpColor = hpPct > 0.5 ? 0x00ff88 : (hpPct > 0.25 ? 0xffaa00 : 0xff3333);
             hpFill.fillStyle(hpColor, 0.9);
-            hpFill.fillRect(barX, barY, barW * Math.max(0, hpPct), barH);
+            hpFill.fillRoundedRect(barX, barY, barW * Math.max(0, hpPct), barH, 2);
             scene._boardUnitTexts[side].push(hpFill);
 
             // ATK badge
@@ -1069,10 +1071,12 @@ const PhaserBattleScene = new Phaser.Class({
         banner.setAlpha(0);
         banner.setScale(0.5);
         banner.setShadow(0, 0, color, 20);
+        banner.setDepth(200);
 
         var backdrop = this.add.graphics();
-        backdrop.fillStyle(0x000000, 0);
-        backdrop.fillRect(0, this.H / 2 - 20, this.W, 40);
+        backdrop.setDepth(199);
+        backdrop.fillStyle(0x000000, 0.6);
+        backdrop.fillRect(0, this.H / 2 - 25, this.W, 50);
 
         this.phaseBanner = banner;
         this.phaseBanner._backdrop = backdrop;

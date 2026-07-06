@@ -40,13 +40,13 @@ var BattlePhaser = {
             backgroundColor: '#0a0a1a',
             scene: PhaserBattleScene,
             scale: {
-                mode: Phaser.Scale.RESIZE,
+                mode: Phaser.Scale.FIT,
                 autoCenter: Phaser.Scale.CENTER_BOTH
             },
             render: {
-                pixelArt: false,
-                antialias: true,
-                roundPixels: false
+                pixelArt: true,
+                antialias: false,
+                roundPixels: true
             },
             audio: { noAudio: true },
             banner: false
@@ -307,8 +307,8 @@ var BattlePhaser = {
             if (battleCtrl) { battleCtrl.style.cssText = ''; battleCtrl.style.removeProperty('display'); }
 
             if (this._game) {
-                this._game.scale.resize(800, 500);
-                this._game.scale.setGameSize(800, 500);
+                this._game.scale.resize(1280, 720);
+                this._game.scale.setGameSize(1280, 720);
             }
 
             if (onComplete) onComplete();
@@ -321,7 +321,7 @@ var BattlePhaser = {
         var container = document.getElementById(this._containerId);
         var canvas = document.querySelector('#battle-canvas-container canvas') || this._game.canvas;
 
-        // Force canvas to fill container edge-to-edge — NO objectFit
+        // With FIT mode, Phaser handles scaling — just ensure canvas fills container
         if (canvas) {
             canvas.style.width = '100%';
             canvas.style.height = '100%';
@@ -329,25 +329,13 @@ var BattlePhaser = {
             canvas.style.margin = '0';
         }
 
-        // Resize Phaser engine to match the container's actual pixel dimensions
-        if (container && container.offsetWidth > 0 && container.offsetHeight > 0) {
-            var cW = container.offsetWidth;
-            var cH = container.offsetHeight;
-            this._game.scale.resize(cW, cH);
-            this._game.scale.setGameSize(cW, cH);
-
-            // Set camera to FILL mode (use max zoom to cover entire canvas)
-            if (this._scene && this._scene.cameras && this._scene.cameras.main) {
-                var cam = this._scene.cameras.main;
-                var W = this._scene.W || 1280;
-                var H = this._scene.H || 720;
-                var zoomX = cW / W;
-                var zoomY = cH / H;
-                // Use MAX zoom to fill — no black bars, content may crop at edges
-                var zoom = Math.max(zoomX, zoomY);
-                cam.setZoom(zoom);
-                cam.centerOn(W / 2, H / 2);
-            }
+        // Center camera — Phaser FIT handles the rest
+        if (this._scene && this._scene.cameras && this._scene.cameras.main) {
+            var cam = this._scene.cameras.main;
+            var W = this._scene.W || 1280;
+            var H = this._scene.H || 720;
+            cam.setZoom(1);
+            cam.centerOn(W / 2, H / 2);
         }
     },
 

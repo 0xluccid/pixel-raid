@@ -508,10 +508,9 @@ const UI = {
                 if (emptySlot < 0) return; // board full
                 const success = BattleEngine.playCard(handIndex, emptySlot);
                 if (success) {
-                    // Animate card out, then re-render
-                    CardHand.animateCardPlay(handIndex, () => {
-                        CardHand.renderHand(BattleEngine.player.hand, BattleEngine.player.energy);
-                    });
+                    // Card play is synced via BattleEngine.onFieldUpdate -> renderHand
+                    // Just animate in Phaser
+                    BattlePhaser.animateCardPlay(card, emptySlot, true);
                 } else {
                     CardHand.shakeCard(handIndex);
                 }
