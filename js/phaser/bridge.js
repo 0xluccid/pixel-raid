@@ -361,7 +361,7 @@ var BattlePhaser = {
         // Skill cards activate at hero position
         var pos = this.getHeroZonePosition(0, isPlayer);
         if (typeof PhaserAnimations !== 'undefined') {
-            PhaserAnimations.heroSummon(pos.x, pos.y);
+            PhaserAnimations.summonUnit(pos.x, pos.y);
         }
     },
 
