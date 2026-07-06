@@ -482,12 +482,9 @@ const UI = {
         const battleWrap = document.querySelector('#screen-battle .battle-canvas-wrap');
         if (battleWrap) { battleWrap.style.display = 'block'; }
 
-        // Init Phaser after layout is computed (RESIZE mode needs parent dimensions)
-        // Use single rAF — need init to complete before enter() runs below
-        const _doInitPhaser = () => {
-            BattlePhaser.init('battle-canvas-container');
-        };
-        requestAnimationFrame(_doInitPhaser);
+        // Init Phaser — container must be visible for RESIZE mode to get dimensions
+        // Call synchronously so init starts before enter() below
+        BattlePhaser.init('battle-canvas-container');
 
         // Init card hand renderer
         if (typeof CardHand !== 'undefined') {
