@@ -88,7 +88,8 @@ const UI = {
                 const controls = document.querySelector('.battle-controls');
                 if (controls) controls.style.cssText = 'flex-shrink:0;padding:12px 16px;background:rgba(10,10,30,0.95);border-top:2px solid rgba(0,229,255,0.3);justify-content:center;z-index:10;';
                 // Hide nav bar inside battle screen
-                const nav = battleScreen ? battleScreen.querySelector('.game-nav') : null;
+                const battleScreenEl = document.getElementById('screen-battle');
+                const nav = battleScreenEl ? battleScreenEl.querySelector('.game-nav') : null;
                 if (nav) nav.style.display = 'none';
             }
         } catch (e) { console.warn('Battle layout fix error:', e); }
