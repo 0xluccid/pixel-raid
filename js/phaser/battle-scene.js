@@ -258,16 +258,16 @@ const PhaserBattleScene = new Phaser.Class({
 
     _createHeroPanel: function (side) {
         var scene = this;
-        var panelW = 200;
-        var panelH = 100;
+        var panelW = 240;
+        var panelH = 110;
         var panelX, panelY;
 
         if (side === 'player') {
-            panelX = 20;
-            panelY = 32;
+            panelX = 16;
+            panelY = 28;
         } else {
-            panelX = this.W - 220;  // 1060
-            panelY = 32;
+            panelX = this.W - 256;  // 1024
+            panelY = 28;
         }
 
         var container = this.add.container(panelX, panelY);
@@ -309,22 +309,22 @@ const PhaserBattleScene = new Phaser.Class({
         strip.fillRect(0, 0, panelW, 2);
         container.add(strip);
 
-        // Emoji portrait (30px, left side)
+        // Emoji portrait (36px, left side — bigger for visibility)
         var portraitGlow = this.add.graphics();
-        portraitGlow.fillStyle(borderColor, 0.08);
-        portraitGlow.fillCircle(28, 38, 20);
+        portraitGlow.fillStyle(borderColor, 0.12);
+        portraitGlow.fillCircle(30, 42, 24);
         container.add(portraitGlow);
 
-        var spriteText = this.add.text(28, 38, '⚔', {
-            fontSize: '30px',
-            color: side === 'player' ? 'rgba(0,229,255,0.4)' : 'rgba(255,68,170,0.4)'
+        var spriteText = this.add.text(30, 42, '⚔', {
+            fontSize: '36px',
+            color: side === 'player' ? 'rgba(0,229,255,0.6)' : 'rgba(255,68,170,0.6)'
         });
         spriteText.setOrigin(0.5, 0.5);
         container.add(spriteText);
         this.heroSprite[side] = spriteText;
 
         // Name text
-        var nameText = this.add.text(52, 8, 'Hero', {
+        var nameText = this.add.text(58, 8, 'Hero', {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '10px',
             color: '#f0f0f0',
@@ -334,7 +334,7 @@ const PhaserBattleScene = new Phaser.Class({
         this.heroNameText[side] = nameText;
 
         // Class text (8px, colored)
-        var classText = this.add.text(52, 22, '', {
+        var classText = this.add.text(58, 22, '', {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '8px',
             color: '#aaaaaa'

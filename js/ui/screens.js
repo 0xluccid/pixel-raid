@@ -491,10 +491,13 @@ const UI = {
             CardHand.init('card-hand-area');
             // Wire up card click → play card to first empty board slot
             CardHand.onCardPlay = (handIndex, card) => {
-                if (BattleEngine.currentPhase !== 'play') return;
-                // Bug #2: Only 1 card per round
-                if (BattleEngine.cardsPlayedThisTurn >= 1) {
-                    this.toast('Can only play 1 card per round!', 'warning');
+                if (BattleEngine.currentPhase !== 'play') {
+                    this.toast('Wait for PLAY phase!', 'warning');
+                    return;
+                }
+                // Allow up to 3 cards per round
+                if (BattleEngine.cardsPlayedThisTurn >= 3) {
+                    this.toast('Max 3 cards per round!', 'warning');
                     return;
                 }
                 // Find first empty slot

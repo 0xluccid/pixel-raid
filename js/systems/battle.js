@@ -150,8 +150,8 @@ const BattleEngine = {
         if (handIndex < 0 || handIndex >= this.player.hand.length) return false;
         if (slotIndex < 0 || slotIndex >= this.BOARD_SIZE) return false;
         if (this.player.board[slotIndex] !== null) return false;
-        // Bug #2: Only 1 card per round
-        if (this.cardsPlayedThisTurn >= 1) return false;
+        // Allow up to 3 cards per round
+        if (this.cardsPlayedThisTurn >= 3) return false;
 
         const card = this.player.hand[handIndex];
         if (card.cost > this.player.energy) return false;
