@@ -923,6 +923,7 @@ const PhaserBattleScene = new Phaser.Class({
                     unitText.setDisplaySize(48, 48);
                 }
                 unitText.setOrigin(0.5, 0.5);
+                unitText.setDepth(5);
                 scene._boardUnitTexts[side].push(unitText);
             } else {
                 // Fallback: emoji text
@@ -930,6 +931,7 @@ const PhaserBattleScene = new Phaser.Class({
                     fontSize: '48px'
                 });
                 unitText.setOrigin(0.5, 0.5);
+                unitText.setDepth(5);
                 scene._boardUnitTexts[side].push(unitText);
             }
 
@@ -1001,6 +1003,7 @@ const PhaserBattleScene = new Phaser.Class({
                 color: '#ffd700'
             });
             nameText.setOrigin(0.5, 0.5);
+            nameText.setDepth(5);
             scene._boardUnitTexts[side].push(nameText);
 
             // HP bar mini
@@ -1011,11 +1014,13 @@ const PhaserBattleScene = new Phaser.Class({
             var barY = slot.y + slot.h - 16;
 
             var hpBg = scene.add.graphics();
+            hpBg.setDepth(5);
             hpBg.fillStyle(0x330000, 0.8);
             hpBg.fillRoundedRect(barX, barY, barW, barH, 2);
             scene._boardUnitTexts[side].push(hpBg);
 
             var hpFill = scene.add.graphics();
+            hpFill.setDepth(5);
             var hpColor = hpPct > 0.5 ? 0x00ff88 : (hpPct > 0.25 ? 0xffaa00 : 0xff3333);
             hpFill.fillStyle(hpColor, 0.9);
             hpFill.fillRoundedRect(barX, barY, barW * Math.max(0, hpPct), barH, 2);
@@ -1028,6 +1033,7 @@ const PhaserBattleScene = new Phaser.Class({
                 color: '#ff6644'
             });
             atkText.setOrigin(0, 0);
+            atkText.setDepth(5);
             scene._boardUnitTexts[side].push(atkText);
 
             // === ARRANGE PHASE: Make player slots clickable for swap ===
