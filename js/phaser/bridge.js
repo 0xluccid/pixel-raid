@@ -329,13 +329,22 @@ var BattlePhaser = {
     _resizeToViewport: function () {
         if (!this._game) return;
         
-        // Let Phaser Scale.FIT handle canvas sizing — don't override
-        // Just ensure the game scales to fill the viewport
+        // DO NOT resize game dimensions — all UI elements are positioned for 1280×720.
+        // Phaser Scale.FIT + CSS width/height:100% handles canvas scaling automatically.
+        // Manual resize would break hero panels, skill slots, and grid positions.
+        
+        // Ensure canvas fills its container (CSS handles display scaling)
         try {
-            this._game.scale.resize(window.innerWidth, window.innerHeight);
-        } catch (e) { /* ignore resize errors */ }
+            var c = this._game.canvas;
+            if (c) {
+                c.style.width = '100%';
+                c.style.height = '100%';
+                c.style.display = 'block';
+                c.style.margin = '0';
+            }
+        } catch (e) { /* ignore */ }
 
-        // Center camera
+        // Center camera on the 1280×720 world
         if (this._scene && this._scene.cameras && this._scene.cameras.main) {
             var cam = this._scene.cameras.main;
             var W = this._scene.W || 1280;
