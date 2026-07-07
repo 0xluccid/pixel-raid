@@ -332,8 +332,11 @@ const CardHand = {
      * Automatically enables cards only during 'play' phase
      */
     renderHand(hand, energy) {
-        const canPlay = typeof BattleEngine !== 'undefined' && BattleEngine.currentPhase === 'play';
-        this.render(hand, energy, canPlay);
+        const phase = typeof BattleEngine !== 'undefined' ? BattleEngine.currentPhase : 'idle';
+        const canPlay = phase === 'play';
+        const board = (BattleEngine.player && BattleEngine.player.board) ? BattleEngine.player.board : [];
+        const hasEmptySlot = board.some(function(s) { return s === null; });
+        this.render(hand, energy, canPlay, hasEmptySlot, hasEmptySlot, false, false);
     },
     clear() {
         if (this.container) this.container.innerHTML = '';
