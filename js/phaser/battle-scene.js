@@ -117,7 +117,8 @@ const PhaserBattleScene = new Phaser.Class({
         this._createSkillSlots();
 
         // === CLEAN BOTTOM AREA ===
-        var bottomY = 634;
+        // Moved up to y=440 to match new player slot position (y=340+90=430)
+        var bottomY = 440;
         var bottomBg = this.add.graphics();
         bottomBg.setDepth(1);
         bottomBg.fillStyle(0x060614, 0.7);
@@ -181,18 +182,20 @@ const PhaserBattleScene = new Phaser.Class({
         var W = this.W;
         var H = this.H;
 
-        // Grid constants — 5×5 cells
+        // Grid constants — visual background grid matching new layout
+        // Enemy row at y=170, player row at y=340, 5 rows in between
         var slotW = 164;
-        var slotH = 90;
         var gap = 12;
         var startX = 206;
-        var startY = 136;
+        var startY = 170;      // matches enemy row Y
+        var rowSpacing = 42;   // (340 - 170) / 4 = 42.5
+        var cellH = 40;        // visual cell height (smaller than actual slot)
 
         // Draw all 25 cells
         for (var row = 0; row < 5; row++) {
             for (var col = 0; col < 5; col++) {
                 var cx = startX + col * (slotW + gap);
-                var cy = startY + row * (slotH + gap);
+                var cy = startY + row * rowSpacing;
 
                 var isEnemyRow = (row === 0);
                 var isPlayerRow = (row === 4);
@@ -201,7 +204,7 @@ const PhaserBattleScene = new Phaser.Class({
                 // Cell background
                 var bgAlpha = (isEnemyRow || isPlayerRow) ? 0.6 : 0.2;
                 g.fillStyle(0x0d1525, bgAlpha);
-                g.fillRect(cx, cy, slotW, slotH);
+                g.fillRect(cx, cy, slotW, cellH);
 
                 // Cell border
                 var borderColor, borderAlpha;
@@ -220,12 +223,12 @@ const PhaserBattleScene = new Phaser.Class({
                 }
 
                 g.lineStyle(1, borderColor, borderAlpha);
-                g.strokeRect(cx, cy, slotW, slotH);
+                g.strokeRect(cx, cy, slotW, cellH);
 
                 // Subtle inner glow for active rows
                 if (isEnemyRow || isPlayerRow) {
                     g.fillStyle(borderColor, 0.02);
-                    g.fillRect(cx + 2, cy + 2, slotW - 4, slotH - 4);
+                    g.fillRect(cx + 2, cy + 2, slotW - 4, cellH - 4);
                 }
             }
         }
@@ -235,13 +238,13 @@ const PhaserBattleScene = new Phaser.Class({
         for (var v = 0; v < 5; v++) {
             var vx = startX + v * (slotW + gap) + slotW / 2;
             g.beginPath();
-            g.moveTo(vx, startY + slotH);
-            g.lineTo(vx, startY + 4 * (slotH + gap));
+            g.moveTo(vx, startY + cellH);
+            g.lineTo(vx, startY + 4 * rowSpacing);
             g.strokePath();
         }
 
         // Center horizontal divider (row 2 area)
-        var dividerY = startY + 2 * (slotH + gap) + slotH / 2;
+        var dividerY = startY + 2 * rowSpacing + cellH / 2;
         g.lineStyle(1, 0x00e5ff, 0.1);
         g.beginPath();
         g.moveTo(startX - 20, dividerY);
@@ -653,8 +656,8 @@ const PhaserBattleScene = new Phaser.Class({
         pulseLine.lineTo(vsCenterX + 300, vsCenterY + 1);
         pulseLine.strokePath();
 
-        // Turn text — bottom area (clean)
-        this.turnText = this.add.text(W / 2 - 80, 660, 'Turn 0', {
+        // Turn text — below player slots, in bottom area
+        this.turnText = this.add.text(W / 2 - 80, 460, 'Turn 0', {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '9px',
             color: 'rgba(255,255,255,0.5)'
@@ -662,8 +665,8 @@ const PhaserBattleScene = new Phaser.Class({
         this.turnText.setOrigin(0, 0.5);
         this.turnText.setDepth(10);
 
-        // Phase text — bottom area (clean)
-        this.phaseText = this.add.text(W / 2 + 20, 660, '', {
+        // Phase text — below player slots, in bottom area
+        this.phaseText = this.add.text(W / 2 + 20, 460, '', {
             fontFamily: '"Press Start 2P", monospace',
             fontSize: '9px',
             color: '#00e5ff'
@@ -682,12 +685,14 @@ const PhaserBattleScene = new Phaser.Class({
 
     _createSkillSlots: function () {
         // 5×5 grid — enemy game slots in row 0, player game slots in row 4
+        // FIX: Player slots moved UP from y=544 to y=340 so they're visible
+        // above the card hand overlay (bottom 28vh). Enemy stays at y=140.
         var slotW = 164;
         var slotH = 90;
         var gap = 12;
         var startX = 206;
-        var enemyRowY = 136;   // Row 0
-        var playerRowY = 544;  // Row 4
+        var enemyRowY = 170;   // Row 0 — below hero panels (y=16+130=146)
+        var playerRowY = 340;  // Row 4 — center, above card hand
 
         // Enemy slots (row 0) — indices 0-4
         for (var i = 0; i < 5; i++) {
