@@ -454,16 +454,18 @@ const PhaserBattleScene = new Phaser.Class({
 
         if (!heroCard && !combatant) {
             // Show empty state
-            if (this.heroNameText[side]) this.heroNameText[side].setText('No Hero');
-            if (this.heroHPText[side]) this.heroHPText[side].setText('HP 0 / 0');
-            if (this.heroClassText[side]) this.heroClassText[side].setText('');
-            if (this.heroLevelText[side]) this.heroLevelText[side].setText('');
-            if (this.heroSprite[side]) this.heroSprite[side].setText('?');
+            var defName = side === 'player' ? 'Player' : 'Enemy';
+            var defEmoji = side === 'player' ? '🛡' : '💀';
+            if (this.heroNameText[side]) this.heroNameText[side].setText(defName);
+            if (this.heroHPText[side]) this.heroHPText[side].setText('HP 20 / 20');
+            if (this.heroClassText[side]) { this.heroClassText[side].setText('Hero'); this.heroClassText[side].setColor('#aaaaaa'); }
+            if (this.heroLevelText[side]) this.heroLevelText[side].setText('Lv.1');
+            if (this.heroSprite[side]) this.heroSprite[side].setText(defEmoji);
             if (this.heroStatText[side]) {
-                this.heroStatText[side].atk.setText('⚔ 0');
-                this.heroStatText[side].def.setText('🛡 0');
+                this.heroStatText[side].atk.setText('⚔ 5');
+                this.heroStatText[side].def.setText('🛡 3');
             }
-            this._drawHPBar(side, 0);
+            this._drawHPBar(side, 1);
             return;
         }
 
@@ -884,11 +886,47 @@ const PhaserBattleScene = new Phaser.Class({
 
             // Unit emoji sprite
             var emoji = unit.emoji || '⚔️';
-            var unitText = scene.add.text(cx, cy - 10, emoji, {
-                fontSize: '48px'
-            });
-            unitText.setOrigin(0.5, 0.5);
-            scene._boardUnitTexts[side].push(unitText);
+            // Try to render pixel art image for this unit
+            var unitId = unit.templateId || unit.id || '';
+            var pixelUrl = (typeof PIXEL_ART !== 'undefined' && PIXEL_ART[unitId]) ? PIXEL_ART[unitId] : null;
+            var unitText;
+
+            if (pixelUrl) {
+                // Render pixel art as image (48x48)
+                unitText = scene.add.image(cx, cy - 10, '__PHASER_EMPTY__');
+                // Load SVG data URL as texture
+                var texKey = 'px_' + unitId;
+                if (!scene.textures.exists(texKey)) {
+                    var _img = new Image();
+                    _img.crossOrigin = 'anonymous';
+                    _img.onload = function () {
+                        try {
+                            var cvs = document.createElement('canvas');
+                            cvs.width = 64; cvs.height = 64;
+                            var ctx = cvs.getContext('2d');
+                            ctx.drawImage(_img, 0, 0, 64, 64);
+                            scene.textures.addCanvas(texKey, cvs);
+                            if (unitText && unitText.scene) {
+                                unitText.setTexture(texKey);
+                                unitText.setDisplaySize(48, 48);
+                            }
+                        } catch (e) {}
+                    };
+                    _img.src = pixelUrl;
+                } else {
+                    unitText.setTexture(texKey);
+                    unitText.setDisplaySize(48, 48);
+                }
+                unitText.setOrigin(0.5, 0.5);
+                scene._boardUnitTexts[side].push(unitText);
+            } else {
+                // Fallback: emoji text
+                unitText = scene.add.text(cx, cy - 10, emoji, {
+                    fontSize: '48px'
+                });
+                unitText.setOrigin(0.5, 0.5);
+                scene._boardUnitTexts[side].push(unitText);
+            }
 
             // Summon animation for new units
             if (isNewSummon && typeof PhaserAnimations !== 'undefined') {
