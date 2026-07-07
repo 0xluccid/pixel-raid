@@ -334,9 +334,9 @@ const CardHand = {
     renderHand(hand, energy) {
         const phase = typeof BattleEngine !== 'undefined' ? BattleEngine.currentPhase : 'idle';
         const canPlay = phase === 'play';
-        const board = (BattleEngine.player && BattleEngine.player.board) ? BattleEngine.player.board : [];
-        const hasEmptySlot = board.some(function(s) { return s === null; });
-        this.render(hand, energy, canPlay, hasEmptySlot, hasEmptySlot, false, false);
+        // render() defaults: canPlayCard=true, hasEmptyHeroZone=true
+        // During 'play' phase, enabled=true → canPlay=true → click handlers attached
+        this.render(hand, energy, canPlay);
     },
     clear() {
         if (this.container) this.container.innerHTML = '';
