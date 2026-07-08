@@ -1,4 +1,3 @@
-
 # Hardhat compiled artifacts (rebuild locally with `npx hardhat compile`)
 blockchain/artifacts/
 blockchain/cache/
@@ -6,19 +5,36 @@ blockchain/artifacts.bak-prev1/
 
 # Dependencies
 blockchain/node_modules/
-
-# PocketBase runtime data
-pocketbase/pb_data/
 node_modules/
+
+# PocketBase runtime data & binaries
+pocketbase/pb_data/
+pocketbase/pocketbase
+pocketbase/pocketbase.bak*
 
 # Smoke test artifacts
 .smoke/
+
+# Environment & secrets
+blockchain/.env
+
+# Supabase CLI temp
+supabase/.temp/
+
+# Git filter-rewrite artifacts
+.git-rewrite/
 
 # Temp files
 *.bak
 *.zip
 *.log
 *.err
-.git-rewrite/
-blockchain/.env
-supabase/.temp/
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
