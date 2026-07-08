@@ -1,0 +1,24 @@
+{
+  "txHash": "0x705c98eea83a0045f6a50ba2d3c2355d93c0d4706ba0c65ee8b2c4a9ca3ffd67",
+  "blockNumber": 116136690,
+  "gasUsed": "488419",
+  "costWei": "48841900000000",
+  "tokenId": "1",
+  "tokenURI": "https://pixel.brebross.xyz/metadata/1",
+  "owner": "0xF6a151d5c4b3fdf70f81CE53042deEAc59EA4ed2",
+  "sample": {
+    "name": "Iron Warrior",
+    "className": "Warrior",
+    "rarity": "Common",
+    "hp": 100,
+    "atk": 25,
+    "def": 20,
+    "spd": 10,
+    "crit": 5,
+    "skillName": "Shield Bash",
+    "skillType": "Physical",
+    "skillValue": 30,
+    "artSeed": 42
+  },
+  "timestamp": 1782705333
+}

@@ -93,7 +93,6 @@ const BattleEngine = {
         }
 
         this._log('⚔️ Battle Start!');
-        if (typeof Sound !== 'undefined') Sound.battleStart();
         this._startTurn();
     },
 
@@ -116,13 +115,11 @@ const BattleEngine = {
 
         this._log(`\n— Turn ${this.turnNumber} —`);
         this._setPhase('draw');
-        if (typeof Sound !== 'undefined') Sound.turnStart();
 
-        // Auto advance to energy phase after brief delay (respect battle speed)
-        var speed = (typeof GameState !== 'undefined' && GameState.battleSpeed) || 1;
+        // Auto advance to energy phase after brief delay
         this._phaseTimer = setTimeout(() => {
             this._enterEnergyPhase();
-        }, Math.round(600 / speed));
+        }, 600);
     },
 
     // ===== ENERGY PHASE =====
@@ -134,14 +131,12 @@ const BattleEngine = {
 
         this._log(`⚡ +${gained} Energy (${this.player.energy}/${this.player.maxEnergy})`);
         this._setPhase('energy');
-        if (typeof Sound !== 'undefined') Sound.energyGain();
 
-        // Auto advance to play phase after brief delay (respect battle speed)
-        var speed = (typeof GameState !== 'undefined' && GameState.battleSpeed) || 1;
+        // Auto advance to play phase after brief delay
         this._phaseTimer = setTimeout(() => {
-            try { this._setPhase('play'); } catch (e) { console.warn('Phase transition error:', e); }
+            this._setPhase('play');
             this._notifyFieldUpdate();
-        }, Math.round(400 / speed));
+        }, 400);
     },
 
     // ===== PLAY PHASE — Player plays cards =====
@@ -150,8 +145,8 @@ const BattleEngine = {
         if (handIndex < 0 || handIndex >= this.player.hand.length) return false;
         if (slotIndex < 0 || slotIndex >= this.BOARD_SIZE) return false;
         if (this.player.board[slotIndex] !== null) return false;
-        // Allow up to 3 cards per round
-        if (this.cardsPlayedThisTurn >= 3) return false;
+        // Bug #2: Only 1 card per round
+        if (this.cardsPlayedThisTurn >= 1) return false;
 
         const card = this.player.hand[handIndex];
         if (card.cost > this.player.energy) return false;
@@ -162,27 +157,17 @@ const BattleEngine = {
         // Place unit on board
         const unit = {
             id: card.id,
-            templateId: card.templateId || card.id,
             name: card.name,
             atk: card.atk,
             hp: card.hp,
-            maxHp: card.maxHp || card.hp,
+            maxHp: card.maxHp,
             cost: card.cost,
             type: card.type,
-            def: card.def || 0,
-            spd: card.spd || 0,
             pixelColor: card.pixelColor,
             emoji: card.emoji,
             slot: slotIndex,
         };
         this.player.board[slotIndex] = unit;
-        if (typeof Sound !== 'undefined') Sound.cardPlay();
-
-        // Position bonus — apply slot-specific stat boost
-        if (typeof applyPositionBonus === 'function') {
-            var bonusText = applyPositionBonus(unit, slotIndex);
-            if (bonusText) this._log('📍 ' + bonusText);
-        }
 
         // Remove from hand
         this.player.hand.splice(handIndex, 1);
@@ -190,7 +175,7 @@ const BattleEngine = {
         // Increment card play counter (Bug #2)
         this.cardsPlayedThisTurn++;
 
-        this._log(`🃏 ${this.player.name} played ${card.name} (⚔${unit.atk} ❤${unit.hp}) → Slot ${slotIndex + 1}`);
+        this._log(`🃏 ${this.player.name} played ${card.name} (⚔${card.atk} ❤${card.hp}) → Slot ${slotIndex + 1}`);
         this._notifyFieldUpdate();
         return true;
     },
@@ -233,7 +218,6 @@ const BattleEngine = {
     _enterBattlePhase() {
         // Enemy AI: play cards greedily
         this._enemyPlayCards();
-        this._notifyFieldUpdate(); // Immediately render enemy units
 
         this._setPhase('battle');
         this._log('⚔️ Auto Battle Phase!');
@@ -266,12 +250,9 @@ const BattleEngine = {
     },
 
     _executeAttackSequence(attacks, index) {
-        if (!this.isRunning) return; // Guard against stale calls after stop()
         if (index >= attacks.length) {
             // All attacks done → check win/lose → result phase
-            var speed = (typeof GameState !== 'undefined' && GameState.battleSpeed) || 1;
             this._battleStepTimer = setTimeout(() => {
-                if (!this.isRunning) return; // Guard: stop() was called during attack sequence
                 this._cleanupDead();
                 this._notifyFieldUpdate();
 
@@ -280,17 +261,13 @@ const BattleEngine = {
                     // Win or lose → show result
                     this._setPhase('result');
                     this._log(result === 'player' ? '🎉 Victory!' : '💀 Defeat!');
-                    if (typeof Sound !== 'undefined') {
-                        if (result === 'player') Sound.victoryFanfare();
-                        else Sound.defeatDramatic();
-                    }
                     if (this.onComplete) this.onComplete(result);
                     return;
                 }
 
                 // No winner yet → next turn
                 this._startTurn();
-            }, Math.round(400 / speed));
+            }, 400);
             return;
         }
 
@@ -318,7 +295,6 @@ const BattleEngine = {
             const dmg = attacker.atk;
             enemyCombatant.heroHp = Math.max(0, enemyCombatant.heroHp - dmg);
             this._log(`💥 ${attacker.name} attacks ${enemyCombatant.name}'s Hero for ${dmg} dmg! (HP: ${enemyCombatant.heroHp}/${enemyCombatant.heroMaxHp})`);
-            if (typeof Sound !== 'undefined') Sound.heroHit();
 
             if (this.onAttack) {
                 this.onAttack({
@@ -335,7 +311,6 @@ const BattleEngine = {
             const dmg = attacker.atk;
             target.hp -= dmg;
             this._log(`💥 ${attacker.name} attacks ${target.name} for ${dmg} dmg! (HP: ${Math.max(0, target.hp)}/${target.maxHp})`);
-            if (typeof Sound !== 'undefined') Sound.attack();
 
             if (this.onAttack) {
                 this.onAttack({
@@ -351,11 +326,10 @@ const BattleEngine = {
 
         this._notifyFieldUpdate();
 
-        // Next attack after delay (respect battle speed setting)
-        var speed = (typeof GameState !== 'undefined' && GameState.battleSpeed) || 1;
+        // Next attack after delay
         this._battleStepTimer = setTimeout(() => {
             this._executeAttackSequence(attacks, index + 1);
-        }, Math.round(500 / speed));
+        }, 500);
     },
 
     // ===== CLEANUP =====
@@ -364,12 +338,10 @@ const BattleEngine = {
             if (this.player.board[i] && this.player.board[i].hp <= 0) {
                 this._log(`💀 ${this.player.board[i].name} destroyed!`);
                 this.player.board[i] = null;
-                if (typeof Sound !== 'undefined') Sound.unitDestroy();
             }
             if (this.enemy.board[i] && this.enemy.board[i].hp <= 0) {
                 this._log(`💀 ${this.enemy.board[i].name} destroyed!`);
                 this.enemy.board[i] = null;
-                if (typeof Sound !== 'undefined') Sound.unitDestroy();
             }
         }
     },
@@ -411,23 +383,16 @@ const BattleEngine = {
             this.enemy.energy -= card.cost;
             this.enemy.board[emptySlot] = {
                 id: card.id,
-                templateId: card.templateId || card.id,
                 name: card.name,
                 atk: card.atk,
                 hp: card.hp,
-                maxHp: card.maxHp || card.hp,
+                maxHp: card.maxHp,
                 cost: card.cost,
                 type: card.type,
-                def: card.def || 0,
-                spd: card.spd || 0,
                 pixelColor: card.pixelColor,
                 emoji: card.emoji,
                 slot: emptySlot,
             };
-            // Position bonus for enemy too
-            if (typeof applyPositionBonus === 'function') {
-                applyPositionBonus(this.enemy.board[emptySlot], emptySlot);
-            }
             played.push({ card, slot: emptySlot, handIdx: index });
             enemyPlayed++;
         }
@@ -504,11 +469,5 @@ const BattleEngine = {
         this._battleStepTimer = null;
         this.player = null;
         this.enemy = null;
-        // Clear event callbacks to prevent stale references
-        this.onPhaseChange = null;
-        this.onFieldUpdate = null;
-        this.onAttack = null;
-        this.onDraw = null;
-        this.onComplete = null;
     },
 };

@@ -1,0 +1,17 @@
+{
+  "address": "0xFB44693a41CaFAa2CfeDb7694A2b7F70A41F7C13",
+  "txHash": "0x79364d4364111cb55de26d0ee4a0f570d49ccdb63c7b00e14d60234932c61010",
+  "blockNumber": 116135198,
+  "gasUsed": "2553927",
+  "gasPrice": "100000000",
+  "totalCostWei": "255392700000000",
+  "deployer": "0xF6a151d5c4b3fdf70f81CE53042deEAc59EA4ed2",
+  "network": "bscTestnet",
+  "chainId": 97,
+  "constructorArgs": {
+    "name": "Pixel Raid Cards",
+    "symbol": "PRC",
+    "baseURI": "https://pixel.brebross.xyz/metadata/"
+  },
+  "timestamp": 1782704661
+}

@@ -1,0 +1,22 @@
+[Unit]
+Description=Pixel Raid PocketBase Server
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/pixel-raid/pocketbase
+ExecStart=/root/pixel-raid/pocketbase/pocketbase serve --http=127.0.0.1:8090 --dir=/root/pixel-raid/pocketbase/pb_data --migrationsDir=/root/pixel-raid/pocketbase/pb_migrations
+Restart=always
+RestartSec=5
+StandardOutput=append:/root/pixel-raid/pocketbase/server.log
+StandardError=append:/root/pixel-raid/pocketbase/server.err
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

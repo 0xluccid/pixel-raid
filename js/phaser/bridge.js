@@ -16,21 +16,14 @@ var BattlePhaser = {
     init: function (containerId) {
         this._containerId = containerId || 'battle-canvas-container';
 
-        // Destroy old Phaser game if it exists (prevent memory leak on retry)
-        if (this._game) {
-            try { this._game.destroy(true, false); } catch (e) {}
-            this._game = null;
-            this._scene = null;
-        }
-
         var container = document.getElementById(this._containerId);
         if (!container) {
             console.error('BattlePhaser: container not found:', this._containerId);
             return;
         }
 
-        var W = 1280;
-        var H = 720;
+        var W = 800;
+        var H = 500;
 
         var config = {
             type: Phaser.AUTO,
@@ -44,9 +37,8 @@ var BattlePhaser = {
                 autoCenter: Phaser.Scale.CENTER_BOTH
             },
             render: {
-                pixelArt: true,
-                antialias: false,
-                roundPixels: true
+                pixelArt: false,
+                antialias: true
             },
             audio: { noAudio: true },
             banner: false
@@ -67,14 +59,6 @@ var BattlePhaser = {
                     PhaserAnimations.init(self._scene);
                 }
                 console.log('BattlePhaser: Phaser scene ready');
-                // If enter() was called before scene was ready, trigger it now
-                // This fixes the race condition where init() via double-rAF
-                // and enter() retries don't sync up
-                if (!self._active && self._pendingEnter) {
-                    var p = self._pendingEnter;
-                    self._pendingEnter = null;
-                    self.enter(p.player, p.enemy, p.onComplete);
-                }
             } else {
                 setTimeout(checkScene, 100);
             }
@@ -114,8 +98,6 @@ var BattlePhaser = {
     // ===== LIFECYCLE =====
     enter: function (player, enemy, onComplete) {
         if (!this._scene) {
-            // Store pending enter params so checkScene() can trigger it after scene loads
-            this._pendingEnter = { player: player, enemy: enemy, onComplete: onComplete };
             var self = this;
             setTimeout(function () { self.enter(player, enemy, onComplete); }, 200);
             return;
@@ -124,26 +106,58 @@ var BattlePhaser = {
         this._active = true;
         this._transitioning = true;
 
-        // Make container take full viewport (arena top, cards bottom)
+        // Make container fullscreen overlay
         var container = document.getElementById(this._containerId);
         if (container) {
-            container.style.display = 'block';
-            container.style.margin = '0';
-            container.style.border = 'none';
-            container.style.boxShadow = 'none';
-            container.style.maxWidth = 'none';
+            container.style.cssText = [
+                'position: fixed',
+                'top: 0',
+                'left: 0',
+                'right: 0',
+                'bottom: 0',
+                'width: 100vw',
+                'height: 100vh',
+                'max-width: none',
+                'min-height: 0',
+                'z-index: 9999',
+                'background: #0a0a1a',
+                'display: block',
+                'margin: 0',
+                'padding: 0',
+                'border: none',
+                'border-radius: 0',
+                'overflow: hidden'
+            ].join('; ') + ';';
 
-            // Reset card hand to normal flow — CSS handles layout via .battle-active
+            // Move card hand and action buttons inside container
             var cardHand = document.getElementById('card-hand-area');
+            var actionRow = document.querySelector('.battle-action-row');
+            var infoStrip = document.querySelector('.battle-info-strip');
+            var controls = document.querySelector('.battle-controls');
+            var els = [cardHand, actionRow, infoStrip, controls];
+            for (var i = 0; i < els.length; i++) {
+                var el = els[i];
+                if (el && el.parentElement !== container) {
+                    container.appendChild(el);
+                }
+                if (el) {
+                    // Bug #3: Position card hand at bottom with absolute positioning
+                    // so it stays visible above the Phaser canvas
+                    el.style.display = '';
+                    el.style.position = 'absolute';
+                    el.style.zIndex = '10000';
+                    el.style.left = '0';
+                    el.style.right = '0';
+                }
+            }
+            // Card hand at very bottom, action row above it
             if (cardHand) {
-                cardHand.style.display = '';
-                cardHand.style.position = '';
-                cardHand.style.top = '';
-                cardHand.style.bottom = '';
-                cardHand.style.left = '';
-                cardHand.style.right = '';
-                cardHand.style.zIndex = '';
-                // Don't override flex/height — CSS .battle-active rules handle it
+                cardHand.style.bottom = '0';
+                cardHand.style.background = 'rgba(10,10,30,0.92)';
+                cardHand.style.borderTop = '1px solid rgba(255,215,0,0.2)';
+            }
+            if (actionRow) {
+                actionRow.style.bottom = 'auto';
             }
         }
 
@@ -153,34 +167,25 @@ var BattlePhaser = {
             hideEls[i].style.display = 'none';
         }
 
-        // Resize with retry to handle layout timing
+        // Resize
         var self = this;
         requestAnimationFrame(function () {
             self._resizeToViewport();
-            // Retry after 100ms in case layout wasn't computed yet
-            setTimeout(function () { self._resizeToViewport(); }, 100);
-            setTimeout(function () { self._resizeToViewport(); }, 300);
         });
 
-        // Keep canvas edge-to-edge on window resize
-        this._resizeHandler = function () { self._resizeToViewport(); };
-        window.addEventListener('resize', this._resizeHandler);
-
-        // Style canvas to fill container edge-to-edge (NO objectFit — causes letterboxing)
         var styleCanvas = function () {
-            var c = document.querySelector('#battle-canvas-container canvas') || (self._game && self._game.canvas);
-            if (c) {
+            if (self._game && self._game.canvas) {
+                var c = self._game.canvas;
                 c.style.width = '100%';
                 c.style.height = '100%';
                 c.style.display = 'block';
-                c.style.margin = '0';
+                c.style.objectFit = 'contain';
+                c.style.margin = '0 auto';
             }
         };
         setTimeout(styleCanvas, 50);
         setTimeout(styleCanvas, 200);
-
-        // Position bonus overlay labels (HTML, not Phaser — more reliable)
-        this._createBonusOverlays();
+        setTimeout(styleCanvas, 500);
 
         // Show enter transition
         this._scene.showTransition('enter', function () {
@@ -192,133 +197,39 @@ var BattlePhaser = {
         this.renderField(player, enemy);
     },
 
-    // ===== POSITION BONUS OVERLAYS (HTML) =====
-    _bonusOverlayEls: [],
-    _createBonusOverlays: function () {
-        // Remove old overlays
-        this._removeBonusOverlays();
-
-        if (typeof POSITION_BONUSES === 'undefined') return;
-
-        var canvas = document.querySelector('#battle-canvas-container canvas');
-        if (!canvas) return;
-
-        var wrap = canvas.parentElement;
-        if (!wrap) return;
-        wrap.style.position = 'relative';
-
-        var W = 800, H = 500;
-        var slotW = 110, slotH = 85, slotGap = 8;
-        var totalW = slotW * 5 + slotGap * 4;
-        var startX = (W - totalW) / 2;
-        var centerY = H / 2;
-        var playerY = centerY + 18;
-
-        for (var i = 0; i < 5; i++) {
-            var cfg = POSITION_BONUSES[i];
-            if (!cfg) continue;
-
-            var slotCenterX = startX + i * (slotW + slotGap) + slotW / 2;
-
-            // Subtle icon overlay — hidden by default, shown only on canvas hover via battle-scene tooltip
-            var iconEl = document.createElement('div');
-            iconEl.textContent = cfg.icon;
-            iconEl.style.cssText = 'position:absolute;pointer-events:none;font-size:12px;text-align:center;transition:opacity 0.3s;opacity:0;pointer-events:auto;cursor:help;';
-            iconEl.style.left = 'calc(' + (slotCenterX / W * 100) + '% - 8px)';
-            iconEl.style.top = 'calc(' + ((playerY + 4) / H * 100) + '%)';
-
-            // Show icon on hover, hide on leave
-            (function(icon, slotIdx) {
-                icon.addEventListener('mouseenter', function() {
-                    icon.style.opacity = '0.9';
-                });
-                icon.addEventListener('mouseleave', function() {
-                    icon.style.opacity = '0';
-                });
-            })(iconEl, i);
-
-            wrap.appendChild(iconEl);
-            this._bonusOverlayEls.push(iconEl);
-        }
-    },
-    _removeBonusOverlays: function () {
-        for (var i = 0; i < this._bonusOverlayEls.length; i++) {
-            if (this._bonusOverlayEls[i] && this._bonusOverlayEls[i].parentNode) {
-                this._bonusOverlayEls[i].parentNode.removeChild(this._bonusOverlayEls[i]);
-            }
-        }
-        this._bonusOverlayEls = [];
-    },
-
     exit: function (onComplete) {
-        // Guard: don't start a new transition if already inactive or transitioning
-        if (!this._active && !this._transitioning) { if (onComplete) onComplete(); return; }
         if (!this._scene) { if (onComplete) onComplete(); return; }
         this._transitioning = true;
-
-        // Remove window resize handler
-        if (this._resizeHandler) {
-            window.removeEventListener('resize', this._resizeHandler);
-            this._resizeHandler = null;
-        }
 
         this._scene.showTransition('exit', function () {
             this._active = false;
             this._transitioning = false;
 
-            // Clean up bonus overlays
-            this._removeBonusOverlays();
+            var container = document.getElementById(this._containerId);
+            var screenBattle = document.getElementById('screen-battle');
 
-            // Clear card hand content from previous battle
-            var cardHand = document.getElementById('card-hand-area');
-            if (cardHand) cardHand.innerHTML = '';
-
-            // Clear hero power area
-            var heroPower = document.getElementById('hero-power-area');
-            if (heroPower) heroPower.innerHTML = '';
-
-            // Remove phase bar from previous battle
-            var phaseBar = document.getElementById('battle-phase-bar');
-            if (phaseBar) phaseBar.remove();
-
-            // Reset inline styles on battle elements (they stay in screen-battle DOM, not moved)
             var movedEls = ['#card-hand-area', '.battle-action-row', '.battle-info-strip', '.battle-controls'];
             for (var i = 0; i < movedEls.length; i++) {
                 var el = document.querySelector(movedEls[i]);
-                if (el) {
+                if (el && container && el.parentElement === container && screenBattle) {
+                    screenBattle.appendChild(el);
+                    // Reset all inline styles set during battle
                     el.style.cssText = '';
                     el.style.display = 'none'; // hidden when not in battle
                 }
             }
 
-            var container = document.getElementById(this._containerId);
             if (container) {
                 container.style.cssText = '';
-                container.style.display = 'none';
-                // Remove leftover canvas from Phaser
-                var oldCanvas = container.querySelector('canvas');
-                if (oldCanvas) oldCanvas.remove();
-            }
-            var wrap = document.querySelector('.battle-canvas-wrap');
-            if (wrap) {
-                wrap.style.cssText = '';
-                wrap.style.height = '';
-                wrap.style.minHeight = '';
             }
 
-            // Robustly restore nav/header visibility
-            var navEl = document.querySelector('.game-nav');
-            var headerEl = document.querySelector('.game-header');
-            if (navEl) { navEl.style.display = ''; navEl.style.removeProperty('display'); }
-            if (headerEl) { headerEl.style.display = ''; headerEl.style.removeProperty('display'); }
-
-            // Restore battle controls (Start Battle button)
-            var battleCtrl = document.querySelector('.battle-controls');
-            if (battleCtrl) { battleCtrl.style.cssText = ''; battleCtrl.style.removeProperty('display'); }
+            var showEls = document.querySelectorAll('.game-nav, .game-header');
+            for (var i = 0; i < showEls.length; i++) {
+                showEls[i].style.display = '';
+            }
 
             if (this._game) {
-                this._game.scale.resize(1280, 720);
-                this._game.scale.setGameSize(1280, 720);
+                this._game.scale.resize(800, 500);
             }
 
             if (onComplete) onComplete();
@@ -328,29 +239,14 @@ var BattlePhaser = {
     // ===== RESIZE =====
     _resizeToViewport: function () {
         if (!this._game) return;
-        
-        // DO NOT resize game dimensions — all UI elements are positioned for 1280×720.
-        // Phaser Scale.FIT + CSS width/height:100% handles canvas scaling automatically.
-        // Manual resize would break hero panels, skill slots, and grid positions.
-        
-        // Ensure canvas fills its container (CSS handles display scaling)
-        try {
-            var c = this._game.canvas;
-            if (c) {
-                c.style.width = '100%';
-                c.style.height = '100%';
-                c.style.display = 'block';
-                c.style.margin = '0';
-            }
-        } catch (e) { /* ignore */ }
-
-        // Center camera on the 1280×720 world
-        if (this._scene && this._scene.cameras && this._scene.cameras.main) {
-            var cam = this._scene.cameras.main;
-            var W = this._scene.W || 1280;
-            var H = this._scene.H || 720;
-            cam.setZoom(1);
-            cam.centerOn(W / 2, H / 2);
+        var canvas = this._game.canvas;
+        if (canvas) {
+            canvas.style.width = '100%';
+            canvas.style.height = 'calc(100vh - 180px)';
+            canvas.style.objectFit = 'contain';
+            canvas.style.display = 'block';
+            canvas.style.margin = '0 auto';
+            canvas.style.maxHeight = 'calc(100vh - 180px)';
         }
     },
 
@@ -366,7 +262,7 @@ var BattlePhaser = {
         // Skill cards activate at hero position
         var pos = this.getHeroZonePosition(0, isPlayer);
         if (typeof PhaserAnimations !== 'undefined') {
-            PhaserAnimations.summonUnit(pos.x, pos.y);
+            PhaserAnimations.heroSummon(pos.x, pos.y);
         }
     },
 
@@ -455,34 +351,14 @@ var BattlePhaser = {
         this._scene.showPhaseBanner(text, isPlayer);
     },
 
-    // ===== DEATH FADE ANIMATION =====
-    deathFade: function (side, slotIndex, emoji, cb) {
-        if (!this._scene || !this._active) { if (cb) cb(); return; }
-        this._scene.deathFade(side, slotIndex, emoji, cb);
-    },
-
-    // ===== VICTORY CELEBRATION =====
-    playVictory: function (cb) {
-        if (!this._scene || !this._active) { if (cb) cb(); return; }
-        this._scene.playVictory(cb);
-    },
-
-    // ===== DEFEAT ANIMATION =====
-    playDefeat: function (cb) {
-        if (!this._scene || !this._active) { if (cb) cb(); return; }
-        this._scene.playDefeat(cb);
-    },
-
     // ===== DESTROY =====
     destroy: function () {
         this._active = false;
-        this._transitioning = false;
-        this._removeBonusOverlays();
         if (typeof PhaserAnimations !== 'undefined') {
             PhaserAnimations.stop();
         }
         if (this._game) {
-            this._game.destroy(true, false); // removeCanvas=true, no scene shutdown
+            this._game.destroy(true);
             this._game = null;
         }
         this._scene = null;

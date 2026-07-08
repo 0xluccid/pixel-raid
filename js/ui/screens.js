@@ -30,17 +30,7 @@ const UI = {
         this.currentScreen = name;
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-
-        // If navigating away from battle, remove battle-active + clear inline styles
-        if (name !== 'battle') {
-            const battleScreen = document.getElementById('screen-battle');
-            if (battleScreen) {
-                battleScreen.classList.remove('battle-active');
-                // Clear inline styles set during battle (position:fixed, display:flex, etc.)
-                battleScreen.removeAttribute('style');
-            }
-        }
-
+        
         const screen = document.getElementById(`screen-${name}`);
         const btn = document.querySelector(`[data-screen="${name}"]`);
         if (screen) screen.classList.add('active');
@@ -65,37 +55,9 @@ const UI = {
 
     // ===== BATTLE SCREEN =====
     renderBattleScreen() {
-        // LAYOUT FIX: Before battle, make screen fullscreen with scrollable preview + sticky controls
-        try {
-            if (typeof BattleEngine === 'undefined' || !BattleEngine.isRunning) {
-                // Do NOT add battle-active here — that class is ONLY for during battle
-                // battle-active hides deck preview, controls, etc. which we need in the menu
-                // Hide canvas wrap + canvas container
-                const canvasWrap = document.querySelector('#screen-battle .battle-canvas-wrap');
-                if (canvasWrap) canvasWrap.style.display = 'none';
-                const canvasContainer = document.getElementById('battle-canvas-container');
-                if (canvasContainer) canvasContainer.style.display = 'none';
-                // Hide hero power area
-                const heroPower = document.getElementById('hero-power-area');
-                if (heroPower) heroPower.style.display = 'none';
-                // Hide card hand when not in battle
-                const cardHandArea = document.getElementById('card-hand-area');
-                if (cardHandArea) cardHandArea.style.display = 'none';
-                // Make deck preview fill available space
-                const preview = document.getElementById('battle-deck-preview');
-                if (preview) preview.style.cssText = 'flex:1;overflow-y:auto;min-height:0;padding:16px;';
-                // Fix controls at bottom
-                const controls = document.querySelector('.battle-controls');
-                if (controls) controls.style.cssText = 'flex-shrink:0;padding:12px 16px;background:rgba(10,10,30,0.95);border-top:2px solid rgba(0,229,255,0.3);justify-content:center;z-index:10;';
-                // Hide nav bar inside battle screen
-                const battleScreenEl = document.getElementById('screen-battle');
-                const nav = battleScreenEl ? battleScreenEl.querySelector('.game-nav') : null;
-                if (nav) nav.style.display = 'none';
-            }
-        } catch (e) { console.warn('Battle layout fix error:', e); }
-
-        // Update start button state (disabled if no deck)
-        this._updateStartButton();
+        // Always re-enable start button when rendering battle screen
+        const startBtn = document.getElementById('btn-start-battle');
+        if (startBtn) startBtn.disabled = false;
 
         // Show deck preview when battle is not active
         this.renderBattleDeckPreview();
@@ -131,9 +93,8 @@ const UI = {
             }
         }
 
-        // (Layout fix moved to top of function)
-
-        // NOTE: renderArenaPreview() removed — renderBattleDeckPreview() handles pre-battle display
+        // Show arena preview when battle is not active
+        this.renderArenaPreview();
     },
 
     renderArenaPreview() {
@@ -185,16 +146,13 @@ const UI = {
                         <div class="arena-hp-text">20/20</div>
                     </div>
                     <div class="arena-cards">
-                        ${deck.slice(0, 3).map((card, i) => {
-                            const elInfo = (typeof getCardElement === 'function') ? getCardElement(card) : null;
-                            const elIcon = elInfo ? elInfo.icon : '⚔️';
-                            const elColor = elInfo ? elInfo.color : '#888';
-                            return `<div class="hero-card arena-card" style="animation-delay:${i * 0.15}s;border-color:${elColor}">
-                                <span class="hero-card-icon">${elIcon}</span>
+                        ${deck.slice(0, 3).map((card, i) => `
+                            <div class="hero-card arena-card" style="animation-delay:${i * 0.15}s">
+                                <span class="hero-card-icon">${this._getHeroIcon(card.class)}</span>
                                 <span class="hero-card-name">${card.name || 'Hero'}</span>
                                 <span class="hero-card-stats">⚔️${card.stats?.atk || 10} 🛡${card.stats?.def || 5}</span>
-                            </div>`;
-                        }).join('')}
+                            </div>
+                        `).join('')}
                         ${deck.length === 0 ? `
                             <div class="hero-card arena-card empty">
                                 <span class="hero-card-icon">❓</span>
@@ -271,23 +229,6 @@ const UI = {
         const rarity = RARITIES[hero.rarity] || {};
         const typeIcons = { attack: '⚔️', defense: '🛡️', buff: '✨', debuff: '💀', special: '⚡' };
 
-        // Generate enemy preview based on stage
-        const enemyTypes = [
-            { name: 'Goblin', icon: '👹', class: 'warrior' },
-            { name: 'Skeleton', icon: '💀', class: 'warrior' },
-            { name: 'Dark Mage', icon: '🧙', class: 'mage' },
-            { name: 'Wolf', icon: '🐺', class: 'assassin' },
-            { name: 'Bandit', icon: '🥷', class: 'assassin' },
-        ];
-        const stage = GameState.player.stage || 1;
-        const enemyCount = Math.min(3, 1 + Math.floor(stage / 3));
-        const enemies = [];
-        for (let i = 0; i < enemyCount; i++) {
-            const base = enemyTypes[(stage + i) % enemyTypes.length];
-            enemies.push({ ...base, hp: 50 + stage * 10, atk: 5 + stage * 2 });
-        }
-        const totalEnemyHP = enemies.reduce((s, e) => s + e.hp, 0);
-
         let heroHTML = `
             <div class="battle-preview-hero">
                 <div class="battle-preview-hero-sprite" id="battle-preview-sprite"></div>
@@ -300,23 +241,6 @@ const UI = {
                         <span style="color:#4488ff">DEF:${hero.stats.def}</span>
                         <span style="color:#ffaa00">SPD:${hero.stats.spd}</span>
                     </div>
-                </div>
-            </div>
-        `;
-
-        // Enemy preview HTML
-        let enemyHTML = `
-            <div class="battle-preview-enemy">
-                <div class="battle-preview-enemy-title" style="color:#ff6644">⚔ Enemies (${enemyCount})</div>
-                <div class="battle-preview-enemy-list">
-                    ${enemies.map(e => `
-                        <div class="battle-preview-enemy-item">
-                            <span>${e.icon}</span>
-                            <span>${e.name}</span>
-                            <span style="color:#ff6644">ATK:${e.atk}</span>
-                            <span style="color:#44cc44">HP:${e.hp}</span>
-                        </div>
-                    `).join('')}
                 </div>
             </div>
         `;
@@ -335,14 +259,7 @@ const UI = {
         });
         skillsHTML += '</div>';
 
-        // Stage info
-        const stageHTML = `
-            <div class="arena-stage-info">
-                Stage ${stage} — Wave ${GameState.player.wave || 1}
-            </div>
-        `;
-
-        preview.innerHTML = heroHTML + enemyHTML + skillsHTML + stageHTML;
+        preview.innerHTML = heroHTML + skillsHTML;
 
         // Draw hero sprite
         const spriteContainer = document.getElementById('battle-preview-sprite');
@@ -374,71 +291,11 @@ const UI = {
     bindBattleControls() {
         document.getElementById('btn-start-battle').addEventListener('click', () => {
             if (typeof Sound !== 'undefined') Sound.click();
-            this.startBattleWithCountdown();
+            this.startBattle();
         });
 
         // Default battle speed = 2x (fast)
         GameState.battleSpeed = 2;
-
-        // Check deck state and enable/disable start button
-        this._updateStartButton();
-
-        // Hero power click handler
-        document.getElementById('hero-power-area').addEventListener('click', (e) => {
-            const btn = e.target.closest('#hero-power-use');
-            if (!btn || btn.disabled) return;
-            if (typeof Sound !== 'undefined') Sound.click();
-            this._useHeroPower();
-        });
-    },
-
-    _updateStartButton() {
-        const btn = document.getElementById('btn-start-battle');
-        if (!btn) return;
-        const deckCards = GameState.getDeckCards();
-        const hasHero = deckCards.length > 0;
-        btn.disabled = !hasHero;
-        if (hasHero) {
-            btn.classList.add('ready');
-            btn.innerHTML = '⚔️ START BATTLE';
-        } else {
-            btn.classList.remove('ready');
-            btn.innerHTML = '⚔️ Build Deck First';
-        }
-    },
-
-    // ===== COUNTDOWN SYSTEM =====
-    startBattleWithCountdown() {
-        const deckCards = GameState.getDeckCards();
-        if (deckCards.length === 0) {
-            this.toast('No cards in deck! Go to Strategy.', 'error');
-            return;
-        }
-
-        const countdownEl = document.getElementById('battle-countdown');
-        if (!countdownEl) return this.startBattle();
-
-        // Hide battle controls during countdown
-        const controls = document.querySelector('.battle-controls');
-        if (controls) controls.style.display = 'none';
-
-        countdownEl.classList.add('active');
-        const steps = ['3', '2', '1', '⚔️ FIGHT!'];
-        let i = 0;
-
-        const showNext = () => {
-            if (i >= steps.length) {
-                countdownEl.classList.remove('active');
-                countdownEl.innerHTML = '';
-                this.startBattle();
-                return;
-            }
-            const isFight = i === steps.length - 1;
-            countdownEl.innerHTML = `<div class="${isFight ? 'countdown-fight' : 'countdown-number'}">${steps[i]}</div>`;
-            i++;
-            setTimeout(showNext, isFight ? 600 : 800);
-        };
-        showNext();
     },
 
     startBattle() {
@@ -465,25 +322,14 @@ const UI = {
         // Stop any previous battle
         BattleEngine.stop();
 
-        // Clear ALL leftover inline display styles from pre-battle layout
-        // (inline styles override CSS, so battle-active rules wouldn't take effect)
-        var resetEls = ['#card-hand-area', '#battle-canvas-container', '.battle-canvas-wrap', '.battle-action-row', '.battle-info-strip', '#battle-phase-bar'];
-        for (var i = 0; i < resetEls.length; i++) {
-            var el = document.querySelector(resetEls[i]);
-            if (el) { el.style.cssText = ''; el.removeAttribute('style'); }
-        }
+        // Show battle canvas container
+        const battleContainer = document.getElementById('battle-canvas-container');
+        if (battleContainer) battleContainer.style.display = 'block';
 
         // Go fullscreen for battle
         document.getElementById('screen-battle').classList.add('battle-active');
 
-        // Show battle canvas container AND wrap — must be visible BEFORE Phaser.init
-        const battleContainer = document.getElementById('battle-canvas-container');
-        if (battleContainer) { battleContainer.style.display = 'block'; }
-        const battleWrap = document.querySelector('#screen-battle .battle-canvas-wrap');
-        if (battleWrap) { battleWrap.style.display = 'block'; }
-
-        // Init Phaser — container must be visible for RESIZE mode to get dimensions
-        // Call synchronously so init starts before enter() below
+        // Init Phaser renderer and activate bridge
         BattlePhaser.init('battle-canvas-container');
 
         // Init card hand renderer
@@ -491,13 +337,10 @@ const UI = {
             CardHand.init('card-hand-area');
             // Wire up card click → play card to first empty board slot
             CardHand.onCardPlay = (handIndex, card) => {
-                if (BattleEngine.currentPhase !== 'play') {
-                    this.toast('Wait for PLAY phase!', 'warning');
-                    return;
-                }
-                // Allow up to 3 cards per round
-                if (BattleEngine.cardsPlayedThisTurn >= 3) {
-                    this.toast('Max 3 cards per round!', 'warning');
+                if (BattleEngine.currentPhase !== 'play') return;
+                // Bug #2: Only 1 card per round
+                if (BattleEngine.cardsPlayedThisTurn >= 1) {
+                    this.toast('Can only play 1 card per round!', 'warning');
                     return;
                 }
                 // Find first empty slot
@@ -509,9 +352,10 @@ const UI = {
                 if (emptySlot < 0) return; // board full
                 const success = BattleEngine.playCard(handIndex, emptySlot);
                 if (success) {
-                    // Card play is synced via BattleEngine.onFieldUpdate -> renderHand
-                    // Just animate in Phaser
-                    BattlePhaser.animateCardPlay(card, emptySlot, true);
+                    // Animate card out, then re-render
+                    CardHand.animateCardPlay(handIndex, () => {
+                        CardHand.renderHand(BattleEngine.player.hand, BattleEngine.player.energy);
+                    });
                 } else {
                     CardHand.shakeCard(handIndex);
                 }
@@ -526,13 +370,8 @@ const UI = {
 
         // Wire up BattleEngine event handlers
         BattleEngine.onPhaseChange = (phase) => {
-            try { this._updatePhaseBar(phase); } catch (e) {}
-            try { this._updateActionButtons(phase); } catch (e) {}
-
-            // Tick hero power cooldowns at start of each turn (draw phase)
-            if (phase === 'draw' && typeof HeroPowers !== 'undefined') {
-                try { HeroPowers.tickCooldowns(); } catch (e) {}
-            }
+            this._updatePhaseBar(phase);
+            this._updateActionButtons(phase);
 
             // Show phase banner in Phaser
             const phaseNames = {
@@ -540,72 +379,29 @@ const UI = {
                 arrange: 'ARRANGE', battle: 'BATTLE', result: 'RESULT'
             };
             if (['play', 'arrange', 'battle', 'result'].includes(phase)) {
-                try {
-                    BattlePhaser.showPhaseBanner(phaseNames[phase] || phase.toUpperCase(), true);
-                } catch (e) { console.warn('showPhaseBanner error:', e); }
+                BattlePhaser.showPhaseBanner(phaseNames[phase] || phase.toUpperCase(), true);
             }
 
-            // Re-render card hand when entering play phase (enables cards for clicking)
-            if (phase === 'play' && typeof CardHand !== 'undefined' && BattleEngine.player) {
-                try { CardHand.renderHand(BattleEngine.player.hand, BattleEngine.player.energy); } catch(e) {}
-            }
             // Update Phaser hero panels
             if (BattleEngine.player && BattleEngine.enemy) {
-                try {
-                    BattlePhaser.renderField(BattleEngine.player, BattleEngine.enemy);
-                } catch (e) { console.warn('renderField error:', e); }
+                BattlePhaser.renderField(BattleEngine.player, BattleEngine.enemy);
             }
         };
 
-        // Track previous board state for death detection
-        this._prevFieldState = { player: [], enemy: [] };
-
         BattleEngine.onFieldUpdate = () => {
-            // Detect deaths BEFORE re-rendering (compare prev vs current)
-            if (this._prevFieldState && this._prevFieldState.player.length) {
-                try { this._detectAndAnimateDeaths(); } catch (e) { console.warn('Death anim error:', e); }
-            }
+            BattlePhaser.renderField(BattleEngine.player, BattleEngine.enemy);
 
-            // Phaser render — wrapped in try-catch so cards always render even if Phaser fails
-            try {
-                BattlePhaser.renderField(BattleEngine.player, BattleEngine.enemy);
-            } catch (e) {
-                console.warn('BattlePhaser.renderField error:', e);
-            }
-
-            // Always re-render card hand during active battle phases
+            // Bug #3: Re-render card hand during play phase AND when drawing cards
             if (typeof CardHand !== 'undefined' && BattleEngine.player) {
-                const activePhases = ['draw', 'energy', 'play', 'arrange'];
-                if (activePhases.includes(BattleEngine.currentPhase)) {
-                    try {
-                        CardHand.renderHand(BattleEngine.player.hand, BattleEngine.player.energy);
-                    } catch (e) {
-                        console.warn('CardHand.renderHand error:', e);
-                    }
+                if (BattleEngine.currentPhase === 'play' || BattleEngine.currentPhase === 'energy') {
+                    CardHand.renderHand(BattleEngine.player.hand, BattleEngine.player.energy);
                 }
-            }
-
-            // Render hero power button
-            if (BattleEngine.player && BattleEngine.player.heroCard && BattleEngine.currentPhase === 'play') {
-                const heroClass = BattleEngine.player.heroCard.class || 'warrior';
-                if (typeof HeroPowers !== 'undefined') {
-                    HeroPowers.renderButton(heroClass, BattleEngine.player.energy, 'hero-power-area');
-                }
-            } else {
-                const pa = document.getElementById('hero-power-area');
-                if (pa) pa.innerHTML = '';
             }
 
             // Update arrange UI if in arrange phase
             if (BattleEngine.currentPhase === 'arrange') {
                 this._renderArrangeOverlay();
             }
-
-            // Save current board state for next comparison
-            this._prevFieldState = {
-                player: BattleEngine.player.board.map(u => u ? { emoji: u.emoji, name: u.name } : null),
-                enemy: BattleEngine.enemy.board.map(u => u ? { emoji: u.emoji, name: u.name } : null)
-            };
         };
 
         BattleEngine.onAttack = (data) => {
@@ -627,9 +423,6 @@ const UI = {
                 CardHand.renderHand(BattleEngine.player.hand, BattleEngine.player.energy);
             }
         };
-
-        // Reset hero power cooldowns
-        if (typeof HeroPowers !== 'undefined') HeroPowers.resetCooldowns();
 
         // Start the battle engine with hero data
         BattleEngine.startBattle(playerDeck, enemyDeck, {
@@ -655,7 +448,7 @@ const UI = {
         if (!bar) {
             bar = document.createElement('div');
             bar.id = 'battle-phase-bar';
-            bar.style.cssText = 'position:absolute;top:0;left:0;right:0;z-index:50;display:flex;justify-content:center;gap:4px;padding:6px 8px;background:rgba(10,10,26,0.95);border-bottom:1px solid rgba(255,215,0,0.2);';
+            bar.style.cssText = 'display:flex;justify-content:center;gap:4px;padding:6px 8px;background:rgba(10,10,26,0.95);border-bottom:1px solid rgba(255,215,0,0.2);';
             const container = document.getElementById('battle-canvas-container');
             if (container && container.parentElement) {
                 container.parentElement.insertBefore(bar, container);
@@ -725,17 +518,10 @@ const UI = {
         if (!row) {
             row = document.createElement('div');
             row.className = 'battle-action-row';
-            row.style.cssText = 'display:flex;justify-content:center;align-items:center;gap:8px;padding:6px 0;background:rgba(10,10,26,0.95);border-top:1px solid rgba(255,215,0,0.15);flex-shrink:0;';
-            // Insert into #screen-battle (NOT inside battle-canvas-wrap which has overflow:hidden)
-            const screenBattle = document.getElementById('screen-battle');
-            if (screenBattle) {
-                // Insert after battle-canvas-wrap, before card-hand-area
-                const cardHand = document.getElementById('card-hand-area');
-                if (cardHand) {
-                    screenBattle.insertBefore(row, cardHand);
-                } else {
-                    screenBattle.appendChild(row);
-                }
+            row.style.cssText = 'display:flex;justify-content:center;gap:8px;padding:4px 0;background:rgba(10,10,26,0.9);';
+            const container = document.getElementById('battle-canvas-container');
+            if (container && container.parentElement) {
+                container.parentElement.appendChild(row);
             }
         }
         this._updateActionButtons('draw');
@@ -760,14 +546,6 @@ const UI = {
             `;
             row.style.display = 'flex';
         } else if (phase === 'result') {
-            // Generate rewards ONCE so display matches what's actually applied
-            const stage = GameState.player.stage || 1;
-            const isWin = BattleEngine._checkWinLose() === 'player';
-            this._lastBattleIsWin = isWin;
-            this._lastBattleRewards = isWin
-                ? Rewards.generateWinRewards(stage)
-                : Rewards.generateLossRewards(stage);
-            this._lastBattleStage = stage;
             this._renderResultScreen();
             row.style.display = 'none';
         } else {
@@ -819,157 +597,54 @@ const UI = {
         const result = BattleEngine._checkWinLose();
         const isWin = result === 'player';
 
-        // Trigger Phaser victory/defeat animation
-        if (isWin) {
-            BattlePhaser.playVictory();
-        } else {
-            BattlePhaser.playDefeat();
-        }
-
-        // Create result overlay using CSS classes
+        // Create result overlay
         let overlay = document.getElementById('battle-result-overlay');
         if (!overlay) {
             overlay = document.createElement('div');
             overlay.id = 'battle-result-overlay';
+            overlay.style.cssText = `
+                position:fixed;top:0;left:0;right:0;bottom:0;
+                z-index:99999;display:flex;align-items:center;justify-content:center;
+                background:rgba(0,0,0,0.7);animation:fadeIn 0.3s ease;
+            `;
             document.body.appendChild(overlay);
         }
+
         overlay.style.display = 'flex';
-        overlay.style.background = isWin ? 'rgba(0,0,0,0.7)' : 'rgba(40,0,0,0.75)';
 
-        const stage = this._lastBattleStage || GameState.player.stage || 1;
-        const rewards = this._lastBattleRewards || { gold: 0, cards: [], heroExp: 0 };
-        const goldReward = rewards.gold;
-        const xpReward = rewards.heroExp || 0;
-
-        // Card reward display from actual generated cards
-        let cardReward = '';
-        if (rewards.cards && rewards.cards.length > 0) {
-            const card = rewards.cards[0];
-            cardReward = `
-                <div class="result-reward-item">
-                    <span class="result-reward-icon">🃏</span>
-                    <span>New Card</span>
-                    <span class="result-reward-value">${card.name} <span style="color:${card.rarity === 'rare' ? '#4488ff' : card.rarity === 'epic' ? '#bb44ff' : '#aaa'}">(${card.rarity})</span></span>
-                </div>`;
+        const stage = GameState.player.stage;
+        let rewardHTML = '';
+        if (isWin) {
+            const goldReward = 20 + (stage * 10);
+            rewardHTML = `
+                <div style="margin:12px 0;font-size:10px;color:#ffd700;">
+                    💰 +${goldReward} Gold
+                </div>
+            `;
         }
 
-        // Mission progress
-        const missionsDone = GameState.player.missionsCompleted || 0;
-        const nextMission = GameState.player.nextMission || 'Win 5 battles';
-
-        const borderColor = isWin ? '#ffd700' : '#ff4444';
-        const titleColor = isWin ? '#ffd700' : '#ff4444';
-        const titleText = isWin ? '🏆 VICTORY!' : '💀 DEFEAT';
-        const titleIcon = isWin ? '' : '';
-
         overlay.innerHTML = `
-            <div class="result-panel" style="border-color:${borderColor};box-shadow:0 0 30px ${isWin ? 'rgba(255,215,0,0.3)' : 'rgba(255,68,68,0.3)'};">
-                <div class="result-title" style="color:${titleColor}">${titleText}</div>
-                <div style="font-size:8px;color:rgba(255,255,255,0.4);margin-bottom:8px;">Stage ${stage} · Turn ${BattleEngine.turnNumber}</div>
-
-                <div class="result-rewards">
-                    <div class="result-reward-item">
-                        <span class="result-reward-icon">💰</span>
-                        <span>Gold Earned</span>
-                        <span class="result-reward-value">+${goldReward}</span>
-                    </div>
-                    <div class="result-reward-item">
-                        <span class="result-reward-icon">⚡</span>
-                        <span>Experience</span>
-                        <span class="result-reward-value">+${xpReward} XP</span>
-                    </div>
-                    ${cardReward}
-                    <div class="result-reward-item">
-                        <span class="result-reward-icon">📋</span>
-                        <span>Mission: ${nextMission}</span>
-                        <span class="result-reward-value">${missionsDone}/${isWin ? missionsDone + 1 : missionsDone}</span>
-                    </div>
+            <div style="
+                background:linear-gradient(135deg,#0a0a2e,#141432);
+                border:2px solid ${isWin ? '#ffd700' : '#ff4444'};
+                border-radius:12px;padding:24px 32px;text-align:center;
+                max-width:320px;width:90%;box-shadow:0 0 30px ${isWin ? 'rgba(255,215,0,0.3)' : 'rgba(255,68,68,0.3)'};
+            ">
+                <div style="font-family:'Press Start 2P',monospace;font-size:18px;color:${isWin ? '#ffd700' : '#ff4444'};margin-bottom:12px;text-shadow:0 0 10px ${isWin ? 'rgba(255,215,0,0.5)' : 'rgba(255,68,68,0.5)'};">
+                    ${isWin ? '🎉 Victory!' : '💀 Defeat!'}
                 </div>
-
-                <div class="result-buttons">
+                <div style="font-size:9px;color:rgba(255,255,255,0.6);margin-bottom:8px;">
+                    Turn ${BattleEngine.turnNumber}
+                </div>
+                ${rewardHTML}
+                <div style="display:flex;gap:8px;justify-content:center;margin-top:16px;">
                     <button class="btn btn-gold" onclick="UI._handleBattleResult('${isWin ? 'win' : 'lose'}')">
                         ${isWin ? '▶ Continue' : '🔄 Retry'}
                     </button>
-                    <button class="btn btn-secondary" onclick="UI._handleBattleResult('back')">
-                        ← Back
-                    </button>
-                </div>
-                <div style="text-align:center;margin-top:8px;">
-                    <button onclick="UI.openBattleCoach({isWin:${isWin},turnNumber:BattleEngine.turnNumber,player:{heroHp:BattleEngine.player.heroHp,heroMaxHp:BattleEngine.player.heroMaxHp},enemy:{heroHp:BattleEngine.enemy.heroHp,heroMaxHp:BattleEngine.enemy.heroMaxHp}})" style="
-                        font-family:'Press Start 2P',monospace;font-size:7px;
-                        padding:8px 14px;background:rgba(255,215,0,0.08);color:var(--gold);
-                        border:1px solid rgba(255,215,0,0.25);border-radius:4px;
-                        cursor:pointer;transition:all 0.2s ease;
-                    " onmouseover="this.style.background='rgba(255,215,0,0.15)'" onmouseout="this.style.background='rgba(255,215,0,0.08)'">
-                        🤖 AI Coach
-                    </button>
+                    ${isWin ? '' : '<button class="btn btn-secondary" onclick="UI._handleBattleResult(\'back\')">Back</button>'}
                 </div>
             </div>
         `;
-    },
-
-    // ===== HERO POWER =====
-    _useHeroPower() {
-        if (!BattleEngine.player || !BattleEngine.player.heroCard) return;
-        if (BattleEngine.currentPhase !== 'play') return;
-        const heroClass = BattleEngine.player.heroCard.class || 'warrior';
-        if (typeof HeroPowers === 'undefined') return;
-
-        // Pass a proper hero object with hp/maxHp for heal effects
-        const heroObj = Object.assign({}, BattleEngine.player.heroCard, {
-            hp: BattleEngine.player.heroHp,
-            maxHp: BattleEngine.player.heroMaxHp,
-        });
-
-        const result = HeroPowers.usePower(
-            heroClass,
-            heroObj,
-            BattleEngine.enemy.board,
-            BattleEngine.player
-        );
-        if (!result) return;
-
-        // Sync hp back to BattleEngine
-        if (heroObj.hp !== BattleEngine.player.heroHp) {
-            BattleEngine.player.heroHp = heroObj.hp;
-        }
-
-        // Log the power usage
-        BattleEngine._log(`${result.powerIcon} ${result.powerName}: ${result.text}`);
-
-        // Update field
-        BattleEngine._notifyFieldUpdate();
-    },
-
-    // ===== DEATH ANIMATION DETECTION =====
-    _detectAndAnimateDeaths() {
-        if (!BattleEngine.player || !BattleEngine.enemy) return;
-        if (!this._prevFieldState || !this._prevFieldState.player.length) return;
-
-        const curPlayer = BattleEngine.player.board;
-        const curEnemy = BattleEngine.enemy.board;
-        const prevPlayer = this._prevFieldState.player;
-        const prevEnemy = this._prevFieldState.enemy;
-
-        // Check player board for deaths
-        for (let i = 0; i < Math.max(prevPlayer.length, curPlayer.length); i++) {
-            const wasAlive = prevPlayer[i] && prevPlayer[i] !== null;
-            const isDead = !curPlayer[i] || curPlayer[i] === null;
-            if (wasAlive && isDead) {
-                const emoji = prevPlayer[i].emoji || '💀';
-                BattlePhaser.deathFade('player', i, emoji);
-            }
-        }
-
-        // Check enemy board for deaths
-        for (let i = 0; i < Math.max(prevEnemy.length, curEnemy.length); i++) {
-            const wasAlive = prevEnemy[i] && prevEnemy[i] !== null;
-            const isDead = !curEnemy[i] || curEnemy[i] === null;
-            if (wasAlive && isDead) {
-                const emoji = prevEnemy[i].emoji || '💀';
-                BattlePhaser.deathFade('enemy', i, emoji);
-            }
-        }
     },
 
     _handleBattleResult(type) {
@@ -992,10 +667,9 @@ const UI = {
         const stage = GameState.player.stage;
         const battleContainer = document.getElementById('battle-canvas-container');
 
-        const rewards = this._lastBattleRewards;
-
         if (type === 'win') {
-            // Apply pre-generated win rewards
+            // Generate and apply win rewards using Rewards system
+            const rewards = Rewards.generateWinRewards(stage);
             Rewards.applyWinRewards(rewards);
 
             // Stage progression
@@ -1015,7 +689,8 @@ const UI = {
             // Show reward popup with new cards
             Rewards.showRewardPopup(true, rewards, stage);
         } else if (type === 'lose') {
-            // Apply pre-generated loss rewards
+            // Generate and apply loss rewards
+            const rewards = Rewards.generateLossRewards(stage);
             Rewards.applyLossRewards(rewards);
 
             // Bug #5: Clean up battle state after loss (no auto-next)
@@ -1037,41 +712,21 @@ const UI = {
      * Removes Phaser canvas, restores normal layout, stops engine.
      */
     _cleanupAfterBattle() {
-        // Destroy Phaser bridge to fully clean up (prevents double-exit issues)
+        // Exit Phaser bridge (restores card hand, action row to original parent)
         if (typeof BattlePhaser !== 'undefined') {
-            if (BattlePhaser.isActive()) {
-                // Reset inline styles on battle elements
-                var movedEls = ['#card-hand-area', '.battle-action-row', '.battle-info-strip', '.battle-controls'];
-                for (var i = 0; i < movedEls.length; i++) {
-                    var el = document.querySelector(movedEls[i]);
-                    if (el) {
-                        el.style.cssText = '';
-                        el.style.display = 'none';
-                    }
-                }
-            }
-            BattlePhaser.destroy();
+            BattlePhaser.exit();
         }
 
-        // Hide battle canvas container AND reset its wrapper
+        // Hide battle canvas container
         const battleContainer = document.getElementById('battle-canvas-container');
         if (battleContainer) {
-            battleContainer.style.cssText = '';
             battleContainer.style.display = 'none';
-            // Clear any leftover canvas elements from Phaser
-            var oldCanvas = battleContainer.querySelector('canvas');
-            if (oldCanvas) oldCanvas.remove();
-        }
-        const canvasWrap = document.querySelector('.battle-canvas-wrap');
-        if (canvasWrap) {
-            canvasWrap.style.cssText = '';
-            canvasWrap.style.height = '';
-            canvasWrap.style.minHeight = '';
+            battleContainer.style.cssText = '';
         }
 
         // Remove battle-active class (exits fullscreen mode)
-        var screenBattleEl = document.getElementById('screen-battle');
-        if (screenBattleEl) screenBattleEl.classList.remove('battle-active');
+        const screenBattle = document.getElementById('screen-battle');
+        if (screenBattle) screenBattle.classList.remove('battle-active');
 
         // Stop battle engine
         if (typeof BattleEngine !== 'undefined') {
@@ -1081,29 +736,18 @@ const UI = {
         // Ensure card hand area is hidden and restored
         const cardHandArea = document.getElementById('card-hand-area');
         if (cardHandArea) {
-            cardHandArea.style.cssText = '';
             cardHandArea.style.display = 'none';
+            cardHandArea.style.cssText = '';
         }
 
-        // Robustly restore nav/header visibility
-        const navEl = document.querySelector('.game-nav');
-        const headerEl = document.querySelector('.game-header');
-        if (navEl) { navEl.style.display = ''; navEl.style.removeProperty('display'); }
-        if (headerEl) { headerEl.style.display = ''; headerEl.style.removeProperty('display'); }
-
-        // Restore battle controls (Start Battle button) — was hidden by inline style during cleanup
-        const battleControls = document.querySelector('.battle-controls');
-        if (battleControls) { battleControls.style.cssText = ''; battleControls.style.removeProperty('display'); }
-
-        // Clear hero power area
-        const heroPowerArea = document.getElementById('hero-power-area');
-        if (heroPowerArea) heroPowerArea.innerHTML = '';
+        // Show nav/header back
+        var showEls = document.querySelectorAll('.game-nav, .game-header');
+        for (var i = 0; i < showEls.length; i++) {
+            showEls[i].style.display = '';
+        }
 
         // Re-render battle screen to show deck preview
         UI.renderBattleScreen();
-
-        // Reset start button state
-        this._updateStartButton();
     },
 
     showRewards(rewards) {
@@ -1128,7 +772,7 @@ const UI = {
         rewardsHTML += `<div>💰 <strong>+${rewards.gold}</strong> Gold</div>`;
         rewardsHTML += `<div>⭐ <strong>+${rewards.exp}</strong> EXP</div>`;
         if (rewards.cards && rewards.cards.length > 0) {
-            rewardsHTML += `<div>🃏 New Card: <strong style="color:${RARITIES[rewards.cards[0].rarity]?.color || 'var(--gold)'}">${rewards.cards.map(c => c.name).join(', ')}</strong></div>`;
+            rewardsHTML += `<div>🃏 New Card: <strong style="color:${RARITIES[rewards.cards[0].rarity].color}">${rewards.cards.map(c => c.name).join(', ')}</strong></div>`;
         }
         if (rewards.items && rewards.items.length > 0) {
             rewardsHTML += `<div>🎁 Item: <strong>${rewards.items.map(i => i.name).join(', ')}</strong></div>`;
@@ -1183,206 +827,37 @@ const UI = {
 
     // ===== HEROES SCREEN =====
     // ===== SPRINT 3: ENHANCED COLLECTION SCREEN =====
-    // ===== FEATURE 1: Collection Screen Improvements =====
-    _collectionState: { search: '', sort: 'name', rarityFilter: 'all', classFilter: 'all' },
-
-    _bindCollectionToolbar() {
-        const searchInput = document.getElementById('collection-search');
-        const sortSelect = document.getElementById('collection-sort');
-        if (!searchInput || !sortSelect) return;
-
-        searchInput.addEventListener('input', () => {
-            this._collectionState.search = searchInput.value.trim().toLowerCase();
-            this._renderCollectionCards();
-        });
-
-        sortSelect.addEventListener('change', () => {
-            this._collectionState.sort = sortSelect.value;
-            this._renderCollectionCards();
-        });
-
-        this._renderRarityFilters();
-        this._renderClassFilters();
-    },
-
-    _renderRarityFilters() {
-        const container = document.getElementById('rarity-filters');
-        if (!container) return;
-        const rarities = [
-            { key: 'all', label: 'All' },
-            { key: 'common', label: 'Common' },
-            { key: 'rare', label: 'Rare' },
-            { key: 'epic', label: 'Epic' },
-            { key: 'legendary', label: 'Legendary' },
-            { key: 'mythic', label: 'Mythic' }
-        ];
-        container.innerHTML = `<span style="font-size:7px;color:var(--text-dim);font-family:'Press Start 2P',monospace;">R:</span>`;
-        rarities.forEach(r => {
-            const isActive = this._collectionState.rarityFilter === r.key;
-            const rColor = r.key !== 'all' && RARITIES[r.key] ? RARITIES[r.key].color : 'var(--gold)';
-            const btn = document.createElement('button');
-            btn.style.cssText = `
-                font-family:'Press Start 2P',monospace;font-size:6px;padding:3px 6px;
-                background:${isActive ? rColor : 'rgba(255,215,0,0.06)'};
-                color:${isActive ? '#000' : rColor};
-                border:1px solid ${isActive ? rColor : rColor+'44'};
-                border-radius:4px;cursor:pointer;transition:all 0.2s ease;white-space:nowrap;
-            `;
-            btn.textContent = r.label;
-            btn.addEventListener('click', () => {
-                this._collectionState.rarityFilter = r.key;
-                this._renderRarityFilters();
-                this._renderCollectionCards();
-            });
-            container.appendChild(btn);
-        });
-    },
-
-    _renderClassFilters() {
-        const container = document.getElementById('class-filters');
-        if (!container) return;
-        const classes = [
-            { key: 'all', label: 'All' },
-            { key: 'warrior', label: '⚔️Warrior' },
-            { key: 'mage', label: '🔮Mage' },
-            { key: 'archer', label: '🏹Archer' },
-            { key: 'healer', label: '💚Healer' },
-            { key: 'assassin', label: '🗡️Assassin' },
-            { key: 'tank', label: '🛡️Tank' }
-        ];
-        container.innerHTML = `<span style="font-size:7px;color:var(--text-dim);font-family:'Press Start 2P',monospace;">C:</span>`;
-        classes.forEach(c => {
-            const isActive = this._collectionState.classFilter === c.key;
-            const cInfo = CLASSES[c.key] || {};
-            const cColor = cInfo.color || 'var(--gold)';
-            const btn = document.createElement('button');
-            btn.style.cssText = `
-                font-family:'Press Start 2P',monospace;font-size:6px;padding:3px 6px;
-                background:${isActive ? cColor : 'rgba(255,215,0,0.06)'};
-                color:${isActive ? '#000' : cColor};
-                border:1px solid ${isActive ? cColor : cColor+'44'};
-                border-radius:4px;cursor:pointer;transition:all 0.2s ease;white-space:nowrap;
-            `;
-            btn.textContent = c.label;
-            btn.addEventListener('click', () => {
-                this._collectionState.classFilter = c.key;
-                this._renderClassFilters();
-                this._renderCollectionCards();
-            });
-            container.appendChild(btn);
-        });
-    },
-
-    _renderCollectionProgressBar() {
-        const el = document.getElementById('collection-progress-bar');
-        if (!el) return;
-        const ownedTemplates = new Set();
-        GameState.collection.forEach(c => ownedTemplates.add(c.templateId || c.name));
-        const owned = ownedTemplates.size;
-        const total = CARD_TEMPLATES.length;
-        const pct = total > 0 ? Math.round((owned / total) * 100) : 0;
-        el.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:var(--gold);">Collection: <span style="color:#44ff88">${owned}</span>/${total}</span>
-                <span style="font-family:'Press Start 2P',monospace;font-size:8px;color:var(--gold);">${pct}%</span>
-            </div>
-            <div style="width:100%;height:8px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,215,0,0.15);border-radius:4px;overflow:hidden;">
-                <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--gold-dark),var(--gold),#ffe060);transition:width 0.3s ease;border-radius:4px;"></div>
-            </div>
-        `;
-    },
-
-    _getFilteredSortedTemplates() {
-        const s = this._collectionState;
-        let templates = [...CARD_TEMPLATES];
-
-        // Search filter
-        if (s.search) {
-            templates = templates.filter(t => t.name.toLowerCase().includes(s.search));
-        }
-
-        // Rarity filter: only show templates whose owned card matches rarity, or show all owned/unowned
-        if (s.rarityFilter !== 'all') {
-            templates = templates.filter(t => {
-                const owned = GameState.collection.find(c => (c.templateId || c.name) === t.name);
-                return owned && owned.rarity === s.rarityFilter;
-            });
-        }
-
-        // Class filter
-        if (s.classFilter !== 'all') {
-            templates = templates.filter(t => t.cls === s.classFilter);
-        }
-
-        // Sort
-        const rarityOrder = { common: 0, rare: 1, epic: 2, legendary: 3, mythic: 4 };
-        const sortFn = (a, b) => {
-            switch (s.sort) {
-                case 'name': return a.name.localeCompare(b.name);
-                case 'rarity': {
-                    const ra = GameState.collection.find(c => (c.templateId || c.name) === a.name);
-                    const rb = GameState.collection.find(c => (c.templateId || c.name) === b.name);
-                    return (rarityOrder[rb?.rarity || 'common'] || 0) - (rarityOrder[ra?.rarity || 'common'] || 0);
-                }
-                case 'class': return (a.cls || '').localeCompare(b.cls || '');
-                case 'power': {
-                    const pa = GameState.collection.find(c => (c.templateId || c.name) === a.name);
-                    const pb = GameState.collection.find(c => (c.templateId || c.name) === b.name);
-                    return (getCardPower(pb || { stats: { hp: b.hp, atk: b.atk, def: b.def, spd: b.spd } }) || 0)
-                         - (getCardPower(pa || { stats: { hp: a.hp, atk: a.atk, def: a.def, spd: a.spd } }) || 0);
-                }
-                default: return 0;
-            }
-        };
-        templates.sort(sortFn);
-        return templates;
-    },
-
-    _renderCollectionCards() {
+    renderHeroesScreen() {
         const grid = document.getElementById('hero-list');
-        if (!grid) return;
         grid.innerHTML = '';
 
-        const templates = this._getFilteredSortedTemplates();
-        const totalTemplates = CARD_TEMPLATES.length;
-        const deckIds = new Set((GameState.deck || []).map(d => typeof d === 'string' ? d : d.id));
+        // Build set of owned template IDs for quick lookup
+        const ownedTemplates = new Set();
+        GameState.collection.forEach(c => {
+            ownedTemplates.add(c.templateId || c.name);
+        });
 
-        // Update count display
-        const countEl = document.getElementById('collection-count');
-        if (countEl) {
-            countEl.textContent = `Showing ${templates.length} of ${totalTemplates}`;
-        }
+        // Count unique owned templates
+        const ownedCount = ownedTemplates.size;
+        const totalCount = CARD_TEMPLATES.length;
 
-        // Update progress bar
-        this._renderCollectionProgressBar();
-
-        if (templates.length === 0) {
-            grid.innerHTML = `<div style="text-align:center;padding:24px;grid-column:1/-1;">
-                <div style="font-size:24px;margin-bottom:8px;">🔍</div>
-                <div style="font-family:'Press Start 2P',monospace;font-size:8px;color:var(--text-dim);">No cards match your filters</div>
-            </div>`;
-            return;
-        }
-
-        templates.forEach(tmpl => {
+        // Header: owned counter
+        const header = document.createElement('div');
+        header.style.cssText = 'font-family:"Press Start 2P";font-size:9px;color:var(--gold);margin-bottom:12px;text-align:center;';
+        header.innerHTML = `🃏 Collection — <span style="color:#44ff88">${ownedCount}</span>/${totalCount} Heroes`;
+        grid.appendChild(header);
+        // Show all 20 templates: owned cards full detail, locked as silhouettes
+        CARD_TEMPLATES.forEach(tmpl => {
             const ownedCard = GameState.collection.find(c => (c.templateId || c.name) === tmpl.name);
             const isOwned = !!ownedCard;
 
             const el = document.createElement('div');
-            el.style.cssText = 'min-height:120px;position:relative;transition:opacity 0.3s ease,transform 0.3s ease;';
+            el.style.minHeight = '120px';
 
             if (isOwned) {
+                // Full card with stats
                 const card = ownedCard;
-                const rarity = card.rarity || 'common';
-                const rColor = (RARITIES[rarity] || {}).color || '#aaa';
-                const clsInfo = CLASSES[card.class] || {};
-                const elInfo = (typeof getCardElement === 'function') ? getCardElement(card) : null;
-                const elColor = elInfo ? elInfo.color : rColor;
-                el.className = `card ${rarity}`;
-                // Element-colored left border
-                el.style.borderLeft = `4px solid ${elColor}`;
-                el.style.paddingLeft = '10px';
-                el.style.boxShadow = `inset 0 0 8px ${elColor}33`;
+                el.className = `card ${card.rarity}`;
                 el.onclick = () => this.showHeroDetail(card);
 
                 const template = getTemplateByName(card.templateId || card.name);
@@ -1407,13 +882,12 @@ const UI = {
 
                 const name = document.createElement('div');
                 name.className = 'card-name';
-                name.style.color = rColor;
+                name.style.color = RARITIES[card.rarity].color;
                 name.textContent = card.name + (card.level > 1 ? ` Lv.${card.level}` : '');
 
                 const cls = document.createElement('div');
                 cls.className = 'card-class';
-                const elIcon = elInfo ? `${elInfo.icon} ${elInfo.name}` : '';
-                cls.innerHTML = `${elIcon} <span style="color:${rColor}">${clsInfo.emoji || ''} ${clsInfo.name || card.class}</span>`;
+                cls.textContent = CLASSES[card.class].emoji + ' ' + CLASSES[card.class].name;
 
                 const stats = document.createElement('div');
                 stats.className = 'card-stats';
@@ -1436,22 +910,6 @@ const UI = {
                 el.appendChild(name);
                 el.appendChild(cls);
                 el.appendChild(stats);
-
-                // "IN DECK" badge
-                if (deckIds.has(card.id)) {
-                    const badge = document.createElement('div');
-                    badge.style.cssText = 'position:absolute;top:4px;right:4px;font-family:"Press Start 2P",monospace;font-size:5px;padding:2px 4px;background:var(--gold);color:#000;border-radius:4px;z-index:2;box-shadow:0 0 6px rgba(255,215,0,0.4);';
-                    badge.textContent = 'IN DECK';
-                    el.appendChild(badge);
-                }
-
-                // Class badge (bottom right)
-                if (clsInfo.color) {
-                    const classBadge = document.createElement('div');
-                    classBadge.style.cssText = `position:absolute;bottom:4px;right:4px;font-family:'Press Start 2P',monospace;font-size:5px;padding:2px 4px;background:${clsInfo.color};color:#000;border-radius:4px;z-index:2;`;
-                    classBadge.textContent = (clsInfo.emoji || '') + ' ' + (clsInfo.name || card.class);
-                    el.appendChild(classBadge);
-                }
             } else {
                 // Locked silhouette
                 el.className = 'card common';
@@ -1469,8 +927,7 @@ const UI = {
 
                 const cls = document.createElement('div');
                 cls.className = 'card-class';
-                const clsInfo = CLASSES[tmpl.cls] || {};
-                cls.textContent = (clsInfo.emoji || '') + ' ' + (clsInfo.name || tmpl.cls);
+                cls.textContent = CLASSES[tmpl.cls]?.emoji + ' ' + (CLASSES[tmpl.cls]?.name || tmpl.cls);
                 cls.style.color = '#555';
 
                 const stats = document.createElement('div');
@@ -1485,15 +942,6 @@ const UI = {
             }
             grid.appendChild(el);
         });
-    },
-
-    renderHeroesScreen() {
-        // Initialize toolbar (only once)
-        if (!this._collectionToolbarBound) {
-            this._bindCollectionToolbar();
-            this._collectionToolbarBound = true;
-        }
-        this._renderCollectionCards();
     },
 
     showHeroDetail(card) {
@@ -1621,28 +1069,7 @@ const UI = {
         // Section C: Active Deck Summary
         html += this._renderDeckSummary();
 
-        // Section D: AI Deck Builder Recommendation
-        html += '<div id="ai-recommendation-panel"></div>';
-
         container.innerHTML = html;
-
-        // Render AI Deck Builder button into the dedicated panel
-        const adbPanel = document.getElementById('ai-deck-builder-panel');
-        if (adbPanel) {
-            adbPanel.innerHTML = `
-                <div style="margin-top:12px;text-align:center;">
-                    <button onclick="UI.openAIDeckBuilder()" style="
-                        font-family:'Press Start 2P',monospace;font-size:8px;
-                        padding:10px 20px;background:linear-gradient(180deg,#1a1a4e,#0a0a2e);
-                        color:var(--gold);border:2px solid var(--gold-dark);border-radius:4px;
-                        cursor:pointer;transition:all 0.2s ease;
-                        box-shadow:0 0 12px rgba(255,215,0,0.15);
-                    " onmouseover="this.style.boxShadow='0 0 20px rgba(255,215,0,0.3)'" onmouseout="this.style.boxShadow='0 0 12px rgba(255,215,0,0.15)'">
-                        🤖 AI Deck Builder
-                    </button>
-                </div>
-            `;
-        }
 
         // Draw sprites after DOM update
         setTimeout(() => {
@@ -1653,13 +1080,6 @@ const UI = {
                     CardRenderer.drawCardSprite(canvas, hero, 48);
                 }
             });
-
-            // Render AI recommendation
-            const deckCards = GameState.getDeckCards();
-            const panel = document.getElementById('ai-recommendation-panel');
-            if (deckCards.length > 0 && panel && typeof AIDeckBuilder !== 'undefined') {
-                AIDeckBuilder.renderRecommendation(deckCards[0], panel);
-            }
         }, 50);
     },
 
@@ -1971,8 +1391,8 @@ const UI = {
             el.className = `card ${item.rarity}`;
             el.innerHTML = `
                 <div style="text-align:center;font-size:16px;margin-bottom:8px;">${ITEM_TYPES[item.type].emoji}</div>
-                <div class="card-name" style="color:${RARITIES[item.rarity]?.color || 'var(--gold)'}">${item.name}</div>
-                <div class="card-class">${RARITIES[item.rarity]?.name || item.rarity}</div>
+                <div class="card-name" style="color:${RARITIES[item.rarity].color}">${item.name}</div>
+                <div class="card-class">${RARITIES[item.rarity].name}</div>
                 <div class="card-stats">
                     <span><span style="color:#888">${item.stat.toUpperCase()}</span> <span style="color:var(--gold)">+${item.val}</span></span>
                 </div>
@@ -2131,7 +1551,7 @@ const UI = {
                                         <div style="text-align:center;">
                                             <canvas class="catalog-sprite" data-hero="${hero.name}" width="48" height="48" style="image-rendering:pixelated;"></canvas>
                                         </div>
-                                        <div class="card-name" style="color:${RARITIES[defaultRarity]?.color || 'var(--gold)'};font-size:8px;">${hero.name}</div>
+                                        <div class="card-name" style="color:${RARITIES[defaultRarity].color};font-size:8px;">${hero.name}</div>
                                         <div class="card-class" style="font-size:7px;">${clsInfo.emoji} ${clsInfo.name}</div>
                                         <div style="font-size:7px;display:flex;gap:4px;justify-content:center;margin-top:4px;">
                                             <span style="color:#44cc44">HP:${hero.hp}</span>
@@ -2188,7 +1608,7 @@ const UI = {
                         <div style="text-align:center;">
                             <canvas id="market-card-${i}" width="48" height="48" style="image-rendering:pixelated;"></canvas>
                         </div>
-                        <div class="card-name" style="color:${RARITIES[listing.card.rarity]?.color || 'var(--gold)'};font-size:8px;">${listing.card.name}</div>
+                        <div class="card-name" style="color:${RARITIES[listing.card.rarity].color};font-size:8px;">${listing.card.name}</div>
                         <div class="card-class" style="font-size:7px;">${CLASSES[listing.card.class].emoji} ${CLASSES[listing.card.class].name}</div>
                         <div class="card-stats" style="font-size:7px;">
                             <span><span style="color:#888">PWR</span> <span style="color:var(--gold)">${getCardPower(listing.card)}</span></span>
@@ -2337,353 +1757,6 @@ const UI = {
         setTimeout(() => { if (popup.parentNode) popup.remove(); }, 5000);
     },
 
-    // ===== FEATURE 2: AI DECK BUILDER =====
-    openAIDeckBuilder() {
-        const panel = document.getElementById('ai-deck-builder-panel');
-        if (!panel) return;
-
-        // Create overlay
-        const overlay = document.createElement('div');
-        overlay.id = 'ai-deck-builder-overlay';
-        overlay.style.cssText = `
-            position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;
-            display:flex;align-items:center;justify-content:center;
-            background:rgba(0,0,0,0.75);animation:s3FadeIn 0.2s ease;
-        `;
-        overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
-
-        // Loading panel
-        const loadingPanel = document.createElement('div');
-        loadingPanel.style.cssText = `
-            background:linear-gradient(135deg,#0a0a2e,#141432);border:2px solid var(--gold-dark);
-            border-radius:4px;padding:24px 20px;text-align:center;max-width:340px;width:90%;
-            animation:resultSlideIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
-        `;
-
-        const messages = [
-            '🧠 Analyzing your collection...',
-            '⚡ Finding card synergies...',
-            '📊 Optimizing mana curve...',
-            '✨ Finalizing recommendations...'
-        ];
-
-        loadingPanel.innerHTML = `
-            <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:var(--gold);margin-bottom:16px;">🤖 AI DECK BUILDER</div>
-            <div id="ai-db-loading-text" style="font-size:9px;color:var(--text);min-height:40px;display:flex;align-items:center;justify-content:center;">${messages[0]}</div>
-            <div style="width:100%;height:4px;background:rgba(0,0,0,0.5);border-radius:4px;overflow:hidden;margin-top:12px;">
-                <div id="ai-db-loading-bar" style="height:100%;width:0%;background:var(--gold);transition:width 0.3s ease;border-radius:4px;"></div>
-            </div>
-            <button onclick="this.closest('#ai-deck-builder-overlay').remove()" style="margin-top:16px;font-family:'Press Start 2P',monospace;font-size:7px;padding:8px 16px;background:rgba(255,255,255,0.05);color:var(--text-dim);border:1px solid rgba(255,255,255,0.1);border-radius:4px;cursor:pointer;">Close</button>
-        `;
-
-        overlay.appendChild(loadingPanel);
-        document.body.appendChild(overlay);
-
-        // Cycle loading messages
-        let msgIdx = 0;
-        const loadingBar = document.getElementById('ai-db-loading-bar');
-        const loadingText = document.getElementById('ai-db-loading-text');
-        const interval = setInterval(() => {
-            msgIdx++;
-            if (msgIdx < messages.length && loadingText) {
-                loadingText.textContent = messages[msgIdx];
-                if (loadingBar) loadingBar.style.width = ((msgIdx + 1) / messages.length * 80) + '%';
-            }
-        }, 600);
-
-        // After ~2.5s, run AI recommendation
-        setTimeout(() => {
-            clearInterval(interval);
-            if (loadingBar) loadingBar.style.width = '100%';
-
-            // Get hero card from deck
-            const deckCards = GameState.getDeckCards();
-            const heroCard = deckCards.length > 0 ? deckCards[0] : null;
-
-            let result = null;
-            if (heroCard && typeof AIDeckBuilder !== 'undefined') {
-                result = AIDeckBuilder.recommendDeck(heroCard);
-            }
-
-            if (result) {
-                this._renderAIDeckBuilderResult(result, overlay);
-            } else {
-                loadingPanel.innerHTML = `
-                    <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:var(--gold);margin-bottom:12px;">🤖 AI DECK BUILDER</div>
-                    <div style="font-size:8px;color:var(--red);margin-bottom:12px;">⚠️ No hero in deck! Add a hero card first.</div>
-                    <button onclick="this.closest('#ai-deck-builder-overlay').remove()" style="font-family:'Press Start 2P',monospace;font-size:7px;padding:8px 16px;background:var(--gold);color:#000;border:none;border-radius:4px;cursor:pointer;">Close</button>
-                `;
-            }
-        }, 2500);
-    },
-
-    _renderAIDeckBuilderResult(result, overlay) {
-        const panel = document.getElementById('ai-deck-builder-overlay');
-        if (!panel) return;
-
-        const panelEl = panel.querySelector('div') || panel;
-
-        const typeIcons = { attack: '⚔️', defense: '🛡️', buff: '✨', debuff: '💀', special: '⚡' };
-        const cardType = CARD_TYPES || {};
-
-        // Build recommended cards HTML
-        let cardsHTML = '<div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:12px 0;">';
-        result.cards.forEach(card => {
-            const typeIcon = typeIcons[card.type] || '🃏';
-            const tColor = (cardType[card.type] || {}).color || '#aaa';
-            cardsHTML += `
-                <div style="background:var(--bg-card);border:1px solid ${tColor};border-radius:4px;padding:8px;text-align:center;min-width:70px;flex:1 1 0;max-width:120px;">
-                    <div style="font-size:16px;margin-bottom:4px;">${typeIcon}</div>
-                    <div style="font-family:'Press Start 2P',monospace;font-size:5px;color:${tColor};margin-bottom:4px;word-break:break-word;">${card.name}</div>
-                    <div style="font-size:7px;color:var(--text-dim);">${card.manaCost}💎</div>
-                    <div style="font-size:7px;color:#ff6644;">${card.damage || card.value || '-'}</div>
-                </div>
-            `;
-        });
-        cardsHTML += '</div>';
-
-        // Mana curve bar chart
-        const manaCounts = {};
-        result.cards.forEach(c => {
-            const cost = c.manaCost || 2;
-            manaCounts[cost] = (manaCounts[cost] || 0) + 1;
-        });
-        const maxManaCount = Math.max(...Object.values(manaCounts), 1);
-        let manaHTML = '<div style="display:flex;gap:4px;align-items:flex-end;justify-content:center;height:50px;margin:8px 0;">';
-        const manaCosts = Object.keys(manaCounts).sort((a, b) => a - b);
-        manaCosts.forEach(cost => {
-            const h = (manaCounts[cost] / maxManaCount) * 40;
-            manaHTML += `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-                <div style="width:18px;height:${h}px;background:linear-gradient(180deg,#4488ff,#2244aa);border-radius:2px;"></div>
-                <div style="font-size:6px;color:var(--text-dim);">${cost}💎</div>
-            </div>`;
-        });
-        manaHTML += '</div>';
-
-        // Synergy score
-        const score = result.score || 0;
-        const scoreColor = score >= 80 ? '#44ff88' : score >= 60 ? '#ffd700' : score >= 40 ? '#ff8844' : '#ff4444';
-
-        panelEl.innerHTML = `
-            <div style="background:linear-gradient(135deg,#0a0a2e,#141432);border:2px solid var(--gold-dark);border-radius:4px;padding:20px;max-width:380px;width:92%;animation:resultSlideIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275);max-height:85vh;overflow-y:auto;">
-                <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:var(--gold);text-align:center;margin-bottom:12px;">🤖 AI DECK BUILDER</div>
-
-                <!-- Synergy Score -->
-                <div style="text-align:center;margin-bottom:12px;">
-                    <div style="font-size:28px;font-family:'Press Start 2P',monospace;color:${scoreColor};text-shadow:0 0 10px ${scoreColor}44;">${score}</div>
-                    <div style="font-size:7px;color:var(--text-dim);margin-bottom:4px;">SYNERGY SCORE</div>
-                    <div style="width:100%;height:6px;background:rgba(0,0,0,0.5);border-radius:4px;overflow:hidden;">
-                        <div style="width:${score}%;height:100%;background:${scoreColor};border-radius:4px;transition:width 0.5s ease;"></div>
-                    </div>
-                </div>
-
-                <!-- Recommended Cards -->
-                <div style="font-family:'Press Start 2P',monospace;font-size:7px;color:var(--gold);margin-bottom:4px;">📦 RECOMMENDED DECK</div>
-                ${cardsHTML}
-
-                <!-- Mana Curve -->
-                <div style="font-family:'Press Start 2P',monospace;font-size:7px;color:var(--gold);margin:8px 0 4px;">💎 MANA CURVE</div>
-                ${manaHTML}
-
-                <!-- Synergies -->
-                ${result.synergies && result.synergies.length > 0 ? `
-                    <div style="font-family:'Press Start 2P',monospace;font-size:7px;color:var(--gold);margin:8px 0 4px;">🔗 SYNERGIES</div>
-                    <div style="margin-bottom:8px;">
-                        ${result.synergies.map(s => `<div style="font-size:7px;color:#44ff88;margin-bottom:2px;">✅ ${s.name} — ${s.description}</div>`).join('')}
-                    </div>
-                ` : ''}
-
-                <!-- Reasoning -->
-                <div style="font-family:'Press Start 2P',monospace;font-size:7px;color:var(--gold);margin:8px 0 4px;">💡 REASONING</div>
-                <div style="font-size:7px;color:var(--text-dim);line-height:1.6;margin-bottom:12px;">${result.reasoning || 'No reasoning available.'}</div>
-
-                <!-- Buttons -->
-                <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-                    <button class="btn btn-gold" onclick="UI.applyAIDeck(${JSON.stringify(result.cards.map(c => c.name)).replace(/"/g, '&quot;')})" style="font-size:7px;padding:8px 16px;">✅ Apply Deck</button>
-                    <button onclick="this.closest('#ai-deck-builder-overlay').remove()" style="font-family:'Press Start 2P',monospace;font-size:7px;padding:8px 16px;background:rgba(255,255,255,0.08);color:var(--text-dim);border:1px solid rgba(255,255,255,0.15);border-radius:4px;cursor:pointer;">Close</button>
-                </div>
-            </div>
-        `;
-    },
-
-    applyAIDeck(cardNames) {
-        if (!cardNames || cardNames.length === 0) return;
-
-        // Find card IDs in skill deck or SKILL_CARD_TEMPLATES
-        const cardIds = [];
-        cardNames.forEach(name => {
-            const skillCard = SKILL_CARD_TEMPLATES.find(t => t.name === name);
-            if (skillCard) {
-                // Generate a unique ID if not present
-                const id = skillCard.id || ('skill-' + name.toLowerCase().replace(/\s+/g, '-'));
-                cardIds.push(id);
-            }
-        });
-
-        if (cardIds.length > 0) {
-            GameState.skillDeck = cardIds;
-            this.toast('✅ AI deck applied! ' + cardNames.join(', '), 'success');
-            this.renderStrategyScreen();
-        } else {
-            this.toast('Could not find skill cards to apply.', 'error');
-        }
-
-        // Close overlay
-        const overlay = document.getElementById('ai-deck-builder-overlay');
-        if (overlay) overlay.remove();
-    },
-
-    // ===== FEATURE 3: BATTLE COACH =====
-    openBattleCoach(battleResult) {
-        // battleResult: { isWin, turnNumber, player: {heroHp, heroMaxHp, ...}, enemy: {...} }
-        // Or can be called without args — uses last battle data
-
-        const overlay = document.createElement('div');
-        overlay.id = 'battle-coach-overlay';
-        overlay.style.cssText = `
-            position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;
-            display:flex;align-items:center;justify-content:center;
-            background:rgba(0,0,0,0.75);animation:s3FadeIn 0.2s ease;
-        `;
-        overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
-
-        const coachPanel = document.createElement('div');
-        coachPanel.style.cssText = `
-            background:linear-gradient(135deg,#0a0a2e,#141432);border:2px solid var(--gold-dark);
-            border-radius:4px;padding:20px;max-width:400px;width:92%;max-height:85vh;overflow-y:auto;
-            animation:resultSlideIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275);
-        `;
-
-        overlay.appendChild(coachPanel);
-        document.body.appendChild(overlay);
-
-        // Run analysis
-        let analysis = null;
-        if (typeof AICoach !== 'undefined') {
-            analysis = AICoach.analyzeBattle(
-                battleResult ? battleResult.isWin : true,
-                battleResult || { turnNumber: 5, player: { heroHp: 15, heroMaxHp: 20 }, enemy: { heroHp: 0, heroMaxHp: 30 } }
-            );
-        }
-
-        if (!analysis) {
-            analysis = {
-                isWin: battleResult ? battleResult.isWin : true,
-                turns: battleResult ? battleResult.turnNumber : 5,
-                tips: [{ icon: '💡', text: 'Good battle! Keep practicing.', color: '#44ff88' }],
-                recommendation: 'Try upgrading your cards and experimenting with different skill combinations.'
-            };
-        }
-
-        this._renderCoachMessages(analysis, coachPanel);
-    },
-
-    _renderCoachMessages(analysis, container) {
-        const messages = [];
-
-        // Greeting
-        if (analysis.isWin) {
-            messages.push({ icon: '🏆', text: 'Great win!', color: '#44ff88', delay: 0 });
-        } else {
-            messages.push({ icon: '💪', text: "Don't worry, let's analyze...", color: '#ff8844', delay: 0 });
-        }
-
-        // Turns info
-        messages.push({ icon: '⏱️', text: `Battle lasted ${analysis.turns || '?'} turns.`, color: '#aaa', delay: 300 });
-
-        // Tips from analysis
-        if (analysis.tips && analysis.tips.length > 0) {
-            const tipText = analysis.tips.map(t => `${t.icon} ${t.text}`).join('\n');
-            messages.push({ icon: '📋', text: tipText, color: '#44ccff', delay: 600 });
-        }
-
-        // HP info
-        if (analysis.playerHPRemaining !== undefined) {
-            const hpPct = Math.round((analysis.playerHPRemaining / analysis.playerHPMax) * 100);
-            messages.push({
-                icon: '❤️',
-                text: `You finished with ${analysis.playerHPRemaining}/${analysis.playerHPMax} HP (${hpPct}%).`,
-                color: hpPct > 50 ? '#44ff88' : hpPct > 25 ? '#ffd700' : '#ff4444',
-                delay: 900
-            });
-        }
-
-        // Energy usage tips
-        if (analysis.isWin) {
-            messages.push({ icon: '⚡', text: 'Energy management was solid this battle!', color: '#ffaa00', delay: 1200 });
-        } else {
-            messages.push({ icon: '⚡', text: 'Consider using lower-cost cards to maintain tempo.', color: '#ffaa00', delay: 1200 });
-        }
-
-        // Recommendation
-        if (analysis.recommendation) {
-            messages.push({ icon: '🎯', text: analysis.recommendation, color: '#ffd700', delay: 1500 });
-        }
-
-        // Final message
-        messages.push({ icon: '🤖', text: 'Keep fighting, champion! Each battle makes you stronger.', color: '#44ff88', delay: 1800 });
-
-        // Render messages one by one
-        container.innerHTML = `
-            <div style="font-family:'Press Start 2P',monospace;font-size:10px;color:var(--gold);text-align:center;margin-bottom:16px;">🤖 AI BATTLE COACH</div>
-            <div id="coach-messages-list" style="display:flex;flex-direction:column;gap:8px;"></div>
-            <div style="text-align:center;margin-top:16px;">
-                <button onclick="this.closest('#battle-coach-overlay').remove()" style="font-family:'Press Start 2P',monospace;font-size:7px;padding:8px 16px;background:rgba(255,255,255,0.08);color:var(--text-dim);border:1px solid rgba(255,255,255,0.15);border-radius:4px;cursor:pointer;">Close</button>
-            </div>
-        `;
-
-        const listEl = document.getElementById('coach-messages-list');
-
-        messages.forEach((msg, i) => {
-            setTimeout(() => {
-                const bubble = document.createElement('div');
-                bubble.style.cssText = `
-                    display:flex;gap:8px;align-items:flex-start;
-                    opacity:0;transform:translateY(8px);
-                    transition:opacity 0.3s ease,transform 0.3s ease;
-                `;
-
-                // Avatar
-                const avatar = document.createElement('div');
-                avatar.style.cssText = 'font-size:18px;flex-shrink:0;';
-                avatar.textContent = '🤖';
-
-                // Message body
-                const body = document.createElement('div');
-                body.style.cssText = `
-                    background:rgba(26,26,46,0.9);border:1px solid ${msg.color}33;
-                    border-radius:4px;padding:8px 10px;flex:1;
-                `;
-
-                const label = document.createElement('div');
-                label.style.cssText = `font-family:'Press Start 2P',monospace;font-size:6px;color:${msg.color};margin-bottom:4px;`;
-                label.textContent = 'AI COACH';
-
-                const text = document.createElement('div');
-                text.style.cssText = `font-size:7px;color:var(--text);line-height:1.6;white-space:pre-line;`;
-                text.textContent = msg.text;
-
-                body.appendChild(label);
-                body.appendChild(text);
-                bubble.appendChild(avatar);
-                bubble.appendChild(body);
-
-                listEl.appendChild(bubble);
-
-                // Animate in
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        bubble.style.opacity = '1';
-                        bubble.style.transform = 'translateY(0)';
-                    });
-                });
-
-                // Scroll to bottom
-                listEl.scrollTop = listEl.scrollHeight;
-            }, msg.delay);
-        });
-    },
-
     toast(message, type = 'info') {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
@@ -2692,17 +1765,5 @@ const UI = {
         toast.style.whiteSpace = 'pre-line';
         container.appendChild(toast);
         setTimeout(() => toast.remove(), 4000);
-    },
-
-    // ===== DEMO MODE =====
-    openDemo() {
-        if (typeof DemoMode !== 'undefined') {
-            DemoMode.start();
-        }
-    },
-    closeDemo() {
-        if (typeof DemoMode !== 'undefined') {
-            DemoMode.stop();
-        }
     },
 };

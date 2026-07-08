@@ -19,3 +19,6 @@ node_modules/
 *.zip
 *.log
 *.err
+.git-rewrite/
+blockchain/.env
+supabase/.temp/
