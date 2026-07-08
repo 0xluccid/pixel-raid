@@ -162,6 +162,7 @@ const BattleEngine = {
         // Place unit on board
         const unit = {
             id: card.id,
+            templateId: card.templateId || card.id,
             name: card.name,
             atk: card.atk,
             hp: card.hp,
@@ -410,6 +411,7 @@ const BattleEngine = {
             this.enemy.energy -= card.cost;
             this.enemy.board[emptySlot] = {
                 id: card.id,
+                templateId: card.templateId || card.id,
                 name: card.name,
                 atk: card.atk,
                 hp: card.hp,
