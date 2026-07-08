@@ -581,12 +581,13 @@ const PhaserBattleScene = new Phaser.Class({
             unitText.setOrigin(0.5, 0.5);
             scene._boardUnitTexts[side].push(unitText);
 
-            // Unit name (truncated)
-            var nameStr = (unit.name || '?').substring(0, 6);
+            // Unit name (full, word-wrapped)
+            var nameStr = unit.name || '?';
             var nameText = scene.add.text(cx, cy + 14, nameStr, {
                 fontFamily: '"Press Start 2P", monospace',
                 fontSize: '5px',
-                color: '#ffd700'
+                color: '#ffd700',
+                wordWrap: { width: slot.w - 8 }
             });
             nameText.setOrigin(0.5, 0.5);
             scene._boardUnitTexts[side].push(nameText);
